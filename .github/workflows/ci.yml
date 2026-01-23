@@ -111,7 +111,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ruff black pytest pytest-asyncio pytest-timeout
-          pip install toml pydantic pydantic-settings loguru structlog httpx aiofiles anyio psutil humanize
+          pip install toml pydantic pydantic-settings loguru structlog httpx aiofiles anyio psutil humanize orjson rich typer
 
       - name: Run Ruff linter
         run: ruff check src/nexus_ai src/nexus_cli src/nexus_mcp
