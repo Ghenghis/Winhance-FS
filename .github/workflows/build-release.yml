@@ -102,8 +102,11 @@ jobs:
           fi
           # Remove 'v' prefix if present
           VERSION_NUM=${VERSION#v}
+          # Extract numeric version for AssemblyVersion (strip any suffix like -alpha, -beta, -test)
+          ASSEMBLY_VERSION=$(echo "$VERSION_NUM" | sed 's/-.*$//' | sed 's/^\([0-9]*\.[0-9]*\.[0-9]*\)$/\1.0/' | sed 's/^\([0-9]*\.[0-9]*\)$/\1.0.0/' | sed 's/^\([0-9]*\)$/\1.0.0.0/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "version_num=$VERSION_NUM" >> $GITHUB_OUTPUT
+          echo "assembly_version=$ASSEMBLY_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build application
         run: |
@@ -115,8 +118,9 @@ jobs:
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=true `
             -p:Version=${{ steps.version.outputs.version_num }} `
-            -p:AssemblyVersion=${{ steps.version.outputs.version_num }} `
-            -p:FileVersion=${{ steps.version.outputs.version_num }} `
+            -p:AssemblyVersion=${{ steps.version.outputs.assembly_version }} `
+            -p:FileVersion=${{ steps.version.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ steps.version.outputs.version_num }} `
             --output ./publish/${{ matrix.config.artifact_name }}
 
       - name: Create release package
