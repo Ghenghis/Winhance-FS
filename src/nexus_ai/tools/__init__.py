@@ -27,6 +27,7 @@ try:
         is_safe_to_delete,
         is_safe_to_move,
     )
+
     _HAS_FILE_CLASSIFIER = True
 except ImportError:
     _HAS_FILE_CLASSIFIER = False
@@ -43,6 +44,7 @@ try:
         start_organizing,
         stop_organizing,
     )
+
     _HAS_REALTIME_ORGANIZER = True
 except ImportError:
     _HAS_REALTIME_ORGANIZER = False
@@ -63,6 +65,7 @@ try:
         ViewMode,
         get_smart_manager,
     )
+
     _HAS_SMART_FILEMANAGER = True
 except ImportError:
     _HAS_SMART_FILEMANAGER = False

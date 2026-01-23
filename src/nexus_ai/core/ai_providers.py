@@ -30,6 +30,7 @@ logger = get_logger("ai_providers")
 
 class ProviderType(Enum):
     """Supported AI providers."""
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
@@ -42,6 +43,7 @@ class ProviderType(Enum):
 @dataclass
 class AIMessage:
     """A message in a conversation."""
+
     role: str  # "system", "user", "assistant"
     content: str
     name: str | None = None
@@ -51,6 +53,7 @@ class AIMessage:
 @dataclass
 class AIResponse:
     """Response from an AI provider."""
+
     content: str
     model: str
     provider: ProviderType
@@ -62,6 +65,7 @@ class AIResponse:
 @dataclass
 class AIConfig:
     """Configuration for an AI provider."""
+
     provider: ProviderType
     api_key: str | None = None
     base_url: str | None = None
@@ -84,20 +88,12 @@ class AIProvider(ABC):
         self._client: httpx.AsyncClient | None = None
 
     @abstractmethod
-    async def chat(
-        self,
-        messages: list[AIMessage],
-        **kwargs
-    ) -> AIResponse:
+    async def chat(self, messages: list[AIMessage], **kwargs) -> AIResponse:
         """Send a chat completion request."""
         pass
 
     @abstractmethod
-    async def stream_chat(
-        self,
-        messages: list[AIMessage],
-        **kwargs
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: list[AIMessage], **kwargs) -> AsyncIterator[str]:
         """Stream a chat completion response."""
         pass
 
@@ -220,7 +216,8 @@ class AnthropicProvider(AIProvider):
             content=data["content"][0]["text"],
             model=data["model"],
             provider=ProviderType.ANTHROPIC,
-            tokens_used=data.get("usage", {}).get("input_tokens", 0) + data.get("usage", {}).get("output_tokens", 0),
+            tokens_used=data.get("usage", {}).get("input_tokens", 0)
+            + data.get("usage", {}).get("output_tokens", 0),
             finish_reason=data.get("stop_reason", "end_turn"),
         )
 
@@ -511,10 +508,7 @@ class AIProviderManager:
         self._default_provider: ProviderType | None = None
 
     def register_provider(
-        self,
-        provider_type: ProviderType,
-        config: AIConfig,
-        set_default: bool = False
+        self, provider_type: ProviderType, config: AIConfig, set_default: bool = False
     ) -> None:
         """Register an AI provider."""
         self._providers[provider_type] = config
@@ -548,10 +542,7 @@ class AIProviderManager:
         return provider_class(config)
 
     async def chat(
-        self,
-        messages: list[AIMessage],
-        provider_type: ProviderType | None = None,
-        **kwargs
+        self, messages: list[AIMessage], provider_type: ProviderType | None = None, **kwargs
     ) -> AIResponse:
         """Send a chat request to a provider."""
         provider = self.get_provider(provider_type)
@@ -559,10 +550,7 @@ class AIProviderManager:
             return await provider.chat(messages, **kwargs)
 
     async def stream_chat(
-        self,
-        messages: list[AIMessage],
-        provider_type: ProviderType | None = None,
-        **kwargs
+        self, messages: list[AIMessage], provider_type: ProviderType | None = None, **kwargs
     ) -> AsyncIterator[str]:
         """Stream a chat response from a provider."""
         provider = self.get_provider(provider_type)

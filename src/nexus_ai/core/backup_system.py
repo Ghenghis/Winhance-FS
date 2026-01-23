@@ -31,6 +31,7 @@ logger = get_logger("backup_system")
 
 class BackupType(Enum):
     """Types of backups."""
+
     FULL = "full"
     INCREMENTAL = "incremental"
     DIFFERENTIAL = "differential"
@@ -40,6 +41,7 @@ class BackupType(Enum):
 
 class BackupStatus(Enum):
     """Backup operation status."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -52,6 +54,7 @@ class BackupStatus(Enum):
 
 class VerificationResult(Enum):
     """Result of backup verification."""
+
     SUCCESS = "success"
     HASH_MISMATCH = "hash_mismatch"
     FILE_MISSING = "file_missing"
@@ -62,6 +65,7 @@ class VerificationResult(Enum):
 @dataclass
 class BackupLocation:
     """A backup storage location."""
+
     id: str
     path: Path
     drive_letter: str
@@ -75,6 +79,7 @@ class BackupLocation:
 @dataclass
 class BackupEntry:
     """Metadata for a single backed up file/folder."""
+
     source_path: str
     backup_path: str
     original_size: int
@@ -88,6 +93,7 @@ class BackupEntry:
 @dataclass
 class BackupRecord:
     """Complete record of a backup operation."""
+
     id: str
     type: BackupType
     status: BackupStatus
@@ -107,6 +113,7 @@ class BackupRecord:
 @dataclass
 class RestorePoint:
     """A system restore point."""
+
     id: str
     name: str
     created_at: datetime
@@ -119,12 +126,15 @@ class RestorePoint:
 @dataclass
 class BackupConfig:
     """Backup system configuration."""
+
     # Locations
     primary_backup_path: Path = field(default_factory=lambda: Path("D:/NexusFS/backups"))
-    secondary_backup_paths: list[Path] = field(default_factory=lambda: [
-        Path("E:/NexusFS_Backup"),
-        Path("F:/NexusFS_Backup"),
-    ])
+    secondary_backup_paths: list[Path] = field(
+        default_factory=lambda: [
+            Path("E:/NexusFS_Backup"),
+            Path("F:/NexusFS_Backup"),
+        ]
+    )
 
     # Retention
     retention_days: int = 7
@@ -141,9 +151,9 @@ class BackupConfig:
 
     # Automation
     auto_restore_points: bool = True
-    restore_point_on_operations: list[str] = field(default_factory=lambda: [
-        "move", "delete", "rename", "organize"
-    ])
+    restore_point_on_operations: list[str] = field(
+        default_factory=lambda: ["move", "delete", "rename", "organize"]
+    )
 
     # Multi-drive redundancy
     min_backup_copies: int = 2
@@ -181,7 +191,9 @@ class BackupVerifier:
 
         return VerificationResult.SUCCESS
 
-    def verify_record(self, record: BackupRecord) -> tuple[bool, list[tuple[str, VerificationResult]]]:
+    def verify_record(
+        self, record: BackupRecord
+    ) -> tuple[bool, list[tuple[str, VerificationResult]]]:
         """Verify all entries in a backup record."""
         results = []
         all_success = True
@@ -275,7 +287,9 @@ class BackupManager:
             logger.error(f"Failed to add backup location {path}: {e}")
             return None
 
-    def _get_available_locations(self, prefer_different_drives: bool = True) -> list[BackupLocation]:
+    def _get_available_locations(
+        self, prefer_different_drives: bool = True
+    ) -> list[BackupLocation]:
         """Get available backup locations, preferring different drives."""
         available = [loc for loc in self._locations.values() if loc.is_available]
         available.sort(key=lambda x: x.priority)
@@ -314,8 +328,12 @@ class BackupManager:
                     "backup_locations": r.backup_locations,
                     "total_size": r.total_size,
                     "verified": r.verified,
-                    "verification_time": r.verification_time.isoformat() if r.verification_time else None,
-                    "verification_result": r.verification_result.value if r.verification_result else None,
+                    "verification_time": (
+                        r.verification_time.isoformat() if r.verification_time else None
+                    ),
+                    "verification_result": (
+                        r.verification_result.value if r.verification_result else None
+                    ),
                     "error_message": r.error_message,
                     "metadata": r.metadata,
                     "entries": [
@@ -391,8 +409,16 @@ class BackupManager:
                     entries=entries,
                     total_size=data.get("total_size", 0),
                     verified=data.get("verified", False),
-                    verification_time=datetime.fromisoformat(data["verification_time"]) if data.get("verification_time") else None,
-                    verification_result=VerificationResult(data["verification_result"]) if data.get("verification_result") else None,
+                    verification_time=(
+                        datetime.fromisoformat(data["verification_time"])
+                        if data.get("verification_time")
+                        else None
+                    ),
+                    verification_result=(
+                        VerificationResult(data["verification_result"])
+                        if data.get("verification_result")
+                        else None
+                    ),
                     error_message=data.get("error_message"),
                     metadata=data.get("metadata", {}),
                 )
@@ -411,7 +437,9 @@ class BackupManager:
                 )
                 self._restore_points[id] = rp
 
-            logger.info(f"Loaded {len(self._records)} backup records, {len(self._restore_points)} restore points")
+            logger.info(
+                f"Loaded {len(self._records)} backup records, {len(self._restore_points)} restore points"
+            )
 
         except Exception as e:
             logger.error(f"Failed to load backup state: {e}")
@@ -493,7 +521,9 @@ class BackupManager:
         locations = self._get_available_locations(self.config.prefer_different_drives)
 
         if len(locations) < self.config.min_backup_copies:
-            logger.warning(f"Only {len(locations)} backup locations available, need {self.config.min_backup_copies}")
+            logger.warning(
+                f"Only {len(locations)} backup locations available, need {self.config.min_backup_copies}"
+            )
 
         record = BackupRecord(
             id=record_id,
@@ -502,14 +532,14 @@ class BackupManager:
             created_at=datetime.now(),
             expires_at=datetime.now() + timedelta(days=self.config.retention_days),
             source_paths=[str(p) for p in paths],
-            backup_locations=[loc.id for loc in locations[:self.config.min_backup_copies]],
+            backup_locations=[loc.id for loc in locations[: self.config.min_backup_copies]],
             metadata=metadata or {},
         )
 
         try:
             with LogPerformance(f"Backup {len(paths)} paths"):
                 for path in paths:
-                    self._backup_path(path, record, locations[:self.config.min_backup_copies])
+                    self._backup_path(path, record, locations[: self.config.min_backup_copies])
 
             record.status = BackupStatus.COMPLETED
 
@@ -518,7 +548,9 @@ class BackupManager:
                 success, results = self.verifier.verify_record(record)
                 record.verified = success
                 record.verification_time = datetime.now()
-                record.verification_result = VerificationResult.SUCCESS if success else VerificationResult.HASH_MISMATCH
+                record.verification_result = (
+                    VerificationResult.SUCCESS if success else VerificationResult.HASH_MISMATCH
+                )
                 if success:
                     record.status = BackupStatus.VERIFIED
 
@@ -567,7 +599,9 @@ class BackupManager:
         if self.config.compress_backups:
             backup_path = backup_dir / (source.name + ".gz")
             with open(source, "rb") as f_in:
-                with gzip.open(backup_path, "wb", compresslevel=self.config.compression_level) as f_out:
+                with gzip.open(
+                    backup_path, "wb", compresslevel=self.config.compression_level
+                ) as f_out:
                     shutil.copyfileobj(f_in, f_out)
             is_compressed = True
         else:
@@ -698,11 +732,14 @@ class BackupManager:
                     record.status = BackupStatus.PENDING_REVIEW
                     expiring.append(record)
 
-                    self._send_alert("backup_expiring", {
-                        "record_id": record.id,
-                        "expires_at": record.expires_at.isoformat(),
-                        "source_paths": record.source_paths,
-                    })
+                    self._send_alert(
+                        "backup_expiring",
+                        {
+                            "record_id": record.id,
+                            "expires_at": record.expires_at.isoformat(),
+                            "source_paths": record.source_paths,
+                        },
+                    )
 
         if expiring:
             self._save_state()
@@ -773,7 +810,9 @@ class BackupManager:
             ],
             "records_count": len(self._records),
             "restore_points_count": len(self._restore_points),
-            "pending_review": sum(1 for r in self._records.values() if r.status == BackupStatus.PENDING_REVIEW),
+            "pending_review": sum(
+                1 for r in self._records.values() if r.status == BackupStatus.PENDING_REVIEW
+            ),
             "total_backup_size_gb": sum(r.total_size for r in self._records.values()) / (1024**3),
         }
 
@@ -812,7 +851,10 @@ def create_restore_point_before(operation: str, paths: list[Path]) -> RestorePoi
     Used by other modules to ensure safety.
     """
     manager = get_backup_manager()
-    if manager.config.auto_restore_points and operation in manager.config.restore_point_on_operations:
+    if (
+        manager.config.auto_restore_points
+        and operation in manager.config.restore_point_on_operations
+    ):
         return manager.create_restore_point(
             name=f"Before {operation}",
             paths=paths,

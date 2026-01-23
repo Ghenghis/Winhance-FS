@@ -37,6 +37,7 @@ logger = get_logger("agents")
 
 class AgentStatus(Enum):
     """Agent execution status."""
+
     IDLE = "idle"
     RUNNING = "running"
     PAUSED = "paused"
@@ -47,6 +48,7 @@ class AgentStatus(Enum):
 
 class TaskPriority(Enum):
     """Task priority levels."""
+
     LOW = 1
     NORMAL = 2
     HIGH = 3
@@ -56,6 +58,7 @@ class TaskPriority(Enum):
 
 class AgentType(Enum):
     """Types of agents available."""
+
     ORGANIZER = "organizer"
     CLEANUP = "cleanup"
     RESEARCH = "research"
@@ -69,6 +72,7 @@ class AgentType(Enum):
 @dataclass
 class AgentTask:
     """A task to be executed by an agent."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     type: AgentType = AgentType.ORGANIZER
     description: str = ""
@@ -87,6 +91,7 @@ class AgentTask:
 @dataclass
 class AgentConfig:
     """Configuration for an agent."""
+
     type: AgentType
     name: str
     description: str
@@ -199,12 +204,14 @@ Output format: JSON with structure:
         if Path(path).is_dir():
             for f in Path(path).iterdir():
                 if f.is_file():
-                    files.append({
-                        "name": f.name,
-                        "extension": f.suffix,
-                        "size": f.stat().st_size,
-                        "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
-                    })
+                    files.append(
+                        {
+                            "name": f.name,
+                            "extension": f.suffix,
+                            "size": f.stat().st_size,
+                            "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                        }
+                    )
 
         if not files:
             return {"suggestions": [], "message": "No files to organize"}
@@ -223,6 +230,7 @@ Provide JSON organization suggestions."""
         # Parse response
         try:
             import json
+
             suggestions = json.loads(response)
         except json.JSONDecodeError:
             suggestions = {"suggestions": [], "raw_response": response}
@@ -268,6 +276,7 @@ Output format: JSON with structure:
         categories = task.parameters.get("categories", ["temp", "cache", "logs"])
 
         from nexus_ai.tools.space_analyzer import SpaceAnalyzer
+
         analyzer = SpaceAnalyzer()
 
         # Find candidates
@@ -275,20 +284,24 @@ Output format: JSON with structure:
 
         candidates = []
         for f in analysis.temp_files[:100]:
-            candidates.append({
-                "path": f.path,
-                "size": f.size,
-                "category": "temp",
-                "modified": f.modified.isoformat(),
-            })
+            candidates.append(
+                {
+                    "path": f.path,
+                    "size": f.size,
+                    "category": "temp",
+                    "modified": f.modified.isoformat(),
+                }
+            )
 
         for f in analysis.cache_files[:100]:
-            candidates.append({
-                "path": f.path,
-                "size": f.size,
-                "category": "cache",
-                "modified": f.modified.isoformat(),
-            })
+            candidates.append(
+                {
+                    "path": f.path,
+                    "size": f.size,
+                    "category": "cache",
+                    "modified": f.modified.isoformat(),
+                }
+            )
 
         if not candidates:
             return {"deletable": [], "total_size": 0, "message": "No cleanup candidates found"}
@@ -305,6 +318,7 @@ Identify which are safe to delete."""
 
         try:
             import json
+
             result = json.loads(response)
         except json.JSONDecodeError:
             result = {"deletable": [], "raw_response": response}
@@ -371,11 +385,13 @@ Always preserve original files before any repair attempt."""
         if Path(path).is_dir():
             for f in Path(path).rglob("*.lnk"):
                 # Would check if shortcut target exists
-                issues.append({
-                    "type": "shortcut",
-                    "path": str(f),
-                    "status": "check_needed",
-                })
+                issues.append(
+                    {
+                        "type": "shortcut",
+                        "path": str(f),
+                        "status": "check_needed",
+                    }
+                )
 
         return {
             "path": path,
@@ -464,6 +480,7 @@ Output JSON with:
 
         try:
             import json
+
             parsed = json.loads(response)
         except json.JSONDecodeError:
             parsed = {"keywords": [query]}
@@ -539,10 +556,7 @@ class AgentOrchestrator:
             try:
                 # Get task with timeout to allow checking _running flag
                 try:
-                    _, task = await asyncio.wait_for(
-                        self._task_queue.get(),
-                        timeout=1.0
-                    )
+                    _, task = await asyncio.wait_for(self._task_queue.get(), timeout=1.0)
                 except TimeoutError:
                     continue
 

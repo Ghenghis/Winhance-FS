@@ -18,6 +18,7 @@ DEFAULT_CONFIG_DIR = Path("D:/NexusFS/configs")
 
 class DriveConfig(BaseModel):
     """Configuration for a single drive."""
+
     letter: str
     enabled: bool = True
     priority: int = 0  # Higher = process first
@@ -27,6 +28,7 @@ class DriveConfig(BaseModel):
 
 class IndexConfig(BaseModel):
     """Indexing configuration."""
+
     # Drives to index
     drives: list[str] = Field(default_factory=lambda: ["C", "D", "E", "F", "G"])
 
@@ -45,24 +47,32 @@ class IndexConfig(BaseModel):
     deep_index: bool = False  # Include content embeddings
 
     # Exclusions
-    exclude_dirs: list[str] = Field(default_factory=lambda: [
-        "$Recycle.Bin",
-        "System Volume Information",
-        "Windows",
-        "Program Files",
-        "Program Files (x86)",
-        "ProgramData",
-        "Recovery",
-        "PerfLogs",
-    ])
+    exclude_dirs: list[str] = Field(
+        default_factory=lambda: [
+            "$Recycle.Bin",
+            "System Volume Information",
+            "Windows",
+            "Program Files",
+            "Program Files (x86)",
+            "ProgramData",
+            "Recovery",
+            "PerfLogs",
+        ]
+    )
 
-    exclude_extensions: list[str] = Field(default_factory=lambda: [
-        "tmp", "temp", "log", "bak",
-    ])
+    exclude_extensions: list[str] = Field(
+        default_factory=lambda: [
+            "tmp",
+            "temp",
+            "log",
+            "bak",
+        ]
+    )
 
 
 class SearchConfig(BaseModel):
     """Search configuration."""
+
     # Performance
     max_results: int = 1000
     fuzzy_distance: int = 2
@@ -79,18 +89,21 @@ class SearchConfig(BaseModel):
 
 class SpaceConfig(BaseModel):
     """Space management configuration."""
+
     # Large file thresholds
     large_file_gb: float = 1.0
     huge_file_gb: float = 10.0
 
     # Model directories to track
-    model_dirs: list[str] = Field(default_factory=lambda: [
-        ".lmstudio",
-        ".ollama",
-        ".cache/huggingface",
-        ".cache/torch",
-        "models",
-    ])
+    model_dirs: list[str] = Field(
+        default_factory=lambda: [
+            ".lmstudio",
+            ".ollama",
+            ".cache/huggingface",
+            ".cache/torch",
+            "models",
+        ]
+    )
 
     # Target drives for large files (by priority)
     large_file_targets: list[str] = Field(default_factory=lambda: ["D", "F", "G"])
@@ -103,6 +116,7 @@ class SpaceConfig(BaseModel):
 
 class TransactionConfig(BaseModel):
     """Transaction and rollback configuration."""
+
     log_path: Path = DEFAULT_DATA_DIR / "transactions" / "transaction_log.jsonl"
     snapshot_dir: Path = DEFAULT_DATA_DIR / "transactions" / "snapshots"
     backup_dir: Path = DEFAULT_DATA_DIR / "backups"
@@ -132,13 +146,15 @@ class NexusConfig(BaseSettings):
     transaction: TransactionConfig = Field(default_factory=TransactionConfig)
 
     # Drives
-    drives: dict[str, DriveConfig] = Field(default_factory=lambda: {
-        "C": DriveConfig(letter="C", priority=1, purpose="system", min_free_gb=100),
-        "D": DriveConfig(letter="D", priority=2, purpose="projects", min_free_gb=100),
-        "E": DriveConfig(letter="E", priority=3, purpose="archive", min_free_gb=50),
-        "F": DriveConfig(letter="F", priority=4, purpose="ai_models", min_free_gb=100),
-        "G": DriveConfig(letter="G", priority=5, purpose="large_files", min_free_gb=50),
-    })
+    drives: dict[str, DriveConfig] = Field(
+        default_factory=lambda: {
+            "C": DriveConfig(letter="C", priority=1, purpose="system", min_free_gb=100),
+            "D": DriveConfig(letter="D", priority=2, purpose="projects", min_free_gb=100),
+            "E": DriveConfig(letter="E", priority=3, purpose="archive", min_free_gb=50),
+            "F": DriveConfig(letter="F", priority=4, purpose="ai_models", min_free_gb=100),
+            "G": DriveConfig(letter="G", priority=5, purpose="large_files", min_free_gb=50),
+        }
+    )
 
     # Performance
     max_workers: int = Field(default_factory=lambda: (os.cpu_count() or 8) * 2)

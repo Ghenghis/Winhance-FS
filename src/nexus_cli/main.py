@@ -49,6 +49,7 @@ app.add_typer(mcp_app, name="mcp")
 # Main Commands
 # =============================================================================
 
+
 @app.command()
 def init(
     global_: bool = typer.Option(False, "--global", "-g", help="Initialize globally"),
@@ -90,10 +91,7 @@ def status():
 
     config = get_config()
 
-    console.print(Panel.fit(
-        "[bold cyan]NexusFS Status[/bold cyan]",
-        border_style="cyan"
-    ))
+    console.print(Panel.fit("[bold cyan]NexusFS Status[/bold cyan]", border_style="cyan"))
 
     table = Table(show_header=False, box=None)
     table.add_column("Key", style="yellow")
@@ -116,6 +114,7 @@ def status():
 # =============================================================================
 # Index Commands
 # =============================================================================
+
 
 @index_app.command("build")
 def index_build(
@@ -182,16 +181,25 @@ def index_status():
 # Search Commands
 # =============================================================================
 
+
 @search_app.callback(invoke_without_command=True)
 def search_main(
     ctx: typer.Context,
     query: str | None = typer.Argument(None, help="Search query"),
-    type_: str = typer.Option("semantic", "--type", "-t", help="Search type: semantic, glob, regex, exact"),
+    type_: str = typer.Option(
+        "semantic", "--type", "-t", help="Search type: semantic, glob, regex, exact"
+    ),
     limit: int = typer.Option(20, "--limit", "-l", help="Maximum results"),
-    extensions: str | None = typer.Option(None, "--ext", "-e", help="Filter by extensions (comma-separated)"),
-    min_size: str | None = typer.Option(None, "--min-size", help="Minimum file size (e.g., 100MB, 1GB)"),
+    extensions: str | None = typer.Option(
+        None, "--ext", "-e", help="Filter by extensions (comma-separated)"
+    ),
+    min_size: str | None = typer.Option(
+        None, "--min-size", help="Minimum file size (e.g., 100MB, 1GB)"
+    ),
     max_size: str | None = typer.Option(None, "--max-size", help="Maximum file size"),
-    drives: str | None = typer.Option(None, "--drives", "-d", help="Filter by drives (comma-separated)"),
+    drives: str | None = typer.Option(
+        None, "--drives", "-d", help="Filter by drives (comma-separated)"
+    ),
     dirs_only: bool = typer.Option(False, "--dirs", help="Only show directories"),
     files_only: bool = typer.Option(False, "--files", help="Only show files"),
 ):
@@ -227,7 +235,9 @@ def search_similar(
 ):
     """Find files similar to a given file."""
     console.print(f"Finding files similar to: [cyan]{file_path}[/cyan]")
-    console.print("[yellow]Semantic search requires index with embeddings. Run 'nexus index build --deep'[/yellow]")
+    console.print(
+        "[yellow]Semantic search requires index with embeddings. Run 'nexus index build --deep'[/yellow]"
+    )
 
 
 @search_app.command("duplicates")
@@ -243,6 +253,7 @@ def search_duplicates(
 # =============================================================================
 # Space Commands
 # =============================================================================
+
 
 @space_app.command("analyze")
 def space_analyze(
@@ -305,16 +316,21 @@ def space_large(
 
     console.print(table)
     total = sum(f.size for f in large_files)
-    console.print(f"\n[cyan]Total: {analyzer.format_size(total)} in {len(large_files)} files[/cyan]")
+    console.print(
+        f"\n[cyan]Total: {analyzer.format_size(total)} in {len(large_files)} files[/cyan]"
+    )
 
 
 # =============================================================================
 # Model Commands
 # =============================================================================
 
+
 @model_app.command("scan")
 def model_scan(
-    app: str | None = typer.Option(None, "--app", "-a", help="Specific app (lmstudio, ollama, huggingface)"),
+    app: str | None = typer.Option(
+        None, "--app", "-a", help="Specific app (lmstudio, ollama, huggingface)"
+    ),
 ):
     """Scan for AI model files."""
     from nexus_ai.tools.model_relocator import ModelRelocator
@@ -371,9 +387,12 @@ def model_suggest(
 # Rollback Commands
 # =============================================================================
 
+
 @rollback_app.command("list")
 def rollback_list(
-    hours: int | None = typer.Option(None, "--hours", "-h", help="Show transactions from last N hours"),
+    hours: int | None = typer.Option(
+        None, "--hours", "-h", help="Show transactions from last N hours"
+    ),
     limit: int = typer.Option(20, "--limit", "-l", help="Maximum transactions to show"),
 ):
     """List recent file transactions."""
@@ -475,6 +494,7 @@ def rollback_script(
 # MCP Commands
 # =============================================================================
 
+
 @mcp_app.command("start")
 def mcp_start():
     """Start the MCP server for AI tool integration."""
@@ -491,6 +511,7 @@ def mcp_status():
 # =============================================================================
 # Entry Point
 # =============================================================================
+
 
 def main():
     """Main entry point."""

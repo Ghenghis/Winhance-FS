@@ -67,11 +67,13 @@ def validate_path(path: str, param_name: str = "path") -> str:
 
     return full_path
 
+
 # MCP imports
 try:
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
     from mcp.types import TextContent, Tool
+
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
@@ -100,40 +102,34 @@ def create_server():
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search query (natural language or pattern)"
+                            "description": "Search query (natural language or pattern)",
                         },
                         "type": {
                             "type": "string",
                             "enum": ["semantic", "glob", "regex", "exact"],
                             "default": "semantic",
-                            "description": "Search type"
+                            "description": "Search type",
                         },
                         "limit": {
                             "type": "integer",
                             "default": 20,
-                            "description": "Maximum results"
+                            "description": "Maximum results",
                         },
                         "extensions": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Filter by file extensions"
+                            "description": "Filter by file extensions",
                         },
                         "drives": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Filter by drive letters"
+                            "description": "Filter by drive letters",
                         },
-                        "min_size_mb": {
-                            "type": "number",
-                            "description": "Minimum file size in MB"
-                        },
-                        "max_size_mb": {
-                            "type": "number",
-                            "description": "Maximum file size in MB"
-                        }
+                        "min_size_mb": {"type": "number", "description": "Minimum file size in MB"},
+                        "max_size_mb": {"type": "number", "description": "Maximum file size in MB"},
                     },
-                    "required": ["query"]
-                }
+                    "required": ["query"],
+                },
             ),
             Tool(
                 name="nexus_index",
@@ -143,15 +139,15 @@ def create_server():
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Path to index (omit for all drives)"
+                            "description": "Path to index (omit for all drives)",
                         },
                         "deep": {
                             "type": "boolean",
                             "default": False,
-                            "description": "Include content embeddings for semantic search"
-                        }
-                    }
-                }
+                            "description": "Include content embeddings for semantic search",
+                        },
+                    },
+                },
             ),
             Tool(
                 name="nexus_organize",
@@ -159,24 +155,21 @@ def create_server():
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Directory to organize"
-                        },
+                        "path": {"type": "string", "description": "Directory to organize"},
                         "strategy": {
                             "type": "string",
                             "enum": ["semantic", "type", "project", "date"],
                             "default": "semantic",
-                            "description": "Organization strategy"
+                            "description": "Organization strategy",
                         },
                         "dry_run": {
                             "type": "boolean",
                             "default": True,
-                            "description": "Preview only, don't move files"
-                        }
+                            "description": "Preview only, don't move files",
+                        },
                     },
-                    "required": ["path"]
-                }
+                    "required": ["path"],
+                },
             ),
             Tool(
                 name="nexus_rollback",
@@ -186,19 +179,19 @@ def create_server():
                     "properties": {
                         "transaction_id": {
                             "type": "string",
-                            "description": "Specific transaction ID to rollback"
+                            "description": "Specific transaction ID to rollback",
                         },
                         "hours": {
                             "type": "integer",
-                            "description": "Rollback all transactions in last N hours"
+                            "description": "Rollback all transactions in last N hours",
                         },
                         "generate_script": {
                             "type": "boolean",
                             "default": False,
-                            "description": "Generate rollback script instead of executing"
-                        }
-                    }
-                }
+                            "description": "Generate rollback script instead of executing",
+                        },
+                    },
+                },
             ),
             Tool(
                 name="nexus_space",
@@ -209,20 +202,20 @@ def create_server():
                         "path": {
                             "type": "string",
                             "default": "C:\\Users\\Admin",
-                            "description": "Path to analyze"
+                            "description": "Path to analyze",
                         },
                         "large_gb": {
                             "type": "number",
                             "default": 1.0,
-                            "description": "Threshold for large files (GB)"
+                            "description": "Threshold for large files (GB)",
                         },
                         "find_duplicates": {
                             "type": "boolean",
                             "default": False,
-                            "description": "Also find duplicate files"
-                        }
-                    }
-                }
+                            "description": "Also find duplicate files",
+                        },
+                    },
+                },
             ),
             Tool(
                 name="nexus_models",
@@ -234,25 +227,25 @@ def create_server():
                             "type": "string",
                             "enum": ["scan", "suggest", "relocate"],
                             "default": "scan",
-                            "description": "Action to perform"
+                            "description": "Action to perform",
                         },
                         "dest_drive": {
                             "type": "string",
                             "default": "G",
-                            "description": "Destination drive for relocation"
+                            "description": "Destination drive for relocation",
                         },
                         "min_size_gb": {
                             "type": "number",
                             "default": 1.0,
-                            "description": "Minimum model size for relocation"
+                            "description": "Minimum model size for relocation",
                         },
                         "dry_run": {
                             "type": "boolean",
                             "default": True,
-                            "description": "Preview only"
-                        }
-                    }
-                }
+                            "description": "Preview only",
+                        },
+                    },
+                },
             ),
             Tool(
                 name="nexus_similar",
@@ -260,18 +253,15 @@ def create_server():
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "Path to reference file"
-                        },
+                        "file_path": {"type": "string", "description": "Path to reference file"},
                         "limit": {
                             "type": "integer",
                             "default": 10,
-                            "description": "Maximum results"
-                        }
+                            "description": "Maximum results",
+                        },
                     },
-                    "required": ["file_path"]
-                }
+                    "required": ["file_path"],
+                },
             ),
         ]
 
@@ -317,7 +307,7 @@ async def handle_search(args: dict[str, Any]) -> dict[str, Any]:
         "type": search_type,
         "limit": result_limit,
         "results": [],
-        "message": "Search index not built yet. Run 'nexus index build' first."
+        "message": "Search index not built yet. Run 'nexus index build' first.",
     }
 
 
@@ -339,10 +329,7 @@ async def handle_index(args: dict[str, Any]) -> dict[str, Any]:
         else:
             stats = indexer.index_all_drives(["C", "D", "E", "F", "G"])
 
-        return {
-            "status": "complete",
-            "stats": stats
-        }
+        return {"status": "complete", "stats": stats}
     except ValueError as e:
         return {"error": f"Invalid path: {e}"}
     except ImportError as e:
@@ -360,7 +347,7 @@ async def handle_organize(args: dict[str, Any]) -> dict[str, Any]:
         "strategy": strategy,
         "dry_run": dry_run,
         "suggestions": [],
-        "message": "Organization analysis not yet implemented"
+        "message": "Organization analysis not yet implemented",
     }
 
 
@@ -383,24 +370,18 @@ async def handle_rollback(args: dict[str, Any]) -> dict[str, Any]:
 
         if generate_script and hours:
             script = tm.generate_rollback_script(hours=hours)
-            return {
-                "script": script,
-                "format": "ps1"
-            }
+            return {"script": script, "format": "ps1"}
 
         if tx_id:
             success = tm.rollback(tx_id)
-            return {
-                "transaction_id": tx_id,
-                "rolled_back": success
-            }
+            return {"transaction_id": tx_id, "rolled_back": success}
 
         if hours:
             rolled_back = tm.rollback_range(hours=hours)
             return {
                 "hours": hours,
                 "transactions_rolled_back": len(rolled_back),
-                "ids": rolled_back
+                "ids": rolled_back,
             }
 
         return {"error": "Specify transaction_id or hours"}
@@ -471,10 +452,10 @@ async def handle_models(args: dict[str, Any]) -> dict[str, Any]:
                     app: {
                         "count": info["count"],
                         "size_gb": info["total_size"] / 1024**3,
-                        "largest": info["largest_model"]
+                        "largest": info["largest_model"],
                     }
                     for app, info in summary.items()
-                }
+                },
             }
 
         elif action == "suggest":
@@ -518,7 +499,7 @@ async def handle_similar(args: dict[str, Any]) -> dict[str, Any]:
         "file_path": file_path,
         "limit": result_limit,
         "similar_files": [],
-        "message": "Semantic similarity requires deep index with embeddings"
+        "message": "Semantic similarity requires deep index with embeddings",
     }
 
 

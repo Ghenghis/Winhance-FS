@@ -28,15 +28,18 @@ from loguru import logger
 # Try fast JSON
 try:
     import orjson as json
+
     JSON_FAST = True
 except ImportError:
     import json
+
     JSON_FAST = False
 
 
 @dataclass
 class FileRecord:
     """Compact file record for high-speed indexing."""
+
     path: str
     name: str
     size: int
@@ -64,6 +67,7 @@ class FileRecord:
 @dataclass
 class IndexStats:
     """Indexing statistics."""
+
     file_count: int = 0
     dir_count: int = 0
     total_size: int = 0
@@ -197,6 +201,7 @@ class HyperIndexer:
         """Check if file is hidden on Windows."""
         try:
             import stat as stat_module
+
             attrs = entry.stat().st_file_attributes
             return bool(attrs & stat_module.FILE_ATTRIBUTE_HIDDEN)
         except (AttributeError, OSError):

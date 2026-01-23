@@ -30,6 +30,7 @@ RICH_AVAILABLE = False
 try:
     from rich.console import Console
     from rich.table import Table
+
     RICH_AVAILABLE = True
 except ImportError:
     pass
@@ -38,6 +39,7 @@ except ImportError:
 @dataclass
 class FileInfo:
     """Information about a single file."""
+
     path: str
     name: str
     size: int
@@ -51,6 +53,7 @@ class FileInfo:
 @dataclass
 class DirectoryInfo:
     """Information about a directory."""
+
     path: str
     name: str
     total_size: int = 0
@@ -63,6 +66,7 @@ class DirectoryInfo:
 @dataclass
 class SpaceAnalysis:
     """Complete space analysis results."""
+
     drive: str
     total_size: int = 0
     free_space: int = 0
@@ -95,9 +99,31 @@ class SpaceAnalyzer:
 
     # File categories and their extensions
     CATEGORIES = {
-        "model": {".gguf", ".safetensors", ".bin", ".pt", ".pth", ".onnx", ".h5", ".pb", ".tflite", ".mlmodel"},
+        "model": {
+            ".gguf",
+            ".safetensors",
+            ".bin",
+            ".pt",
+            ".pth",
+            ".onnx",
+            ".h5",
+            ".pb",
+            ".tflite",
+            ".mlmodel",
+        },
         "video": {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v"},
-        "image": {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".psd", ".raw"},
+        "image": {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".tiff",
+            ".webp",
+            ".svg",
+            ".psd",
+            ".raw",
+        },
         "audio": {".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma", ".m4a"},
         "archive": {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"},
         "document": {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt"},
@@ -121,9 +147,19 @@ class SpaceAnalyzer:
 
     # Temp/cache patterns
     TEMP_PATTERNS = {
-        "temp", "tmp", "cache", ".cache", "__pycache__",
-        "node_modules", ".npm", ".yarn", ".pnpm",
-        "venv", ".venv", "env", ".env",
+        "temp",
+        "tmp",
+        "cache",
+        ".cache",
+        "__pycache__",
+        "node_modules",
+        ".npm",
+        ".yarn",
+        ".pnpm",
+        "venv",
+        ".venv",
+        "env",
+        ".env",
         ".git/objects",
     }
 
@@ -329,6 +365,7 @@ class SpaceAnalyzer:
         # Get drive info
         try:
             import shutil
+
             total, used, free = shutil.disk_usage(path)
         except Exception:
             total, used, free = 0, 0, 0
@@ -392,10 +429,7 @@ class SpaceAnalyzer:
         analysis.model_files.sort(key=lambda x: -x.size)
 
         # Top directories
-        analysis.largest_dirs = sorted(
-            self._dirs.values(),
-            key=lambda x: -x.total_size
-        )[:50]
+        analysis.largest_dirs = sorted(self._dirs.values(), key=lambda x: -x.total_size)[:50]
 
         logger.info(
             f"Analysis complete: {self._file_count:,} files, "
@@ -433,13 +467,15 @@ class SpaceAnalyzer:
                             if entry.is_file(follow_symlinks=False):
                                 stat = entry.stat()
                                 if stat.st_size >= min_size:
-                                    large_files.append(FileInfo(
-                                        path=entry.path,
-                                        name=entry.name,
-                                        size=stat.st_size,
-                                        modified=datetime.fromtimestamp(stat.st_mtime),
-                                        extension=Path(entry.name).suffix.lower(),
-                                    ))
+                                    large_files.append(
+                                        FileInfo(
+                                            path=entry.path,
+                                            name=entry.name,
+                                            size=stat.st_size,
+                                            modified=datetime.fromtimestamp(stat.st_mtime),
+                                            extension=Path(entry.name).suffix.lower(),
+                                        )
+                                    )
                             elif entry.is_dir(follow_symlinks=False):
                                 scan_dir(Path(entry.path))
                         except (PermissionError, OSError):
@@ -455,13 +491,15 @@ class SpaceAnalyzer:
                         if entry.is_file(follow_symlinks=False):
                             stat = entry.stat()
                             if stat.st_size >= min_size:
-                                large_files.append(FileInfo(
-                                    path=entry.path,
-                                    name=entry.name,
-                                    size=stat.st_size,
-                                    modified=datetime.fromtimestamp(stat.st_mtime),
-                                    extension=Path(entry.name).suffix.lower(),
-                                ))
+                                large_files.append(
+                                    FileInfo(
+                                        path=entry.path,
+                                        name=entry.name,
+                                        size=stat.st_size,
+                                        modified=datetime.fromtimestamp(stat.st_mtime),
+                                        extension=Path(entry.name).suffix.lower(),
+                                    )
+                                )
                     except (PermissionError, OSError):
                         pass
         except (PermissionError, OSError):
@@ -503,9 +541,11 @@ class SpaceAnalyzer:
         print(f"\n{'='*60}")
         print(f"  NexusFS Space Analysis: {analysis.drive}")
         print(f"{'='*60}")
-        print(f"\nDrive: {self.format_size(analysis.used_space)} used / "
-              f"{self.format_size(analysis.total_size)} total "
-              f"({self.format_size(analysis.free_space)} free)")
+        print(
+            f"\nDrive: {self.format_size(analysis.used_space)} used / "
+            f"{self.format_size(analysis.total_size)} total "
+            f"({self.format_size(analysis.free_space)} free)"
+        )
         print(f"Scanned: {analysis.file_count:,} files, {analysis.dir_count:,} directories")
         print(f"Scan time: {analysis.scan_time_ms}ms")
 
@@ -536,11 +576,15 @@ class SpaceAnalyzer:
         console.print(f"[bold cyan]{'='*60}[/bold cyan]")
 
         # Drive summary
-        console.print(f"\n[yellow]Drive:[/yellow] {self.format_size(analysis.used_space)} used / "
-                      f"{self.format_size(analysis.total_size)} total "
-                      f"([green]{self.format_size(analysis.free_space)} free[/green])")
-        console.print(f"[yellow]Scanned:[/yellow] {analysis.file_count:,} files, "
-                      f"{analysis.dir_count:,} directories in {analysis.scan_time_ms}ms")
+        console.print(
+            f"\n[yellow]Drive:[/yellow] {self.format_size(analysis.used_space)} used / "
+            f"{self.format_size(analysis.total_size)} total "
+            f"([green]{self.format_size(analysis.free_space)} free[/green])"
+        )
+        console.print(
+            f"[yellow]Scanned:[/yellow] {analysis.file_count:,} files, "
+            f"{analysis.dir_count:,} directories in {analysis.scan_time_ms}ms"
+        )
 
         # Huge files table
         if analysis.huge_files:
@@ -576,11 +620,7 @@ class SpaceAnalyzer:
         table.add_column("Files", width=10)
         table.add_column("Path", style="white")
         for d in analysis.largest_dirs[:10]:
-            table.add_row(
-                self.format_size(d.total_size),
-                str(d.file_count),
-                d.path
-            )
+            table.add_row(self.format_size(d.total_size), str(d.file_count), d.path)
         console.print(table)
 
 

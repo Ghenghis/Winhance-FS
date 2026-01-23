@@ -30,6 +30,7 @@ from loguru import logger
 
 class TransactionStatus(str, Enum):
     """Transaction status."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -39,6 +40,7 @@ class TransactionStatus(str, Enum):
 
 class OperationType(str, Enum):
     """File operation type."""
+
     MOVE = "move"
     COPY = "copy"
     RENAME = "rename"
@@ -49,6 +51,7 @@ class OperationType(str, Enum):
 @dataclass
 class FileTransaction:
     """A single file operation transaction."""
+
     id: str
     timestamp: datetime
     operation: OperationType
@@ -76,7 +79,9 @@ class FileTransaction:
         """Deserialize from JSON bytes."""
         obj = orjson.loads(data)
         obj["timestamp"] = datetime.fromisoformat(obj["timestamp"])
-        obj["completed_at"] = datetime.fromisoformat(obj["completed_at"]) if obj["completed_at"] else None
+        obj["completed_at"] = (
+            datetime.fromisoformat(obj["completed_at"]) if obj["completed_at"] else None
+        )
         obj["operation"] = OperationType(obj["operation"])
         obj["status"] = TransactionStatus(obj["status"])
         return cls(**obj)
@@ -162,9 +167,7 @@ class TransactionManager:
 
         try:
             # Check backup space
-            backup_used = sum(
-                f.stat().st_size for f in self.backup_dir.rglob("*") if f.is_file()
-            )
+            backup_used = sum(f.stat().st_size for f in self.backup_dir.rglob("*") if f.is_file())
             if backup_used > self.max_backup_size_gb * 1024**3:
                 self._cleanup_old_backups()
 
@@ -313,9 +316,7 @@ class TransactionManager:
         source = Path(source)
         dest = Path(dest)
 
-        tx = self.begin_transaction(
-            OperationType.MOVE, source, dest, create_backup, metadata
-        )
+        tx = self.begin_transaction(OperationType.MOVE, source, dest, create_backup, metadata)
 
         try:
             tx.status = TransactionStatus.IN_PROGRESS
@@ -563,10 +564,12 @@ class TransactionManager:
             lines.append(f'    -Backup "{tx.backup_path or ""}"')
             lines.append("")
 
-        lines.extend([
-            'Write-Host ""',
-            'Write-Host "Rollback complete!" -ForegroundColor Green',
-        ])
+        lines.extend(
+            [
+                'Write-Host ""',
+                'Write-Host "Rollback complete!" -ForegroundColor Green',
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -587,25 +590,27 @@ class TransactionManager:
             if tx.dest_path:
                 lines.append(f'if exist "{tx.dest_path}" (')
                 lines.append(f'    move /Y "{tx.dest_path}" "{tx.source_path}"')
-                lines.append('    echo   [OK] Restored')
-                lines.append(') else (')
+                lines.append("    echo   [OK] Restored")
+                lines.append(") else (")
                 if tx.backup_path:
                     lines.append(f'    if exist "{tx.backup_path}" (')
                     lines.append(f'        copy /Y "{tx.backup_path}" "{tx.source_path}"')
-                    lines.append('        echo   [OK] Restored from backup')
-                    lines.append('    ) else (')
-                    lines.append('        echo   [ERROR] No source found')
-                    lines.append('    )')
+                    lines.append("        echo   [OK] Restored from backup")
+                    lines.append("    ) else (")
+                    lines.append("        echo   [ERROR] No source found")
+                    lines.append("    )")
                 else:
-                    lines.append('    echo   [ERROR] No source found')
-                lines.append(')')
+                    lines.append("    echo   [ERROR] No source found")
+                lines.append(")")
             lines.append("")
 
-        lines.extend([
-            "echo.",
-            "echo Rollback complete!",
-            "pause",
-        ])
+        lines.extend(
+            [
+                "echo.",
+                "echo Rollback complete!",
+                "pause",
+            ]
+        )
 
         return "\n".join(lines)
 

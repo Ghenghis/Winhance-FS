@@ -24,22 +24,26 @@ from typing import TYPE_CHECKING, Any
 # Setup logger with fallback
 _logger: logging.Logger | None = None
 
+
 def _get_module_logger() -> logging.Logger:
     """Get logger with fallback."""
     global _logger
     if _logger is None:
         try:
             from nexus_ai.core.logging_config import get_logger
+
             _logger = get_logger("smart_filemanager")
         except ImportError:
             _logger = logging.getLogger("smart_filemanager")
     return _logger
+
 
 logger = _get_module_logger()
 
 
 class SafetyLevel(Enum):
     """File safety levels for move/delete operations."""
+
     CRITICAL = "critical"
     PROTECTED = "protected"
     INSTALLED = "installed"
@@ -56,6 +60,7 @@ def _get_classifier() -> Any:
     """Get file classifier with fallback."""
     try:
         from nexus_ai.tools.file_classifier import get_classifier
+
         return get_classifier()
     except ImportError:
         return None
@@ -65,6 +70,7 @@ def _get_organizer() -> Any:
     """Get realtime organizer with fallback."""
     try:
         from nexus_ai.tools.realtime_organizer import get_organizer
+
         return get_organizer()
     except ImportError:
         return None
@@ -72,6 +78,7 @@ def _get_organizer() -> Any:
 
 class GestureType(Enum):
     """Touch gesture types."""
+
     TAP = "tap"
     DOUBLE_TAP = "double_tap"
     LONG_PRESS = "long_press"
@@ -88,6 +95,7 @@ class GestureType(Enum):
 
 class ActionType(Enum):
     """File manager action types."""
+
     OPEN = "open"
     SELECT = "select"
     MULTI_SELECT = "multi_select"
@@ -113,6 +121,7 @@ class ActionType(Enum):
 
 class ViewMode(Enum):
     """File display modes."""
+
     GRID = "grid"
     LIST = "list"
     CARDS = "cards"
@@ -124,6 +133,7 @@ class ViewMode(Enum):
 @dataclass
 class GestureMapping:
     """Maps a gesture to an action."""
+
     gesture: GestureType
     action: ActionType
     context: str | None = None  # "file", "folder", "empty", "selection"
@@ -134,6 +144,7 @@ class GestureMapping:
 @dataclass
 class QuickAction:
     """A quick action for the action wheel."""
+
     id: str
     name: str
     icon: str
@@ -147,6 +158,7 @@ class QuickAction:
 @dataclass
 class FileCard:
     """Visual representation of a file for touch UI."""
+
     path: Path
     name: str
     extension: str
@@ -179,6 +191,7 @@ class FileCard:
 @dataclass
 class DropZone:
     """A drop zone for drag and drop operations."""
+
     id: str
     name: str
     icon: str
@@ -192,6 +205,7 @@ class DropZone:
 @dataclass
 class BreadcrumbItem:
     """A breadcrumb navigation item."""
+
     path: Path
     name: str
     icon: str = "folder"
@@ -201,6 +215,7 @@ class BreadcrumbItem:
 @dataclass
 class UndoAction:
     """An undoable action."""
+
     id: str
     timestamp: datetime
     action_type: ActionType
@@ -230,25 +245,48 @@ class GestureManager:
     DEFAULT_MAPPINGS = [
         # Basic operations
         GestureMapping(GestureType.TAP, ActionType.SELECT, "file", description="Select file"),
-        GestureMapping(GestureType.TAP, ActionType.NAVIGATE_BACK, "empty", description="Navigate to parent"),
+        GestureMapping(
+            GestureType.TAP, ActionType.NAVIGATE_BACK, "empty", description="Navigate to parent"
+        ),
         GestureMapping(GestureType.DOUBLE_TAP, ActionType.OPEN, "file", description="Open file"),
-        GestureMapping(GestureType.DOUBLE_TAP, ActionType.OPEN, "folder", description="Enter folder"),
-        GestureMapping(GestureType.LONG_PRESS, ActionType.MULTI_SELECT, "file", description="Start multi-select"),
-        GestureMapping(GestureType.LONG_PRESS, ActionType.QUICK_ACTION, "folder", description="Show quick actions"),
-
+        GestureMapping(
+            GestureType.DOUBLE_TAP, ActionType.OPEN, "folder", description="Enter folder"
+        ),
+        GestureMapping(
+            GestureType.LONG_PRESS,
+            ActionType.MULTI_SELECT,
+            "file",
+            description="Start multi-select",
+        ),
+        GestureMapping(
+            GestureType.LONG_PRESS,
+            ActionType.QUICK_ACTION,
+            "folder",
+            description="Show quick actions",
+        ),
         # Swipe operations (like mobile apps)
         GestureMapping(GestureType.SWIPE_RIGHT, ActionType.MOVE, "file", description="Move to..."),
-        GestureMapping(GestureType.SWIPE_LEFT, ActionType.DELETE, "file", description="Delete (with undo)"),
+        GestureMapping(
+            GestureType.SWIPE_LEFT, ActionType.DELETE, "file", description="Delete (with undo)"
+        ),
         GestureMapping(GestureType.SWIPE_UP, ActionType.SHARE, "file", description="Share file"),
-        GestureMapping(GestureType.SWIPE_DOWN, ActionType.PROPERTIES, "file", description="Show properties"),
-
+        GestureMapping(
+            GestureType.SWIPE_DOWN, ActionType.PROPERTIES, "file", description="Show properties"
+        ),
         # Navigation
-        GestureMapping(GestureType.TWO_FINGER_SWIPE, ActionType.NAVIGATE_BACK, description="Navigate back"),
-        GestureMapping(GestureType.PINCH_IN, ActionType.VIEW_CHANGE, description="Switch to list view"),
-        GestureMapping(GestureType.PINCH_OUT, ActionType.VIEW_CHANGE, description="Switch to grid view"),
-
+        GestureMapping(
+            GestureType.TWO_FINGER_SWIPE, ActionType.NAVIGATE_BACK, description="Navigate back"
+        ),
+        GestureMapping(
+            GestureType.PINCH_IN, ActionType.VIEW_CHANGE, description="Switch to list view"
+        ),
+        GestureMapping(
+            GestureType.PINCH_OUT, ActionType.VIEW_CHANGE, description="Switch to grid view"
+        ),
         # Preview
-        GestureMapping(GestureType.PINCH_OUT, ActionType.PREVIEW, "file", description="Preview file"),
+        GestureMapping(
+            GestureType.PINCH_OUT, ActionType.PREVIEW, "file", description="Preview file"
+        ),
     ]
 
     def __init__(self):
@@ -256,10 +294,7 @@ class GestureManager:
         self._custom_mappings: list[GestureMapping] = []
 
     def get_action(
-        self,
-        gesture: GestureType,
-        context: str,
-        modifier: str | None = None
+        self, gesture: GestureType, context: str, modifier: str | None = None
     ) -> ActionType | None:
         """Get the action for a gesture in a context."""
         # Check custom mappings first
@@ -275,11 +310,7 @@ class GestureManager:
         return None
 
     def _mapping_matches(
-        self,
-        mapping: GestureMapping,
-        gesture: GestureType,
-        context: str,
-        modifier: str | None
+        self, mapping: GestureMapping, gesture: GestureType, context: str, modifier: str | None
     ) -> bool:
         """Check if a mapping matches the gesture."""
         if mapping.gesture != gesture:
@@ -298,12 +329,14 @@ class GestureManager:
         """Get help text for all gestures."""
         help_items = []
         for mapping in self.mappings:
-            help_items.append({
-                "gesture": mapping.gesture.value,
-                "action": mapping.action.value,
-                "context": mapping.context or "anywhere",
-                "description": mapping.description,
-            })
+            help_items.append(
+                {
+                    "gesture": mapping.gesture.value,
+                    "action": mapping.action.value,
+                    "context": mapping.context or "anywhere",
+                    "description": mapping.description,
+                }
+            )
         return help_items
 
 
@@ -320,13 +353,26 @@ class QuickActionWheel:
 
     # Default quick actions
     DEFAULT_ACTIONS = [
-        QuickAction("open", "Open", "folder-open", ActionType.OPEN, shortcut="Enter", color="#4CAF50"),
+        QuickAction(
+            "open", "Open", "folder-open", ActionType.OPEN, shortcut="Enter", color="#4CAF50"
+        ),
         QuickAction("copy", "Copy", "copy", ActionType.COPY, shortcut="Ctrl+C", color="#2196F3"),
-        QuickAction("move", "Move", "folder-move", ActionType.MOVE, shortcut="Ctrl+X", color="#FF9800"),
-        QuickAction("delete", "Delete", "trash", ActionType.DELETE, shortcut="Del", color="#F44336"),
+        QuickAction(
+            "move", "Move", "folder-move", ActionType.MOVE, shortcut="Ctrl+X", color="#FF9800"
+        ),
+        QuickAction(
+            "delete", "Delete", "trash", ActionType.DELETE, shortcut="Del", color="#F44336"
+        ),
         QuickAction("rename", "Rename", "edit", ActionType.RENAME, shortcut="F2", color="#9C27B0"),
         QuickAction("share", "Share", "share", ActionType.SHARE, color="#00BCD4"),
-        QuickAction("properties", "Properties", "info", ActionType.PROPERTIES, shortcut="Alt+Enter", color="#607D8B"),
+        QuickAction(
+            "properties",
+            "Properties",
+            "info",
+            ActionType.PROPERTIES,
+            shortcut="Alt+Enter",
+            color="#607D8B",
+        ),
         QuickAction("compress", "Compress", "archive", ActionType.COMPRESS, color="#795548"),
     ]
 
@@ -336,9 +382,7 @@ class QuickActionWheel:
         self._max_recent = 8
 
     def get_actions_for_context(
-        self,
-        selected_items: list[FileCard],
-        is_single: bool = True
+        self, selected_items: list[FileCard], is_single: bool = True
     ) -> list[QuickAction]:
         """Get relevant quick actions for selection context."""
         available = []
@@ -348,17 +392,16 @@ class QuickActionWheel:
                 available.append(action)
 
         # Prioritize recent actions
-        available.sort(key=lambda a: (
-            -self._recent_actions.index(a.id) if a.id in self._recent_actions else 999
-        ))
+        available.sort(
+            key=lambda a: (
+                -self._recent_actions.index(a.id) if a.id in self._recent_actions else 999
+            )
+        )
 
         return available[:8]  # Max 8 in wheel
 
     def _is_action_available(
-        self,
-        action: QuickAction,
-        selected_items: list[FileCard],
-        is_single: bool
+        self, action: QuickAction, selected_items: list[FileCard], is_single: bool
     ) -> bool:
         """Check if action is available for selection."""
         if not action.enabled:
@@ -406,34 +449,16 @@ class DropZoneManager:
 
         self.zones = [
             DropZone(
-                "documents", "Documents", "file-text",
-                path=home / "Documents",
-                color="#2196F3"
+                "documents", "Documents", "file-text", path=home / "Documents", color="#2196F3"
             ),
+            DropZone("pictures", "Pictures", "image", path=home / "Pictures", color="#4CAF50"),
             DropZone(
-                "pictures", "Pictures", "image",
-                path=home / "Pictures",
-                color="#4CAF50"
+                "downloads", "Downloads", "download", path=home / "Downloads", color="#FF9800"
             ),
+            DropZone("desktop", "Desktop", "monitor", path=home / "Desktop", color="#9C27B0"),
+            DropZone("trash", "Delete", "trash", action=ActionType.DELETE, color="#F44336"),
             DropZone(
-                "downloads", "Downloads", "download",
-                path=home / "Downloads",
-                color="#FF9800"
-            ),
-            DropZone(
-                "desktop", "Desktop", "monitor",
-                path=home / "Desktop",
-                color="#9C27B0"
-            ),
-            DropZone(
-                "trash", "Delete", "trash",
-                action=ActionType.DELETE,
-                color="#F44336"
-            ),
-            DropZone(
-                "compress", "Compress", "archive",
-                action=ActionType.COMPRESS,
-                color="#795548"
+                "compress", "Compress", "archive", action=ActionType.COMPRESS, color="#795548"
             ),
         ]
 
@@ -517,7 +542,9 @@ class SmartFileManager:
         self.on_navigate: Callable[[Path], None] | None = None
         self.on_selection_change: Callable[[list[FileCard]], None] | None = None
         self.on_action_complete: Callable[[ActionType, bool], None] | None = None
-        self.on_confirmation_needed: Callable[[str, str, Callable[[bool], None]], None] | None = None
+        self.on_confirmation_needed: Callable[[str, str, Callable[[bool], None]], None] | None = (
+            None
+        )
 
     def navigate_to(self, path: Path) -> list[FileCard]:
         """Navigate to a directory and return file cards."""
@@ -528,7 +555,7 @@ class SmartFileManager:
 
         # Update history
         if self.current_path != path:
-            self.navigation_history = self.navigation_history[:self.history_index + 1]
+            self.navigation_history = self.navigation_history[: self.history_index + 1]
             self.navigation_history.append(path)
             self.history_index = len(self.navigation_history) - 1
 
@@ -617,7 +644,6 @@ class SmartFileManager:
             ".pptx": "file-powerpoint",
             ".txt": "file-text",
             ".md": "file-text",
-
             # Images
             ".jpg": "image",
             ".jpeg": "image",
@@ -625,7 +651,6 @@ class SmartFileManager:
             ".gif": "image",
             ".bmp": "image",
             ".svg": "image",
-
             # Media
             ".mp3": "music",
             ".wav": "music",
@@ -633,19 +658,16 @@ class SmartFileManager:
             ".mp4": "video",
             ".mkv": "video",
             ".avi": "video",
-
             # Archives
             ".zip": "archive",
             ".rar": "archive",
             ".7z": "archive",
-
             # Code
             ".py": "code",
             ".js": "code",
             ".ts": "code",
             ".html": "code",
             ".css": "code",
-
             # Executables
             ".exe": "application",
             ".msi": "application",
@@ -690,10 +712,7 @@ class SmartFileManager:
         return folders + files
 
     def handle_gesture(
-        self,
-        gesture: GestureType,
-        target: FileCard | None = None,
-        modifier: str | None = None
+        self, gesture: GestureType, target: FileCard | None = None, modifier: str | None = None
     ) -> ActionType | None:
         """Handle a touch/mouse gesture."""
         context = "empty"
@@ -708,13 +727,14 @@ class SmartFileManager:
         return action
 
     def _execute_action(
-        self,
-        action: ActionType,
-        targets: list[FileCard],
-        destination: Path | None = None
+        self, action: ActionType, targets: list[FileCard], destination: Path | None = None
     ) -> bool:
         """Execute a file action."""
-        if not targets and action not in [ActionType.NAVIGATE_BACK, ActionType.NAVIGATE_FORWARD, ActionType.REFRESH]:
+        if not targets and action not in [
+            ActionType.NAVIGATE_BACK,
+            ActionType.NAVIGATE_FORWARD,
+            ActionType.REFRESH,
+        ]:
             targets = self.selected_items
 
         try:
@@ -758,6 +778,7 @@ class SmartFileManager:
         else:
             # Open with default application
             import os
+
             os.startfile(str(target.path))
 
         return True
@@ -793,8 +814,7 @@ class SmartFileManager:
 
         # Request confirmation for cautious files
         needs_confirm = any(
-            t.safety_level in [SafetyLevel.INSTALLED, SafetyLevel.CAUTIOUS]
-            for t in targets
+            t.safety_level in [SafetyLevel.INSTALLED, SafetyLevel.CAUTIOUS] for t in targets
         )
 
         if needs_confirm and self.on_confirmation_needed:
@@ -807,9 +827,7 @@ class SmartFileManager:
                     self._perform_delete(targets)
 
             self.on_confirmation_needed(
-                "Confirm Delete",
-                f"Delete these files?\n\n{file_list}",
-                on_confirm
+                "Confirm Delete", f"Delete these files?\n\n{file_list}", on_confirm
             )
             return True
 
@@ -1007,19 +1025,25 @@ class SmartFileManager:
         path = self.current_path
 
         while path != path.parent:
-            crumbs.insert(0, BreadcrumbItem(
-                path=path,
-                name=path.name or str(path),
-                is_current=(path == self.current_path),
-            ))
+            crumbs.insert(
+                0,
+                BreadcrumbItem(
+                    path=path,
+                    name=path.name or str(path),
+                    is_current=(path == self.current_path),
+                ),
+            )
             path = path.parent
 
         # Add root
-        crumbs.insert(0, BreadcrumbItem(
-            path=path,
-            name=str(path),
-            icon="hard-drive",
-        ))
+        crumbs.insert(
+            0,
+            BreadcrumbItem(
+                path=path,
+                name=str(path),
+                icon="hard-drive",
+            ),
+        )
 
         return crumbs
 

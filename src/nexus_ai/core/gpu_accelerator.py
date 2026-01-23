@@ -24,6 +24,7 @@ logger = get_logger("gpu_accelerator")
 @dataclass
 class GPUInfo:
     """GPU device information."""
+
     device_id: int
     name: str
     compute_capability: tuple
@@ -35,6 +36,7 @@ class GPUInfo:
 @dataclass
 class GPUConfig:
     """GPU acceleration configuration."""
+
     enabled: bool = True
     device_id: int = 0
     memory_fraction: float = 0.9
@@ -68,6 +70,7 @@ class GPUAccelerator:
         """Initialize GPU resources."""
         try:
             import torch
+
             self._torch = torch
 
             if torch.cuda.is_available() and self.config.enabled:
@@ -76,8 +79,7 @@ class GPUAccelerator:
 
                 # Set memory fraction
                 torch.cuda.set_per_process_memory_fraction(
-                    self.config.memory_fraction,
-                    self.config.device_id
+                    self.config.memory_fraction, self.config.device_id
                 )
 
                 # Get GPU info
@@ -221,6 +223,7 @@ class GPUAccelerator:
                 if algorithm == "xxhash":
                     try:
                         import xxhash
+
                         hasher = xxhash.xxh64()
                     except ImportError:
                         hasher = hashlib.md5()

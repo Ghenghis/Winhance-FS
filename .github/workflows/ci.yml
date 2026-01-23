@@ -110,19 +110,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy pytest pytest-asyncio
+          pip install ruff black pytest pytest-asyncio pytest-timeout
 
       - name: Run Ruff linter
-        run: ruff check src/nexus_ai src/nexus_cli src/nexus_mcp --ignore E501
-        continue-on-error: true
+        run: ruff check src/nexus_ai src/nexus_cli src/nexus_mcp
 
       - name: Check Black formatting
         run: black --check src/nexus_ai src/nexus_cli src/nexus_mcp --line-length 100
-        continue-on-error: true
 
       - name: Run Python tests
-        run: pytest tests/ -v --tb=short
-        continue-on-error: true
+        run: pytest tests/ -v --tb=short --timeout=60 -m "not slow and not integration and not benchmark"
+        env:
+          SKIP_SLOW_TESTS: "1"
+          SKIP_INTEGRATION_TESTS: "1"
 
   # Summary job
   ci-complete:

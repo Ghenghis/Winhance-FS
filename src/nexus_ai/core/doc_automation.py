@@ -27,6 +27,7 @@ logger = get_logger("doc_automation")
 
 class DocType(Enum):
     """Types of documentation."""
+
     README = "readme"
     API_REFERENCE = "api_reference"
     ARCHITECTURE = "architecture"
@@ -39,6 +40,7 @@ class DocType(Enum):
 
 class DiagramType(Enum):
     """Types of diagrams."""
+
     FLOWCHART = "flowchart"
     SEQUENCE = "sequence"
     CLASS_DIAGRAM = "class"
@@ -51,6 +53,7 @@ class DiagramType(Enum):
 @dataclass
 class CodeElement:
     """Represents a code element (class, function, module)."""
+
     name: str
     type: str  # "class", "function", "module", "method"
     file_path: str
@@ -64,6 +67,7 @@ class CodeElement:
 @dataclass
 class IssueEntry:
     """Represents a detected issue."""
+
     id: str
     type: str  # "bug", "warning", "improvement", "missing"
     severity: str  # "critical", "high", "medium", "low"
@@ -77,6 +81,7 @@ class IssueEntry:
 @dataclass
 class DocSection:
     """A section of documentation."""
+
     title: str
     content: str
     order: int = 0
@@ -143,14 +148,16 @@ class CodeAnalyzer:
 
         except Exception as e:
             logger.error(f"Failed to analyze {file_path}: {e}")
-            self.issues.append(IssueEntry(
-                id=f"parse_error_{file_path.name}",
-                type="bug",
-                severity="high",
-                file_path=str(file_path),
-                line_number=None,
-                description=f"Failed to parse file: {e}",
-            ))
+            self.issues.append(
+                IssueEntry(
+                    id=f"parse_error_{file_path.name}",
+                    type="bug",
+                    severity="high",
+                    file_path=str(file_path),
+                    line_number=None,
+                    description=f"Failed to parse file: {e}",
+                )
+            )
 
         return elements
 
@@ -177,41 +184,47 @@ class CodeAnalyzer:
             # Missing docstrings
             if isinstance(node, ast.ClassDef | ast.FunctionDef):
                 if not ast.get_docstring(node):
-                    self.issues.append(IssueEntry(
-                        id=f"missing_doc_{file_path.name}_{node.name}",
-                        type="warning",
-                        severity="medium",
-                        file_path=str(file_path),
-                        line_number=node.lineno,
-                        description=f"Missing docstring for {node.__class__.__name__} '{node.name}'",
-                        suggestion="Add a docstring describing the purpose and usage",
-                    ))
+                    self.issues.append(
+                        IssueEntry(
+                            id=f"missing_doc_{file_path.name}_{node.name}",
+                            type="warning",
+                            severity="medium",
+                            file_path=str(file_path),
+                            line_number=node.lineno,
+                            description=f"Missing docstring for {node.__class__.__name__} '{node.name}'",
+                            suggestion="Add a docstring describing the purpose and usage",
+                        )
+                    )
 
             # TODO comments
             if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
                 if isinstance(node.value.value, str) and "TODO" in node.value.value:
-                    self.issues.append(IssueEntry(
-                        id=f"todo_{file_path.name}_{node.lineno}",
-                        type="improvement",
-                        severity="low",
-                        file_path=str(file_path),
-                        line_number=node.lineno,
-                        description=node.value.value,
-                    ))
+                    self.issues.append(
+                        IssueEntry(
+                            id=f"todo_{file_path.name}_{node.lineno}",
+                            type="improvement",
+                            severity="low",
+                            file_path=str(file_path),
+                            line_number=node.lineno,
+                            description=node.value.value,
+                        )
+                    )
 
         # Check for TODO/FIXME in comments
         for i, line in enumerate(lines, 1):
             if "#" in line:
-                comment = line[line.index("#"):]
+                comment = line[line.index("#") :]
                 if "TODO" in comment or "FIXME" in comment:
-                    self.issues.append(IssueEntry(
-                        id=f"comment_{file_path.name}_{i}",
-                        type="improvement" if "TODO" in comment else "bug",
-                        severity="low" if "TODO" in comment else "medium",
-                        file_path=str(file_path),
-                        line_number=i,
-                        description=comment.strip("# "),
-                    ))
+                    self.issues.append(
+                        IssueEntry(
+                            id=f"comment_{file_path.name}_{i}",
+                            type="improvement" if "TODO" in comment else "bug",
+                            severity="low" if "TODO" in comment else "medium",
+                            file_path=str(file_path),
+                            line_number=i,
+                            description=comment.strip("# "),
+                        )
+                    )
 
     def analyze_rust_file(self, file_path: Path) -> list[CodeElement]:
         """Analyze a Rust file (basic parsing)."""
@@ -222,35 +235,41 @@ class CodeAnalyzer:
 
             # Basic regex patterns for Rust
             # Functions
-            for match in re.finditer(r'(pub\s+)?(async\s+)?fn\s+(\w+)\s*\([^)]*\)', source):
-                line_num = source[:match.start()].count('\n') + 1
-                elements.append(CodeElement(
-                    name=match.group(3),
-                    type="function",
-                    file_path=str(file_path),
-                    line_number=line_num,
-                    signature=match.group(0),
-                ))
+            for match in re.finditer(r"(pub\s+)?(async\s+)?fn\s+(\w+)\s*\([^)]*\)", source):
+                line_num = source[: match.start()].count("\n") + 1
+                elements.append(
+                    CodeElement(
+                        name=match.group(3),
+                        type="function",
+                        file_path=str(file_path),
+                        line_number=line_num,
+                        signature=match.group(0),
+                    )
+                )
 
             # Structs
-            for match in re.finditer(r'(pub\s+)?struct\s+(\w+)', source):
-                line_num = source[:match.start()].count('\n') + 1
-                elements.append(CodeElement(
-                    name=match.group(2),
-                    type="struct",
-                    file_path=str(file_path),
-                    line_number=line_num,
-                ))
+            for match in re.finditer(r"(pub\s+)?struct\s+(\w+)", source):
+                line_num = source[: match.start()].count("\n") + 1
+                elements.append(
+                    CodeElement(
+                        name=match.group(2),
+                        type="struct",
+                        file_path=str(file_path),
+                        line_number=line_num,
+                    )
+                )
 
             # Impl blocks
-            for match in re.finditer(r'impl\s+(\w+)', source):
-                line_num = source[:match.start()].count('\n') + 1
-                elements.append(CodeElement(
-                    name=match.group(1),
-                    type="impl",
-                    file_path=str(file_path),
-                    line_number=line_num,
-                ))
+            for match in re.finditer(r"impl\s+(\w+)", source):
+                line_num = source[: match.start()].count("\n") + 1
+                elements.append(
+                    CodeElement(
+                        name=match.group(1),
+                        type="impl",
+                        file_path=str(file_path),
+                        line_number=line_num,
+                    )
+                )
 
         except Exception as e:
             logger.error(f"Failed to analyze Rust file {file_path}: {e}")
@@ -265,25 +284,34 @@ class CodeAnalyzer:
             source = file_path.read_text(encoding="utf-8")
 
             # Classes
-            for match in re.finditer(r'(public|internal|private)?\s*(class|interface)\s+(\w+)', source):
-                line_num = source[:match.start()].count('\n') + 1
-                elements.append(CodeElement(
-                    name=match.group(3),
-                    type=match.group(2),
-                    file_path=str(file_path),
-                    line_number=line_num,
-                ))
+            for match in re.finditer(
+                r"(public|internal|private)?\s*(class|interface)\s+(\w+)", source
+            ):
+                line_num = source[: match.start()].count("\n") + 1
+                elements.append(
+                    CodeElement(
+                        name=match.group(3),
+                        type=match.group(2),
+                        file_path=str(file_path),
+                        line_number=line_num,
+                    )
+                )
 
             # Methods
-            for match in re.finditer(r'(public|private|protected|internal)?\s*(async\s+)?([\w<>]+)\s+(\w+)\s*\([^)]*\)', source):
-                line_num = source[:match.start()].count('\n') + 1
-                elements.append(CodeElement(
-                    name=match.group(4),
-                    type="method",
-                    file_path=str(file_path),
-                    line_number=line_num,
-                    signature=match.group(0),
-                ))
+            for match in re.finditer(
+                r"(public|private|protected|internal)?\s*(async\s+)?([\w<>]+)\s+(\w+)\s*\([^)]*\)",
+                source,
+            ):
+                line_num = source[: match.start()].count("\n") + 1
+                elements.append(
+                    CodeElement(
+                        name=match.group(4),
+                        type="method",
+                        file_path=str(file_path),
+                        line_number=line_num,
+                        signature=match.group(0),
+                    )
+                )
 
         except Exception as e:
             logger.error(f"Failed to analyze C# file {file_path}: {e}")
@@ -297,7 +325,9 @@ class DiagramGenerator:
     def __init__(self, ai_manager=None):
         self.ai_manager = ai_manager or get_ai_manager()
 
-    def generate_mermaid_flowchart(self, elements: list[CodeElement], title: str = "Code Flow") -> str:
+    def generate_mermaid_flowchart(
+        self, elements: list[CodeElement], title: str = "Code Flow"
+    ) -> str:
         """Generate a Mermaid flowchart from code elements."""
         lines = ["```mermaid", "flowchart TD", f"    subgraph {title}"]
 
@@ -374,7 +404,10 @@ Output only the Mermaid code block, no explanation."""
 
         try:
             messages = [
-                AIMessage(role="system", content="You are a diagram expert. Generate clean Mermaid diagrams."),
+                AIMessage(
+                    role="system",
+                    content="You are a diagram expert. Generate clean Mermaid diagrams.",
+                ),
                 AIMessage(role="user", content=prompt),
             ]
             response = await self.ai_manager.chat(messages)
@@ -441,7 +474,9 @@ class DocGenerator:
 
         for severity in ["critical", "high", "medium", "low"]:
             if severity in by_severity:
-                sections.append(f"\n## {severity.upper()} Severity ({len(by_severity[severity])})\n")
+                sections.append(
+                    f"\n## {severity.upper()} Severity ({len(by_severity[severity])})\n"
+                )
                 for issue in by_severity[severity]:
                     sections.append(f"### {issue.type.upper()}: {issue.description[:50]}...\n")
                     sections.append(f"- **File:** `{issue.file_path}`")
@@ -501,7 +536,10 @@ class DocGenerator:
 
         try:
             messages = [
-                AIMessage(role="system", content="You are a technical writer. Generate clear, comprehensive documentation."),
+                AIMessage(
+                    role="system",
+                    content="You are a technical writer. Generate clear, comprehensive documentation.",
+                ),
                 AIMessage(role="user", content=f"{prompt}\n\n```\n{code_snippet}\n```"),
             ]
             response = await self.ai_manager.chat(messages)

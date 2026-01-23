@@ -202,12 +202,18 @@ class TestSmartFileManager:
 
         manager = SmartFileManager()
 
-        # Navigate - each unique path should be added to history
-        manager.navigate_to(Path.home())
-
-        # History should have at least one entry after navigation
-        assert len(manager.navigation_history) >= 1
-        assert manager.history_index >= 0
+        # Navigate to a DIFFERENT path (current_path starts as home)
+        # Only navigation to different paths adds to history
+        documents_path = Path.home() / "Documents"
+        if documents_path.exists():
+            manager.navigate_to(documents_path)
+            # History should have at least one entry after navigation to different path
+            assert len(manager.navigation_history) >= 1
+            assert manager.history_index >= 0
+        else:
+            # Fallback: navigate back to root then to home
+            manager.navigate_to(Path("/"))
+            assert len(manager.navigation_history) >= 1
 
     def test_navigate_back(self):
         """Test navigate back functionality."""

@@ -41,6 +41,7 @@ def _get_module_logger() -> logging.Logger:
     if _logger is None:
         try:
             from nexus_ai.core.logging_config import get_logger
+
             _logger = get_logger("realtime_organizer")
         except ImportError:
             _logger = logging.getLogger("realtime_organizer")
@@ -52,6 +53,7 @@ logger = _get_module_logger()
 
 class SafetyLevel(Enum):
     """File safety levels."""
+
     CRITICAL = "critical"
     PROTECTED = "protected"
     INSTALLED = "installed"
@@ -62,6 +64,7 @@ class SafetyLevel(Enum):
 
 class FileOrigin(Enum):
     """Where a file came from."""
+
     WINDOWS_SYSTEM = "windows_system"
     WINDOWS_UPDATE = "windows_update"
     DRIVER = "driver"
@@ -78,6 +81,7 @@ def get_classifier() -> Any:
     """Get file classifier with fallback."""
     try:
         from nexus_ai.tools.file_classifier import get_classifier as _get_classifier
+
         return _get_classifier()
     except ImportError:
         return None
@@ -85,6 +89,7 @@ def get_classifier() -> Any:
 
 class OrganizationAction(Enum):
     """Actions the organizer can take."""
+
     MOVE = "move"
     COPY = "copy"
     RENAME = "rename"
@@ -97,15 +102,17 @@ class OrganizationAction(Enum):
 
 class ConfirmationLevel(Enum):
     """When to ask for confirmation."""
-    NEVER = "never"           # Fully automatic
-    CAUTIOUS = "cautious"     # Ask for uncertain files
-    ALWAYS = "always"         # Always ask
-    LEARNING = "learning"     # Ask initially, learn preferences
+
+    NEVER = "never"  # Fully automatic
+    CAUTIOUS = "cautious"  # Ask for uncertain files
+    ALWAYS = "always"  # Always ask
+    LEARNING = "learning"  # Ask initially, learn preferences
 
 
 @dataclass
 class OrganizationRule:
     """Rule for organizing files."""
+
     id: str
     name: str
     enabled: bool = True
@@ -133,6 +140,7 @@ class OrganizationRule:
 @dataclass
 class OrganizationDecision:
     """A decision about what to do with a file."""
+
     file_path: Path
     rule_id: str | None
     action: OrganizationAction
@@ -159,6 +167,7 @@ class OrganizationDecision:
 @dataclass
 class UserPreference:
     """Learned user preference for organization."""
+
     pattern: str  # What triggered this preference
     action: OrganizationAction
     destination: str | None
@@ -317,9 +326,7 @@ class RealtimeOrganizer:
                 with open(self.config_path) as f:
                     config = json.load(f)
                     # Load rules
-                    self.rules = [
-                        OrganizationRule(**r) for r in config.get("rules", [])
-                    ]
+                    self.rules = [OrganizationRule(**r) for r in config.get("rules", [])]
                     # Load preferences
                     for key, pref in config.get("preferences", {}).items():
                         self.preferences[key] = UserPreference(**pref)
@@ -537,13 +544,12 @@ class RealtimeOrganizer:
         # Use extension and parent folder as key
         return f"{path.suffix.lower()}:{path.parent.name.lower()}"
 
-    def _match_rule(self, path: Path, classification: FileClassification) -> OrganizationRule | None:
+    def _match_rule(
+        self, path: Path, classification: FileClassification
+    ) -> OrganizationRule | None:
         """Find matching rule for a file."""
         # Sort rules by priority
-        sorted_rules = sorted(
-            [r for r in self.rules if r.enabled],
-            key=lambda r: -r.priority
-        )
+        sorted_rules = sorted([r for r in self.rules if r.enabled], key=lambda r: -r.priority)
 
         for rule in sorted_rules:
             if self._rule_matches(rule, path, classification):
@@ -551,7 +557,9 @@ class RealtimeOrganizer:
 
         return None
 
-    def _rule_matches(self, rule: OrganizationRule, path: Path, classification: FileClassification) -> bool:
+    def _rule_matches(
+        self, rule: OrganizationRule, path: Path, classification: FileClassification
+    ) -> bool:
         """Check if a rule matches a file."""
         # Check extension
         if rule.extensions:
@@ -561,6 +569,7 @@ class RealtimeOrganizer:
         # Check name patterns
         if rule.name_patterns:
             import fnmatch
+
             matched = False
             for pattern in rule.name_patterns:
                 if fnmatch.fnmatch(path.name.lower(), pattern.lower()):
@@ -783,6 +792,7 @@ class RealtimeOrganizer:
         try:
             # Move to trash instead of permanent delete
             import send2trash
+
             send2trash.send2trash(str(decision.file_path))
 
             decision.executed_at = datetime.now()
@@ -832,10 +842,10 @@ class RealtimeOrganizer:
 
             # Extract based on type
             if src.suffix.lower() == ".zip":
-                with zipfile.ZipFile(src, 'r') as zf:
+                with zipfile.ZipFile(src, "r") as zf:
                     zf.extractall(extract_dir)
             elif src.suffix.lower() in [".tar", ".gz", ".tgz", ".bz2"]:
-                with tarfile.open(src, 'r:*') as tf:
+                with tarfile.open(src, "r:*") as tf:
                     tf.extractall(extract_dir)
             elif src.suffix.lower() in [".7z", ".rar"]:
                 logger.warning(f"7z/rar extraction requires additional tools: {src}")

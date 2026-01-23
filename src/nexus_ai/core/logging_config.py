@@ -26,6 +26,7 @@ from loguru import logger
 
 class LogLevel(Enum):
     """Log levels with numeric values."""
+
     TRACE = 5
     DEBUG = 10
     INFO = 20
@@ -38,9 +39,12 @@ class LogLevel(Enum):
 @dataclass
 class LogConfig:
     """Logging configuration."""
+
     console_enabled: bool = True
     console_level: LogLevel = LogLevel.INFO
-    console_format: str = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+    console_format: str = (
+        "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+    )
 
     file_enabled: bool = True
     file_level: LogLevel = LogLevel.DEBUG
@@ -243,7 +247,9 @@ def log_function_call(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         func_logger = get_logger(func.__module__)
-        func_logger.debug(f"Calling {func.__name__}", args=str(args)[:100], kwargs=str(kwargs)[:100])
+        func_logger.debug(
+            f"Calling {func.__name__}", args=str(args)[:100], kwargs=str(kwargs)[:100]
+        )
         try:
             result = func(*args, **kwargs)
             func_logger.debug(f"Completed {func.__name__}", result_type=type(result).__name__)
@@ -262,7 +268,9 @@ def log_async_function_call(func):
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         func_logger = get_logger(func.__module__)
-        func_logger.debug(f"Calling async {func.__name__}", args=str(args)[:100], kwargs=str(kwargs)[:100])
+        func_logger.debug(
+            f"Calling async {func.__name__}", args=str(args)[:100], kwargs=str(kwargs)[:100]
+        )
         try:
             result = await func(*args, **kwargs)
             func_logger.debug(f"Completed async {func.__name__}", result_type=type(result).__name__)

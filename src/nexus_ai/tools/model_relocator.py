@@ -27,6 +27,7 @@ from loguru import logger
 @dataclass
 class ModelInfo:
     """Information about a model file."""
+
     path: str
     name: str
     size: int
@@ -39,6 +40,7 @@ class ModelInfo:
 @dataclass
 class RelocationPlan:
     """Plan for relocating models."""
+
     source_dir: str
     dest_dir: str
     models: list[ModelInfo] = field(default_factory=list)
@@ -50,6 +52,7 @@ class RelocationPlan:
 @dataclass
 class RelocationResult:
     """Result of a relocation operation."""
+
     model: ModelInfo
     success: bool
     new_path: str | None = None
@@ -130,14 +133,17 @@ class ModelRelocator:
         # Check admin privileges for symlinks
         self.has_symlink_privilege = self._check_symlink_privilege()
 
-        logger.info(f"ModelRelocator initialized: user_dir={self.user_dir}, "
-                    f"symlink_privilege={self.has_symlink_privilege}")
+        logger.info(
+            f"ModelRelocator initialized: user_dir={self.user_dir}, "
+            f"symlink_privilege={self.has_symlink_privilege}"
+        )
 
     def _check_symlink_privilege(self) -> bool:
         """Check if we have privilege to create symlinks."""
         try:
             # Try to check for admin or developer mode
             import subprocess
+
             subprocess.run(
                 ["fsutil", "behavior", "query", "SymlinkEvaluation"],
                 capture_output=True,
@@ -184,7 +190,9 @@ class ModelRelocator:
         """
         models: list[ModelInfo] = []
 
-        locations = self.MODEL_LOCATIONS if app is None else {app: self.MODEL_LOCATIONS.get(app, [])}
+        locations = (
+            self.MODEL_LOCATIONS if app is None else {app: self.MODEL_LOCATIONS.get(app, [])}
+        )
 
         for app_name, paths in locations.items():
             for rel_path in paths:
@@ -202,14 +210,16 @@ class ModelRelocator:
                         if ext in self.MODEL_EXTENSIONS:
                             try:
                                 stat = file_path.stat()
-                                models.append(ModelInfo(
-                                    path=str(file_path),
-                                    name=file,
-                                    size=stat.st_size,
-                                    format=self.MODEL_EXTENSIONS[ext],
-                                    app=app_name,
-                                    modified=datetime.fromtimestamp(stat.st_mtime),
-                                ))
+                                models.append(
+                                    ModelInfo(
+                                        path=str(file_path),
+                                        name=file,
+                                        size=stat.st_size,
+                                        format=self.MODEL_EXTENSIONS[ext],
+                                        app=app_name,
+                                        modified=datetime.fromtimestamp(stat.st_mtime),
+                                    )
+                                )
                             except (PermissionError, OSError) as e:
                                 logger.debug(f"Cannot access {file_path}: {e}")
 
@@ -249,10 +259,9 @@ class ModelRelocator:
         all_models = self.scan_models()
 
         # Filter models
-        models = [
-            m for m in all_models
-            if m.size >= min_size and (apps is None or m.app in apps)
-        ][:max_models]
+        models = [m for m in all_models if m.size >= min_size and (apps is None or m.app in apps)][
+            :max_models
+        ]
 
         plan = RelocationPlan(
             source_dir=str(self.user_dir),
@@ -263,8 +272,10 @@ class ModelRelocator:
             verify_after_move=self.verify_hashes,
         )
 
-        logger.info(f"Created relocation plan: {len(models)} models, "
-                    f"{plan.total_size / 1024**3:.2f} GB to {dest_base}")
+        logger.info(
+            f"Created relocation plan: {len(models)} models, "
+            f"{plan.total_size / 1024**3:.2f} GB to {dest_base}"
+        )
 
         return plan
 
@@ -295,6 +306,7 @@ class ModelRelocator:
         total = len(plan.models)
         for i, model in enumerate(plan.models):
             import time
+
             start = time.time()
 
             source = Path(model.path)
@@ -328,7 +340,7 @@ class ModelRelocator:
                     # Verify hash after move
                     if plan.verify_after_move and source_hash:
                         dest_hash = self._compute_hash(dest_path)
-                        result.verified = (source_hash == dest_hash)
+                        result.verified = source_hash == dest_hash
                         if not result.verified:
                             raise ValueError("Hash mismatch after move!")
 
@@ -357,8 +369,10 @@ class ModelRelocator:
         # Summary
         success_count = sum(1 for r in results if r.success)
         total_moved = sum(r.model.size for r in results if r.success)
-        logger.info(f"Relocation complete: {success_count}/{total} models, "
-                    f"{total_moved / 1024**3:.2f} GB moved")
+        logger.info(
+            f"Relocation complete: {success_count}/{total} models, "
+            f"{total_moved / 1024**3:.2f} GB moved"
+        )
 
         return results
 

@@ -28,16 +28,18 @@ logger = get_logger("file_classifier")
 
 class SafetyLevel(Enum):
     """File safety levels for move/delete operations."""
-    CRITICAL = "critical"      # System critical - NEVER touch
-    PROTECTED = "protected"    # Windows protected - requires admin
-    INSTALLED = "installed"    # Part of installed app - warn user
-    CAUTIOUS = "cautious"      # Might be important - ask user
-    SAFE = "safe"              # User file - safe to move
-    TEMPORARY = "temporary"    # Temp/cache - safe to delete
+
+    CRITICAL = "critical"  # System critical - NEVER touch
+    PROTECTED = "protected"  # Windows protected - requires admin
+    INSTALLED = "installed"  # Part of installed app - warn user
+    CAUTIOUS = "cautious"  # Might be important - ask user
+    SAFE = "safe"  # User file - safe to move
+    TEMPORARY = "temporary"  # Temp/cache - safe to delete
 
 
 class FileOrigin(Enum):
     """Where a file came from."""
+
     WINDOWS_SYSTEM = "windows_system"
     WINDOWS_UPDATE = "windows_update"
     DRIVER = "driver"
@@ -53,6 +55,7 @@ class FileOrigin(Enum):
 @dataclass
 class FileClassification:
     """Complete classification of a file."""
+
     path: Path
     safety_level: SafetyLevel
     origin: FileOrigin
@@ -84,6 +87,7 @@ class FileClassification:
 @dataclass
 class InstalledApp:
     """Information about an installed application."""
+
     name: str
     install_path: Path
     publisher: str | None = None
@@ -117,19 +121,52 @@ class WindowsSystemDetector:
 
     # Protected Windows folders
     PROTECTED_FOLDERS = {
-        "System32", "SysWOW64", "WinSxS", "assembly", "Boot",
-        "Fonts", "Globalization", "IME", "Installer", "Logs",
-        "Microsoft.NET", "Panther", "PolicyDefinitions", "Prefetch",
-        "Registration", "Resources", "SchCache", "security",
-        "ServiceProfiles", "servicing", "Setup", "SoftwareDistribution",
-        "System", "SystemResources", "TAPI", "Tasks", "Temp", "tracing",
-        "WaaS", "Web", "Vss",
+        "System32",
+        "SysWOW64",
+        "WinSxS",
+        "assembly",
+        "Boot",
+        "Fonts",
+        "Globalization",
+        "IME",
+        "Installer",
+        "Logs",
+        "Microsoft.NET",
+        "Panther",
+        "PolicyDefinitions",
+        "Prefetch",
+        "Registration",
+        "Resources",
+        "SchCache",
+        "security",
+        "ServiceProfiles",
+        "servicing",
+        "Setup",
+        "SoftwareDistribution",
+        "System",
+        "SystemResources",
+        "TAPI",
+        "Tasks",
+        "Temp",
+        "tracing",
+        "WaaS",
+        "Web",
+        "Vss",
     }
 
     # System file extensions
     SYSTEM_EXTENSIONS = {
-        ".sys", ".dll", ".exe", ".drv", ".ocx", ".cpl", ".msc",
-        ".inf", ".cat", ".mum", ".manifest",
+        ".sys",
+        ".dll",
+        ".exe",
+        ".drv",
+        ".ocx",
+        ".cpl",
+        ".msc",
+        ".inf",
+        ".cat",
+        ".mum",
+        ".manifest",
     }
 
     # Driver paths
@@ -141,7 +178,9 @@ class WindowsSystemDetector:
     def __init__(self):
         self.windows_root = Path(os.environ.get("SYSTEMROOT", "C:\\Windows"))
         self.program_files = Path(os.environ.get("PROGRAMFILES", "C:\\Program Files"))
-        self.program_files_x86 = Path(os.environ.get("PROGRAMFILES(X86)", "C:\\Program Files (x86)"))
+        self.program_files_x86 = Path(
+            os.environ.get("PROGRAMFILES(X86)", "C:\\Program Files (x86)")
+        )
         self._system_file_cache: dict[str, bool] = {}
 
     def is_system_path(self, path: Path) -> bool:
@@ -452,19 +491,55 @@ class UserFileDetector:
 
     # User-created content indicators
     USER_CONTENT_EXTENSIONS = {
-        ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-        ".txt", ".rtf", ".pdf", ".odt", ".ods", ".odp",
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff",
-        ".mp3", ".wav", ".flac", ".m4a", ".aac",
-        ".mp4", ".mov", ".avi", ".mkv", ".wmv",
-        ".psd", ".ai", ".sketch", ".fig",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        ".txt",
+        ".rtf",
+        ".pdf",
+        ".odt",
+        ".ods",
+        ".odp",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".tiff",
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".m4a",
+        ".aac",
+        ".mp4",
+        ".mov",
+        ".avi",
+        ".mkv",
+        ".wmv",
+        ".psd",
+        ".ai",
+        ".sketch",
+        ".fig",
     }
 
     # Development project indicators
     PROJECT_INDICATORS = {
-        "package.json", "requirements.txt", "Cargo.toml", "go.mod",
-        ".git", ".gitignore", "README.md", "setup.py", "pyproject.toml",
-        "CMakeLists.txt", "Makefile", ".sln", ".csproj",
+        "package.json",
+        "requirements.txt",
+        "Cargo.toml",
+        "go.mod",
+        ".git",
+        ".gitignore",
+        "README.md",
+        "setup.py",
+        "pyproject.toml",
+        "CMakeLists.txt",
+        "Makefile",
+        ".sln",
+        ".csproj",
     }
 
     # App-generated patterns
@@ -671,14 +746,18 @@ class FileClassifier:
             app = self.app_detector.find_app_for_path(path)
             if app:
                 classification.associated_app = app.name
-                classification.app_install_path = str(app.install_path) if app.install_path else None
+                classification.app_install_path = (
+                    str(app.install_path) if app.install_path else None
+                )
                 classification.safety_level = SafetyLevel.INSTALLED
                 classification.origin = FileOrigin.INSTALLED_APP
                 classification.warning_message = f"Part of installed application: {app.name}"
                 classification.safe_to_move = False
                 classification.requires_confirmation = True
                 classification.confidence = 0.85
-                classification.suggested_action = f"Uninstall {app.name} through Settings if you want to remove this"
+                classification.suggested_action = (
+                    f"Uninstall {app.name} through Settings if you want to remove this"
+                )
                 return classification
 
             # Check if user file
@@ -722,7 +801,9 @@ class FileClassifier:
                 classification.origin = FileOrigin.UNKNOWN
                 classification.safe_to_move = True
                 classification.requires_confirmation = True
-                classification.warning_message = "Unknown file in user folder - verify before moving"
+                classification.warning_message = (
+                    "Unknown file in user folder - verify before moving"
+                )
             else:
                 classification.safety_level = SafetyLevel.CAUTIOUS
                 classification.origin = FileOrigin.UNKNOWN
@@ -745,12 +826,22 @@ class FileClassifier:
     def _is_temp_file(self, path: Path) -> bool:
         """Check if file is a temporary/cache file."""
         temp_indicators = {
-            ".tmp", ".temp", ".cache", ".log", ".bak",
+            ".tmp",
+            ".temp",
+            ".cache",
+            ".log",
+            ".bak",
         }
 
         temp_folders = {
-            "temp", "tmp", "cache", ".cache", "__pycache__",
-            "node_modules", ".npm", ".yarn",
+            "temp",
+            "tmp",
+            "cache",
+            ".cache",
+            "__pycache__",
+            "node_modules",
+            ".npm",
+            ".yarn",
         }
 
         # Check extension
@@ -808,11 +899,13 @@ class FileClassifier:
             if clf.requires_confirmation:
                 summary["requires_confirmation"] += 1
             if clf.warning_message:
-                summary["warnings"].append({
-                    "path": str(path),
-                    "message": clf.warning_message,
-                    "level": clf.safety_level.value,
-                })
+                summary["warnings"].append(
+                    {
+                        "path": str(path),
+                        "message": clf.warning_message,
+                        "level": clf.safety_level.value,
+                    }
+                )
 
         return summary
 
