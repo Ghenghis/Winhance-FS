@@ -6,10 +6,8 @@ Comprehensive tests for the intelligent file classification system.
 
 from __future__ import annotations
 
-import pytest
-from pathlib import Path
 import os
-import tempfile
+from pathlib import Path
 
 from tests.conftest import DummyFileGenerator
 
@@ -147,20 +145,21 @@ class TestFileClassification:
 
     def test_classify_user_file(self, file_generator: DummyFileGenerator):
         """Test classification of user files."""
-        from nexus_ai.tools.file_classifier import classify_file, SafetyLevel
+        from nexus_ai.tools.file_classifier import SafetyLevel, classify_file
 
         user_doc = file_generator.create_file("my_notes.txt", 1024)
         classification = classify_file(user_doc)
 
-        assert classification.path == user_doc
+        assert classification.path.resolve() == user_doc.resolve()
         # User file should be safe to move
         assert classification.safe_to_move or classification.safety_level in [
-            SafetyLevel.SAFE, SafetyLevel.CAUTIOUS
+            SafetyLevel.SAFE,
+            SafetyLevel.CAUTIOUS,
         ]
 
     def test_classify_temp_file(self, file_generator: DummyFileGenerator):
         """Test classification of temp files."""
-        from nexus_ai.tools.file_classifier import classify_file, SafetyLevel, FileOrigin
+        from nexus_ai.tools.file_classifier import classify_file
 
         temp_file = file_generator.create_file("cache.tmp", 512, subdir="temp")
         classification = classify_file(temp_file)
@@ -183,8 +182,8 @@ class TestFileClassification:
         results = classifier.batch_classify(files)
 
         assert len(results) == 3
-        for path, clf in results.items():
-            assert clf.path in files
+        for _, clf in results.items():
+            assert clf.path.resolve() in [f.resolve() for f in files]
 
     def test_safety_summary(self, file_generator: DummyFileGenerator):
         """Test safety summary generation."""
@@ -249,4 +248,4 @@ class TestEdgeCases:
         special_file = file_generator.create_file("file with spaces & symbols.txt", 100)
         classification = classify_file(special_file)
 
-        assert classification.path == special_file
+        assert classification.path.resolve() == special_file.resolve()

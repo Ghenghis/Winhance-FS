@@ -109,9 +109,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip setuptools wheel
           pip install ruff black pytest pytest-asyncio pytest-timeout
-          pip install toml pydantic pydantic-settings loguru structlog httpx aiofiles anyio psutil humanize orjson rich typer
+          pip install -e ".[dev]" --no-deps || echo "Skipping editable install"
+          pip install toml pydantic pydantic-settings loguru structlog httpx aiofiles anyio psutil humanize orjson rich typer python-dateutil watchdog xxhash joblib multiprocess msgpack
 
       - name: Run Ruff linter
         run: ruff check src/nexus_ai src/nexus_cli src/nexus_mcp
