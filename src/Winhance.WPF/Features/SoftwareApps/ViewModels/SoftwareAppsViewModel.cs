@@ -58,7 +58,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             : _localizationService.GetString("SoftwareApps_Button_UninstallSelected");
 
         [ObservableProperty]
-        private object _currentHelpContent = null;
+        private object? _currentHelpContent = null;
 
         [ObservableProperty]
         private bool _isHelpVisible = false;
@@ -79,7 +79,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         private bool _shouldFocusHelpOverlay = false;
 
         [ObservableProperty]
-        private FrameworkElement _helpButtonElement = null;
+        private FrameworkElement? _helpButtonElement = null;
 
         public bool IsRefreshingContent
         {

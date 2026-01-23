@@ -21,7 +21,7 @@ public class StoreDownloadService : IStoreDownloadService
 {
     private readonly ITaskProgressService _taskProgressService;
     private readonly IPowerShellExecutionService _powerShellService;
-    private readonly ILogService _logService;
+    private readonly ILogService? _logService;
     private readonly ILocalizationService _localization;
     private readonly HttpClient _httpClient;
 
@@ -32,7 +32,7 @@ public class StoreDownloadService : IStoreDownloadService
         ITaskProgressService taskProgressService,
         IPowerShellExecutionService powerShellService,
         ILocalizationService localization,
-        ILogService logService = null)
+        ILogService? logService = null)
     {
         _taskProgressService = taskProgressService;
         _powerShellService = powerShellService;
@@ -46,7 +46,7 @@ public class StoreDownloadService : IStoreDownloadService
 
     public async Task<bool> DownloadAndInstallPackageAsync(
         string productId,
-        string displayName = null,
+        string? displayName = null,
         CancellationToken cancellationToken = default)
     {
         displayName ??= productId;
@@ -118,10 +118,10 @@ public class StoreDownloadService : IStoreDownloadService
         }
     }
 
-    public async Task<string> DownloadPackageAsync(
+    public async Task<string?> DownloadPackageAsync(
         string productId,
         string downloadPath,
-        string displayName = null,
+        string? displayName = null,
         CancellationToken cancellationToken = default)
     {
         displayName ??= productId;

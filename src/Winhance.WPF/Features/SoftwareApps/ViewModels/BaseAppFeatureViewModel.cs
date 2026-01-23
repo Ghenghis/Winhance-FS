@@ -32,6 +32,13 @@ public abstract partial class BaseAppFeatureViewModel<T>(
     IInternetConnectivityService connectivityService,
     ILocalizationService localizationService) : BaseFeatureViewModel, IAppFeatureViewModel where T : class, ISelectable
 {
+    protected ITaskProgressService ProgressService => progressService;
+    protected ILogService LogService => logService;
+    protected IEventBus EventBus => eventBus;
+    protected IDialogService DialogService => dialogService;
+    protected IInternetConnectivityService ConnectivityService => connectivityService;
+    protected ILocalizationService LocalizationService => localizationService;
+
     private bool _isDisposed;
 
     [ObservableProperty] private string _statusText = "Ready";
@@ -83,7 +90,7 @@ public abstract partial class BaseAppFeatureViewModel<T>(
     }
 
     [RelayCommand]
-    private void ToggleViewMode(object parameter = null)
+    private void ToggleViewMode(object? parameter = null)
     {
         if (parameter != null)
         {
@@ -323,8 +330,8 @@ public abstract partial class BaseAppFeatureViewModel<T>(
         }
     }
 
-    protected async Task<T> ExecuteWithProgressAsync<T>(
-        Func<ITaskProgressService, Task<T>> operation,
+    protected async Task<TResult> ExecuteWithProgressAsync<TResult>(
+        Func<ITaskProgressService, Task<TResult>> operation,
         string taskName,
         bool isIndeterminate = false)
     {

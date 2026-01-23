@@ -206,8 +206,8 @@ namespace Winhance.Infrastructure.Features.Common.Services
                                 try
                                 {
                                     var result = method.Invoke(null, null);
-                                    var settingsProperty = result.GetType().GetProperty("Settings");
-                                    return (IEnumerable<SettingDefinition>)settingsProperty.GetValue(result);
+                                    var settingsProperty = result?.GetType().GetProperty("Settings");
+                                    return settingsProperty?.GetValue(result) as IEnumerable<SettingDefinition> ?? Enumerable.Empty<SettingDefinition>();
                                 }
                                 catch (Exception)
                                 {
@@ -243,8 +243,8 @@ namespace Winhance.Infrastructure.Features.Common.Services
             try
             {
                 var result = method.Invoke(null, null);
-                var featureIdProperty = result.GetType().GetProperty("FeatureId");
-                return (string)featureIdProperty.GetValue(result);
+                var featureIdProperty = result?.GetType().GetProperty("FeatureId");
+                return featureIdProperty?.GetValue(result) as string ?? "Unknown";
             }
             catch (Exception)
             {

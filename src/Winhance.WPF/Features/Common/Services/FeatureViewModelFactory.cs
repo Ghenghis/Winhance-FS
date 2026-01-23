@@ -11,10 +11,10 @@ namespace Winhance.WPF.Features.Common.Services
 {
     public static class FeatureViewModelFactory
     {
-        public static async Task<UserControl> CreateFeatureAsync(
+        public static async Task<UserControl?> CreateFeatureAsync(
             FeatureMetadata feature,
             IServiceProvider serviceProvider,
-            IViewPoolService viewPoolService = null
+            IViewPoolService? viewPoolService = null
         )
         {
 
@@ -25,7 +25,7 @@ namespace Winhance.WPF.Features.Common.Services
             {
                 object viewModel = serviceProvider.GetRequiredService(feature.ViewModelType);
 
-                UserControl view = null;
+                UserControl? view = null;
 
                 if (viewPoolService != null)
                 {

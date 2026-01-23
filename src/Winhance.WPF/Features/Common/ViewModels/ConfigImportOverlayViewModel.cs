@@ -5,8 +5,8 @@ namespace Winhance.WPF.Features.Common.ViewModels
 {
     public class ConfigImportOverlayViewModel : INotifyPropertyChanged
     {
-        private string _statusText;
-        private string _detailText;
+        private string _statusText = string.Empty;
+        private string _detailText = string.Empty;
 
         public string StatusText
         {
@@ -28,9 +28,9 @@ namespace Winhance.WPF.Features.Common.ViewModels
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

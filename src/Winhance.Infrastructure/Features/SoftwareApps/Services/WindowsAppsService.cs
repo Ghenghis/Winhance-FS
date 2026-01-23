@@ -16,11 +16,11 @@ public class WindowsAppsService(
     ILogService logService,
     IPowerShellExecutionService powerShellService,
     IWinGetService winGetService,
-    IStoreDownloadService storeDownloadService = null,
-    IDialogService dialogService = null,
-    IUserPreferencesService userPreferencesService = null,
-    ITaskProgressService taskProgressService = null,
-    ILocalizationService localizationService = null) : IWindowsAppsService
+    IStoreDownloadService? storeDownloadService = null,
+    IDialogService? dialogService = null,
+    IUserPreferencesService? userPreferencesService = null,
+    ITaskProgressService? taskProgressService = null,
+    ILocalizationService? localizationService = null) : IWindowsAppsService
 {
     public string DomainName => FeatureIds.WindowsApps;
     private const string FallbackConfirmationPreferenceKey = "StoreDownloadFallback_DontShowAgain";

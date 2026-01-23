@@ -15,11 +15,11 @@ namespace Winhance.Infrastructure.Features.Common.Services
     {
         private readonly ILogService _logService;
         private int _currentProgress;
-        private string _currentStatusText;
+        private string _currentStatusText = string.Empty;
         private bool _isTaskRunning;
         private bool _isIndeterminate;
         private List<string> _logMessages = new List<string>();
-        private CancellationTokenSource _cancellationSource;
+        private CancellationTokenSource? _cancellationSource;
 
         /// <summary>
         /// Gets whether a task is currently running.
@@ -222,7 +222,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
 
             // Dispose cancellation token source
             _cancellationSource?.Dispose();
-            _cancellationSource = null;
+            _cancellationSource = null!;
         }
 
         /// <summary>

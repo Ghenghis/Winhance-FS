@@ -104,7 +104,7 @@ namespace Winhance.Infrastructure.Features.Customize.Services
             }
         }
 
-        private void CleanWindows11StartMenu(ILogService logService = null)
+        private void CleanWindows11StartMenu(ILogService? logService = null)
         {
             try
             {
@@ -176,8 +176,8 @@ namespace Winhance.Infrastructure.Features.Customize.Services
         }
 
         private void CleanWindows10StartMenu(
-            IScheduledTaskService scheduledTaskService = null,
-            ILogService logService = null
+            IScheduledTaskService? scheduledTaskService = null,
+            ILogService? logService = null
         )
         {
             try
@@ -264,7 +264,7 @@ namespace Winhance.Infrastructure.Features.Customize.Services
 
         private void SetupScheduledTasksForAllUsersWindows10(
             IScheduledTaskService scheduledTaskService,
-            ILogService logService = null
+            ILogService? logService = null
         )
         {
             try
@@ -354,7 +354,7 @@ namespace Winhance.Infrastructure.Features.Customize.Services
             }
         }
 
-        private void CleanOtherUsersStartMenuFiles(ILogService logService = null)
+        private void CleanOtherUsersStartMenuFiles(ILogService? logService = null)
         {
             try
             {

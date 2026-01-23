@@ -28,7 +28,6 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         IEventBus eventBus,
         IExternalAppsService externalAppsService,
         IAppOperationService appOperationService,
-        IConfigurationService configurationService,
         IDialogService dialogService,
         IInternetConnectivityService connectivityService,
         ILocalizationService localizationService)
@@ -88,9 +87,9 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
 
         private bool _isAllSelected = false;
 
-        private ICollectionView _allItemsView;
+        private ICollectionView? _allItemsView;
 
-        public event EventHandler SelectedItemsChanged;
+        public event EventHandler? SelectedItemsChanged;
 
         public ICollectionView AllItemsView
         {
@@ -100,7 +99,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                 {
                     InitializeCollectionView();
                 }
-                return _allItemsView;
+                return _allItemsView!;
             }
         }
 
@@ -205,7 +204,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                 .Replace("/", "")
                 .Replace(",", "");
             var key = $"ExternalApps_Category_{keyName}";
-            return localizationService.GetString(key);
+            return LocalizationService.GetString(key);
         }
 
         [RelayCommand]
@@ -226,7 +225,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             {
                 await ExecuteWithProgressAsync(
                     progressService => ExecuteInstallOperation(selectedApps.ToList(), progressService.CreateDetailedProgress(), skipResultDialog: skipConfirmation),
-                    localizationService.GetString("Progress_Task_InstallingExternalApps")
+                    LocalizationService.GetString("Progress_Task_InstallingExternalApps")
                 );
             }
             catch (OperationCanceledException)
@@ -252,7 +251,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             {
                 await ExecuteWithProgressAsync(
                     progressService => ExecuteRemoveOperation(selectedItems, progressService.CreateDetailedProgress(), skipResultDialog: skipConfirmation),
-                    localizationService.GetString("Progress_Task_UninstallingExternalApps")
+                    LocalizationService.GetString("Progress_Task_UninstallingExternalApps")
                 );
             }
             catch (OperationCanceledException)
@@ -276,9 +275,9 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                     var viewModel = new AppItemViewModel(
                         itemDef,
                         appOperationService,
-                        dialogService,
-                        logService,
-                        localizationService);
+                        DialogService,
+                        LogService,
+                        LocalizationService);
                     Items.Add(viewModel);
                     viewModel.PropertyChanged += Item_PropertyChanged;
                 }
@@ -311,7 +310,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             if (showLoadingOverlay)
             {
                 IsLoading = true;
-                StatusText = localizationService.GetString("Progress_CheckingInstallStatus");
+                StatusText = LocalizationService.GetString("Progress_CheckingInstallStatus");
             }
 
             try
@@ -361,7 +360,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             catch (Exception ex)
             {
                 StatusText = $"Error checking status: {ex.Message}";
-                logService.LogError("Error checking installation status", ex);
+                LogService.LogError("Error checking installation status", ex);
             }
             finally
             {
@@ -374,12 +373,12 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         {
             if (!IsInitialized)
             {
-                StatusText = localizationService.GetString("Progress_WaitForInitialLoad");
+                StatusText = LocalizationService.GetString("Progress_WaitForInitialLoad");
                 return;
             }
 
             IsLoading = true;
-            StatusText = localizationService.GetString("Progress_RefreshingStatus");
+            StatusText = LocalizationService.GetString("Progress_RefreshingStatus");
 
             try
             {
@@ -389,7 +388,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             catch (Exception ex)
             {
                 StatusText = $"Error refreshing status: {ex.Message}";
-                logService.LogError("Error refreshing installation status", ex);
+                LogService.LogError("Error refreshing installation status", ex);
             }
             finally
             {
@@ -401,24 +400,24 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         {
             if (IsInitialized)
             {
-                logService.LogInformation("[ExternalAppsViewModel] Already initialized, skipping");
+                LogService.LogInformation("[ExternalAppsViewModel] Already initialized, skipping");
                 return;
             }
 
-            logService.LogInformation("[ExternalAppsViewModel] LoadItemsAsync starting");
+            LogService.LogInformation("[ExternalAppsViewModel] LoadItemsAsync starting");
             await LoadItemsAsync().ConfigureAwait(false);
-            logService.LogInformation("[ExternalAppsViewModel] LoadItemsAsync completed");
+            LogService.LogInformation("[ExternalAppsViewModel] LoadItemsAsync completed");
 
-            logService.LogInformation("[ExternalAppsViewModel] CheckInstallationStatusAsync starting");
+            LogService.LogInformation("[ExternalAppsViewModel] CheckInstallationStatusAsync starting");
             await CheckInstallationStatusAsync().ConfigureAwait(false);
-            logService.LogInformation("[ExternalAppsViewModel] CheckInstallationStatusAsync completed");
+            LogService.LogInformation("[ExternalAppsViewModel] CheckInstallationStatusAsync completed");
 
             IsAllSelected = false;
             IsInitialized = true;
-            logService.LogInformation("[ExternalAppsViewModel] LoadAppsAndCheckInstallationStatusAsync fully completed");
+            LogService.LogInformation("[ExternalAppsViewModel] LoadAppsAndCheckInstallationStatusAsync fully completed");
         }
 
-        public override async void OnNavigatedTo(object parameter)
+        public override async void OnNavigatedTo(object? parameter)
         {
             try
             {
@@ -437,6 +436,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             {
                 StatusText = $"Error loading apps: {ex.Message}";
                 IsLoading = false;
+                LogService.LogError("Error on ExternalAppsViewModel navigation", ex);
             }
         }
 
@@ -577,7 +577,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         }
 
 
-        private async Task<bool> ShowConfirmationAsync(string operationType, IEnumerable<AppItemViewModel> items)
+        private new async Task<bool> ShowConfirmationAsync(string operationType, IEnumerable<AppItemViewModel> items)
         {
             var itemNames = items.Select(a => a.Name);
             return await ShowConfirmItemsDialogAsync(operationType, itemNames, items.Count()) == true;

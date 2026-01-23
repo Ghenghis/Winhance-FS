@@ -19,9 +19,6 @@ namespace Winhance.WPF.Features.Common.ViewModels
         private string _statusText = string.Empty;
 
         [ObservableProperty]
-        private string _searchText = string.Empty;
-
-        [ObservableProperty]
         private FrameworkElement? _helpButtonElement;
 
         [ObservableProperty]
@@ -41,7 +38,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
             HideHelpFlyoutCommand = new RelayCommand(HideHelpFlyout);
         }
 
-        protected virtual void Initialize()
+        public virtual void Initialize()
         {
             StatusText = DefaultStatusText;
             searchTextCoordinationService.SearchTextChanged += OnSearchTextChanged;
@@ -52,7 +49,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
             SearchText = e.SearchText ?? string.Empty;
         }
 
-        partial void OnSearchTextChanged(string value) =>
+        protected override void OnSearchTextChangedCore(string value) =>
             searchTextCoordinationService.UpdateSearchText(value ?? string.Empty);
 
         private void HideHelpFlyout()
@@ -60,19 +57,20 @@ namespace Winhance.WPF.Features.Common.ViewModels
             ShouldFocusHelpOverlay = false;
         }
 
-        public virtual void Dispose()
+        public new void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (!_isDisposed && disposing)
             {
                 searchTextCoordinationService.SearchTextChanged -= OnSearchTextChanged;
                 _isDisposed = true;
             }
+            base.Dispose(disposing);
         }
 
         ~BaseContainerViewModel()

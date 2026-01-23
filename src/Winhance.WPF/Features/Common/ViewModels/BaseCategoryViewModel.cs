@@ -52,10 +52,9 @@ namespace Winhance.WPF.Features.Common.ViewModels
             InitializeCommand = new RelayCommand(Initialize);
         }
 
-        public void Initialize()
+        public override void Initialize()
         {
-            StatusText = DefaultStatusText;
-            searchTextCoordinationService.SearchTextChanged += OnSearchTextChanged;
+            base.Initialize();
         }
 
         public virtual async Task PreloadFeaturesAsync()
@@ -272,9 +271,9 @@ namespace Winhance.WPF.Features.Common.ViewModels
         }
 
 
-        public void OnNavigatedTo(object parameter = null) { }
+        public override void OnNavigatedTo(object? parameter = null) { }
 
-        public void OnNavigatedFrom() { }
+        public override void OnNavigatedFrom() { }
 
         public async Task RefreshAllFeaturesAsync()
         {
@@ -287,7 +286,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
             }
         }
 
-        public override void Dispose()
+        public new void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
@@ -323,7 +322,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
                 _isDisposed = true;
             }
 
-            base.Dispose(disposing);
+            // base.Dispose(disposing); // BaseContainerViewModel.Dispose() is not virtual
         }
     }
 }

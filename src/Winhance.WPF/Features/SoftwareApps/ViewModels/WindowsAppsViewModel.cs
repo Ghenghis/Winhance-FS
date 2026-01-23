@@ -31,12 +31,11 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         IWindowsAppsService windowsAppsService,
         IAppOperationService appOperationService,
         IAppStatusDiscoveryService appStatusDiscoveryService,
-        IConfigurationService configurationService,
         IScriptDetectionService scriptDetectionService,
         IInternetConnectivityService connectivityService,
         IDialogService dialogService,
-        ILocalizationService localizationService)
-        : BaseAppFeatureViewModel<AppItemViewModel>(progressService, logService, eventBus, dialogService, connectivityService, localizationService)
+        ILocalizationService LocalizationService)
+        : BaseAppFeatureViewModel<AppItemViewModel>(progressService, logService, eventBus, dialogService, connectivityService, LocalizationService)
     {
         private System.Threading.Timer? _refreshTimer;
         private CancellationTokenSource? _refreshCts;
@@ -48,14 +47,14 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         public override string ModuleId => FeatureIds.WindowsApps;
         public override string DisplayName => "Windows Apps";
 
-        public event EventHandler SelectedItemsChanged;
+        public event EventHandler? SelectedItemsChanged;
 
         [ObservableProperty] private bool _isUpdatingButtonStates = false;
         [ObservableProperty] private bool _isRemovingApps;
         [ObservableProperty] private ObservableCollection<ScriptInfo> _activeScripts = new();
         [ObservableProperty] private bool _isAllSelectedOptionalFeatures;
 
-        private ICollectionView _allItemsView;
+        private ICollectionView? _allItemsView;
 
         public ICollectionView AllItemsView
         {
@@ -65,7 +64,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                 {
                     InitializeCollectionView();
                 }
-                return _allItemsView;
+                return _allItemsView!;
             }
         }
 
@@ -137,22 +136,6 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                     SetNotInstalledItemsSelection(value);
                     UpdateIsAllSelectedState();
                 }
-            }
-        }
-
-        private bool _hasSelectedItems;
-        private bool _hasSelectedItemsCacheValid;
-
-        public bool HasSelectedItems
-        {
-            get
-            {
-                if (!_hasSelectedItemsCacheValid)
-                {
-                    _hasSelectedItems = Items?.Any(a => a.IsSelected) == true;
-                    _hasSelectedItemsCacheValid = true;
-                }
-                return _hasSelectedItems;
             }
         }
 
@@ -270,7 +253,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             if (showLoadingOverlay)
             {
                 IsLoading = true;
-                StatusText = localizationService.GetString("Progress_CheckingInstallStatus");
+                StatusText = LocalizationService.GetString("Progress_CheckingInstallStatus");
             }
 
             try
@@ -301,7 +284,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             catch (Exception ex)
             {
                 StatusText = $"Error checking installation status: {ex.Message}";
-                logService.LogError("Error checking installation status", ex);
+                LogService.LogError("Error checking installation status", ex);
             }
             finally
             {
@@ -329,7 +312,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             {
                 await ExecuteWithProgressAsync(
                     progressService => ExecuteInstallOperation(selectedItems, progressService.CreateDetailedProgress()),
-                    localizationService.GetString("Progress_Task_InstallingWindowsApps")
+                    LocalizationService.GetString("Progress_Task_InstallingWindowsApps")
                 );
             }
             catch (OperationCanceledException)
@@ -344,12 +327,12 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         {
             if (!IsInitialized)
             {
-                StatusText = localizationService.GetString("Progress_WaitForInitialLoad");
+                StatusText = LocalizationService.GetString("Progress_WaitForInitialLoad");
                 return;
             }
 
             IsLoading = true;
-            StatusText = localizationService.GetString("Progress_RefreshingStatus");
+            StatusText = LocalizationService.GetString("Progress_RefreshingStatus");
 
             try
             {
@@ -359,7 +342,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             catch (Exception ex)
             {
                 StatusText = $"Error refreshing status: {ex.Message}";
-                logService.LogError("Error refreshing installation status", ex);
+                LogService.LogError("Error refreshing installation status", ex);
             }
             finally
             {
@@ -384,7 +367,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             {
                 await ExecuteWithProgressAsync(
                     progressService => ExecuteRemoveOperation(selectedItems, progressService.CreateDetailedProgress(), skipResultDialog: skipConfirmation),
-                    localizationService.GetString("Progress_Task_RemovingWindowsApps")
+                    LocalizationService.GetString("Progress_Task_RemovingWindowsApps")
                 );
             }
             catch (OperationCanceledException)
@@ -407,7 +390,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
 
             try
             {
-                var progress = progressService.CreateDetailedProgress();
+                var progress = ProgressService.CreateDetailedProgress();
                 var result = await appOperationService.InstallAppAsync(
                     app.Definition, progress, shouldRemoveFromBloatScript: true);
 
@@ -423,7 +406,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
 
                     if (isPowerShellOperation)
                     {
-                        await dialogService.ShowInformationAsync(PowerShellOperationMessage, "PowerShell Operation");
+                        await DialogService.ShowInformationAsync(PowerShellOperationMessage, "PowerShell Operation");
                     }
                     else
                     {
@@ -537,23 +520,23 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         {
             if (IsInitialized)
             {
-                logService.LogInformation("[WindowsAppsViewModel] Already initialized, skipping");
+                LogService.LogInformation("[WindowsAppsViewModel] Already initialized, skipping");
                 return;
             }
 
-            logService.LogInformation("[WindowsAppsViewModel] LoadItemsAsync starting");
+            LogService.LogInformation("[WindowsAppsViewModel] LoadItemsAsync starting");
             await LoadItemsAsync().ConfigureAwait(false);
-            logService.LogInformation("[WindowsAppsViewModel] LoadItemsAsync completed");
+            LogService.LogInformation("[WindowsAppsViewModel] LoadItemsAsync completed");
 
-            logService.LogInformation("[WindowsAppsViewModel] CheckInstallationStatusAsync starting");
+            LogService.LogInformation("[WindowsAppsViewModel] CheckInstallationStatusAsync starting");
             await CheckInstallationStatusAsync().ConfigureAwait(false);
-            logService.LogInformation("[WindowsAppsViewModel] CheckInstallationStatusAsync completed");
+            LogService.LogInformation("[WindowsAppsViewModel] CheckInstallationStatusAsync completed");
 
             IsAllSelected = false;
             IsInitialized = true;
-            logService.LogInformation("[WindowsAppsViewModel] Calling RefreshScriptStatus");
+            LogService.LogInformation("[WindowsAppsViewModel] Calling RefreshScriptStatus");
             RefreshScriptStatus();
-            logService.LogInformation("[WindowsAppsViewModel] LoadAppsAndCheckInstallationStatusAsync fully completed");
+            LogService.LogInformation("[WindowsAppsViewModel] LoadAppsAndCheckInstallationStatusAsync fully completed");
         }
 
         private async void RefreshUIAfterOperation()
@@ -567,7 +550,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             catch (Exception ex)
             {
                 // Log refresh errors but don't crash UI
-                logService.LogWarning($"Failed to refresh UI after operation: {ex.Message}");
+                LogService.LogWarning($"Failed to refresh UI after operation: {ex.Message}");
             }
         }
 
@@ -588,7 +571,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             OnPropertyChanged(nameof(HasSelectedItems));
         }
 
-        public override async void OnNavigatedTo(object parameter)
+        public override async void OnNavigatedTo(object? parameter)
         {
             try
             {
@@ -607,6 +590,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             {
                 StatusText = $"Error loading apps: {ex.Message}";
                 IsLoading = false;
+                LogService.LogError("Error on WindowsAppsViewModel navigation", ex);
             }
         }
 
@@ -720,7 +704,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             }
         }
 
-        private IEnumerable<AppItemViewModel> FilterItems(IEnumerable<AppItemViewModel> items)
+        private new IEnumerable<AppItemViewModel> FilterItems(IEnumerable<AppItemViewModel> items)
         {
             if (string.IsNullOrWhiteSpace(SearchText)) return items;
 
@@ -735,9 +719,9 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                 var viewModel = new AppItemViewModel(
                     app,
                     appOperationService,
-                    dialogService,
-                    logService,
-                    localizationService);
+                    DialogService,
+                    LogService,
+                    LocalizationService);
                 Items.Add(viewModel);
                 viewModel.PropertyChanged += Item_PropertyChanged;
             }
@@ -747,9 +731,9 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                 var viewModel = new AppItemViewModel(
                     capability,
                     appOperationService,
-                    dialogService,
-                    logService,
-                    localizationService);
+                    DialogService,
+                    LogService,
+                    LocalizationService);
                 Items.Add(viewModel);
                 viewModel.PropertyChanged += Item_PropertyChanged;
             }
@@ -759,9 +743,9 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
                 var viewModel = new AppItemViewModel(
                     feature,
                     appOperationService,
-                    dialogService,
-                    logService,
-                    localizationService);
+                    DialogService,
+                    LogService,
+                    LocalizationService);
                 Items.Add(viewModel);
                 viewModel.PropertyChanged += Item_PropertyChanged;
             }
@@ -780,7 +764,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
         }
 
 
-        private async Task<bool> ShowConfirmationAsync(string operationType, IEnumerable<AppItemViewModel> items)
+        private new async Task<bool> ShowConfirmationAsync(string operationType, IEnumerable<AppItemViewModel> items)
         {
             var itemNames = items.Select(a => a.Name);
             return await ShowConfirmItemsDialogAsync(operationType, itemNames, items.Count()) == true;
@@ -829,12 +813,12 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             // Now show dialogs
             if (selectedItems.Capabilities.Any())
             {
-                await dialogService.ShowInformationAsync(PowerShellOperationMessage, "PowerShell Operations - Capabilities");
+                await DialogService.ShowInformationAsync(PowerShellOperationMessage, "PowerShell Operations - Capabilities");
             }
 
             if (selectedItems.Features.Any())
             {
-                await dialogService.ShowInformationAsync(PowerShellOperationMessage, "PowerShell Operations - Optional Features");
+                await DialogService.ShowInformationAsync(PowerShellOperationMessage, "PowerShell Operations - Optional Features");
             }
 
             if (selectedItems.Apps.Any())
@@ -1099,11 +1083,6 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             }
         }
 
-        private void InvalidateHasSelectedItemsCache()
-        {
-            _hasSelectedItemsCacheValid = false;
-        }
-
         private void UnsubscribeFromItemPropertyChangedEvents()
         {
             foreach (var app in Items)
@@ -1118,7 +1097,7 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             var appNames = selectedApps.Select(a => a.Name).ToList();
             string message = $"{headerText}\n{string.Join("\n", appNames)}\n\nDo you want to continue?";
 
-            return await dialogService.ShowConfirmationAsync(message, title);
+            return await DialogService.ShowConfirmationAsync(message, title);
         }
 
 
@@ -1131,8 +1110,6 @@ namespace Winhance.WPF.Features.SoftwareApps.ViewModels
             foreach (var script in scriptDetectionService.GetActiveScripts())
                 ActiveScripts.Add(script);
         }
-
-        public bool IsSearchActive => !string.IsNullOrWhiteSpace(SearchText);
 
         protected override void Dispose(bool disposing)
         {

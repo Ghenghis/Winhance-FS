@@ -80,7 +80,7 @@ namespace Winhance.WPF.Features.Common.Services
                     FileName = $"Winhance_Config_{DateTime.Now:yyyyMMdd}{FileExtension}"
                 };
 
-                if (saveFileDialog.ShowDialog() != true)
+                if (saveFileDialog.ShowDialog() != true || string.IsNullOrEmpty(saveFileDialog.FileName))
                 {
                     _logService.Log(LogLevel.Info, "Export canceled by user");
                     return;
@@ -122,7 +122,7 @@ namespace Winhance.WPF.Features.Common.Services
                 return;
             }
 
-            UnifiedConfigurationFile config;
+            UnifiedConfigurationFile? config;
 
             if (selectedOption == ImportOption.ImportOwn)
             {
@@ -215,7 +215,7 @@ namespace Winhance.WPF.Features.Common.Services
 
                 _windowsUIManagementService.IsConfigImportMode = true;
 
-                ConfigImportOverlayWindow overlayWindow = null;
+                ConfigImportOverlayWindow? overlayWindow = null;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     overlayWindow = new ConfigImportOverlayWindow(_localizationService.GetString("Config_Import_Status_Applying"));
@@ -224,7 +224,7 @@ namespace Winhance.WPF.Features.Common.Services
 
                 try
                 {
-                    await ApplyConfigurationWithOptionsAsync(config, selectedSections, importOptions, overlayWindow);
+                    await ApplyConfigurationWithOptionsAsync(config, selectedSections, importOptions, overlayWindow!);
                 }
                 finally
                 {
@@ -306,7 +306,7 @@ namespace Winhance.WPF.Features.Common.Services
                     }
                     else if (setting.InputType == InputType.Selection)
                     {
-                        var (selectedIndex, customStateValues, powerPlanGuid, powerPlanName) = GetSelectionStateFromState(setting, state);
+                        var (selectedIndex, customStateValues, powerPlanGuid, powerPlanName) = GetSelectionStateFromState(setting, state!);
 
                         if (setting.Id == "power-plan-selection")
                         {
@@ -361,8 +361,8 @@ namespace Winhance.WPF.Features.Common.Services
                                 {
                                     item.PowerSettings = new Dictionary<string, object>
                                     {
-                                        ["ACValue"] = acValue,
-                                        ["DCValue"] = dcValue
+                                        ["ACValue"] = acValue!,
+                                        ["DCValue"] = dcValue!
                                     };
                                 }
                             }
@@ -370,7 +370,7 @@ namespace Winhance.WPF.Features.Common.Services
                             {
                                 item.PowerSettings = new Dictionary<string, object>
                                 {
-                                    ["Value"] = state.CurrentValue
+                                    ["Value"] = state.CurrentValue!
                                 };
                             }
                         }
@@ -472,8 +472,8 @@ namespace Winhance.WPF.Features.Common.Services
             }
         }
 
-        private (int? selectedIndex, Dictionary<string, object> customStateValues, string powerPlanGuid, string powerPlanName)
-            GetSelectionStateFromState(SettingDefinition setting, SettingStateResult state)
+        private (int? selectedIndex, Dictionary<string, object>? customStateValues, string? powerPlanGuid, string? powerPlanName)
+            GetSelectionStateFromState(SettingDefinition setting, SettingStateResult? state)
         {
             if (setting.InputType != InputType.Selection)
                 return (null, null, null, null);
@@ -535,7 +535,7 @@ namespace Winhance.WPF.Features.Common.Services
             return 0;
         }
 
-        private async Task<UnifiedConfigurationFile> LoadAndValidateConfigurationFromFileAsync()
+        private async Task<UnifiedConfigurationFile?> LoadAndValidateConfigurationFromFileAsync()
         {
             var openFileDialog = new OpenFileDialog
             {
@@ -544,8 +544,8 @@ namespace Winhance.WPF.Features.Common.Services
                 Title = "Open Configuration"
             };
 
-            if (openFileDialog.ShowDialog() != true)
-                return null;
+            if (openFileDialog.ShowDialog() != true || string.IsNullOrEmpty(openFileDialog.FileName))
+                return null!;
 
             var json = await File.ReadAllTextAsync(openFileDialog.FileName);
             var loadedConfig = JsonConvert.DeserializeObject<UnifiedConfigurationFile>(json);
@@ -595,7 +595,7 @@ namespace Winhance.WPF.Features.Common.Services
                 sectionInfo);
         }
 
-        private AppItemViewModel FindMatchingWindowsApp(IEnumerable<AppItemViewModel> vmItems, ConfigurationItem configItem)
+        private AppItemViewModel? FindMatchingWindowsApp(IEnumerable<AppItemViewModel> vmItems, ConfigurationItem configItem)
         {
             return vmItems.FirstOrDefault(i =>
                 (!string.IsNullOrEmpty(configItem.AppxPackageName) && i.Definition?.AppxPackageName == configItem.AppxPackageName) ||
@@ -604,14 +604,14 @@ namespace Winhance.WPF.Features.Common.Services
                 i.Id == configItem.Id);
         }
 
-        private AppItemViewModel FindMatchingExternalApp(IEnumerable<AppItemViewModel> vmItems, ConfigurationItem configItem)
+        private AppItemViewModel? FindMatchingExternalApp(IEnumerable<AppItemViewModel> vmItems, ConfigurationItem configItem)
         {
             return vmItems.FirstOrDefault(i =>
                 (!string.IsNullOrEmpty(configItem.WinGetPackageId) && i.Definition?.WinGetPackageId == configItem.WinGetPackageId) ||
                 i.Id == configItem.Id);
         }
 
-        private async Task SelectWindowsAppsFromConfigAsync(ConfigSection windowsAppsSection)
+        private async Task SelectWindowsAppsFromConfigAsync(ConfigSection? windowsAppsSection)
         {
             var vm = _serviceProvider.GetService<WindowsAppsViewModel>();
             if (vm == null) return;
@@ -656,7 +656,7 @@ namespace Winhance.WPF.Features.Common.Services
                 vmItem.IsSelected = false;
         }
 
-        private async Task SelectExternalAppsFromConfigAsync(ConfigSection externalAppsSection)
+        private async Task SelectExternalAppsFromConfigAsync(ConfigSection? externalAppsSection)
         {
             var vm = _serviceProvider.GetService<ExternalAppsViewModel>();
             if (vm == null) return;
@@ -681,7 +681,7 @@ namespace Winhance.WPF.Features.Common.Services
             _logService.Log(LogLevel.Info, $"Selected {selectedCount} External Apps from config");
         }
 
-        private async Task ProcessExternalAppsInstallationAsync(ConfigSection externalAppsSection)
+        private async Task ProcessExternalAppsInstallationAsync(ConfigSection? externalAppsSection)
         {
             var vm = _serviceProvider.GetService<ExternalAppsViewModel>();
             if (vm == null) return;
@@ -714,7 +714,7 @@ namespace Winhance.WPF.Features.Common.Services
             UnifiedConfigurationFile config,
             List<string> selectedSections,
             ImportOptions options,
-            ConfigImportOverlayWindow overlayWindow = null)
+            ConfigImportOverlayWindow? overlayWindow = null)
         {
             _logService.Log(LogLevel.Info, $"Applying configuration to: {string.Join(", ", selectedSections)}");
 
@@ -769,7 +769,7 @@ namespace Winhance.WPF.Features.Common.Services
             string groupName,
             ImportOptions options,
             List<string> selectedSections,
-            ConfigImportOverlayWindow overlayWindow = null)
+            ConfigImportOverlayWindow? overlayWindow = null)
         {
             bool hasActionOnlySubsections = selectedSections.Any(s =>
                 s.StartsWith($"{groupName}_") &&
@@ -800,7 +800,7 @@ namespace Winhance.WPF.Features.Common.Services
                         continue;
                     }
 
-                    bool isActionOnly = options.ActionOnlySubsections.Contains(featureKey);
+                    bool isActionOnly = options?.ActionOnlySubsections?.Contains(featureKey) == true;
 
                     Func<string, object?, SettingDefinition, Task<(bool confirmed, bool checkboxResult)>> confirmationHandler =
                         async (settingId, value, setting) =>
@@ -898,7 +898,7 @@ namespace Winhance.WPF.Features.Common.Services
 
             var unprocessedActionOnly = selectedSections
                 .Where(s => s.StartsWith($"{groupName}_") &&
-                           options.ActionOnlySubsections.Contains(s) &&
+                           options?.ActionOnlySubsections?.Contains(s) == true &&
                            !processedFeatureKeys.Contains(s))
                 .ToList();
 
@@ -1014,7 +1014,7 @@ namespace Winhance.WPF.Features.Common.Services
 
 
 
-        private async Task<UnifiedConfigurationFile> LoadRecommendedConfigurationAsync()
+        private async Task<UnifiedConfigurationFile?> LoadRecommendedConfigurationAsync()
         {
             try
             {
@@ -1037,6 +1037,12 @@ namespace Winhance.WPF.Features.Common.Services
                 using var reader = new StreamReader(stream);
                 var json = await reader.ReadToEndAsync();
                 var config = JsonConvert.DeserializeObject<UnifiedConfigurationFile>(json);
+
+                if (config == null)
+                {
+                    _logService.Log(LogLevel.Error, "Failed to deserialize recommended configuration");
+                    return null;
+                }
 
                 _logService.Log(LogLevel.Info, "Successfully loaded embedded recommended configuration");
                 return config;
@@ -1184,15 +1190,15 @@ namespace Winhance.WPF.Features.Common.Services
             return new UnifiedConfigurationFile
             {
                 Version = config.Version,
-                Optimize = filteredOptimize,
-                Customize = filteredCustomize,
+                Optimize = filteredOptimize ?? new FeatureGroupSection(),
+                Customize = filteredCustomize ?? new FeatureGroupSection(),
                 WindowsApps = config.WindowsApps,
                 ExternalApps = config.ExternalApps
             };
         }
 
-        private FeatureGroupSection FilterFeatureGroup(
-            FeatureGroupSection section,
+        private FeatureGroupSection? FilterFeatureGroup(
+            FeatureGroupSection? section,
             bool isWindows11,
             int buildNumber)
         {

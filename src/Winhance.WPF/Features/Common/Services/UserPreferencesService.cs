@@ -125,7 +125,7 @@ namespace Winhance.WPF.Features.Common.Services
 
                 string json = JsonConvert.SerializeObject(preferences, settings);
 
-                string directory = Path.GetDirectoryName(filePath);
+                string directory = Path.GetDirectoryName(filePath)!;
                 if (!Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
@@ -167,7 +167,7 @@ namespace Winhance.WPF.Features.Common.Services
                     {
                         if (value != null)
                         {
-                            string valueStr = value.ToString().ToLowerInvariant();
+                            string valueStr = value.ToString()!.ToLowerInvariant();
                             if (valueStr == "true" || valueStr == "1")
                             {
                                 return (T)(object)true;
@@ -190,7 +190,7 @@ namespace Winhance.WPF.Features.Common.Services
                         {
                             if (jToken.Type == Newtonsoft.Json.Linq.JTokenType.Boolean)
                             {
-                                bool boolValue = (bool)jToken.ToObject(typeof(bool));
+                                bool boolValue = (bool)jToken.ToObject(typeof(bool))!;
                                 return (T)(object)boolValue;
                             }
                             else if (jToken.Type == Newtonsoft.Json.Linq.JTokenType.String)
@@ -211,14 +211,14 @@ namespace Winhance.WPF.Features.Common.Services
                             }
                             else if (jToken.Type == Newtonsoft.Json.Linq.JTokenType.Integer)
                             {
-                                double numValue = Convert.ToDouble(jToken.ToObject<object>());
+                                double numValue = Convert.ToDouble(jToken.ToObject<object>()!);
                                 bool boolValue = numValue != 0;
                                 return (T)(object)boolValue;
                             }
                         }
                     }
 
-                    var convertedValue = (T)Convert.ChangeType(value, typeof(T));
+                    var convertedValue = (T)Convert.ChangeType(value!, typeof(T))!;
                     return convertedValue;
                 }
                 catch (Exception ex)
@@ -242,7 +242,7 @@ namespace Winhance.WPF.Features.Common.Services
             {
                 var preferences = await GetPreferencesAsync();
 
-                preferences[key] = value;
+                preferences[key] = value!;
 
                 bool result = await SavePreferencesAsync(preferences);
 

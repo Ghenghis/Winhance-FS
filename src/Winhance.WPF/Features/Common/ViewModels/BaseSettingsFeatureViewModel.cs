@@ -99,7 +99,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
             return false;
         }
 
-        public void ApplySearchFilter(string searchText)
+        public override void ApplySearchFilter(string searchText)
         {
             SearchText = searchText ?? string.Empty;
         }
@@ -200,13 +200,13 @@ namespace Winhance.WPF.Features.Common.ViewModels
             }
         }
 
-        public virtual void OnNavigatedFrom()
+        public override void OnNavigatedFrom()
         {
             SearchText = string.Empty;
             VisibilityChanged = null;
         }
 
-        public virtual void OnNavigatedTo(object? parameter = null)
+        public override void OnNavigatedTo(object? parameter = null)
         {
             if (!Settings.Any())
             {
@@ -244,13 +244,13 @@ namespace Winhance.WPF.Features.Common.ViewModels
             }
         }
 
-        public void Dispose()
+        public new void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (!_isDisposed && disposing)
             {

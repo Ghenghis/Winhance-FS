@@ -46,7 +46,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
         public INavigationService NavigationService => _navigationService;
 
         [ObservableProperty]
-        private object _currentViewModel;
+        private object _currentViewModel = null!;
 
         public object CurrentViewInstance
         {
@@ -54,9 +54,9 @@ namespace Winhance.WPF.Features.Common.ViewModels
             {
                 if (_navigationService is Infrastructure.Features.Common.Services.FrameNavigationService frameNav)
                 {
-                    return frameNav.CurrentViewInstance;
+                    return frameNav.CurrentViewInstance!;
                 }
-                return null;
+                return null!;
             }
         }
 
@@ -476,7 +476,10 @@ namespace Winhance.WPF.Features.Common.ViewModels
                     _taskProgressService.ProgressUpdated -= OnProgressUpdated;
                 }
 
-                (_currentViewModel as IDisposable)?.Dispose();
+                if (CurrentViewModel is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
 
             _disposed = true;

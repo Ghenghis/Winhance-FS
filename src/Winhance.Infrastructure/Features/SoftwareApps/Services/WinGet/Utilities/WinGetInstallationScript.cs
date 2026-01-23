@@ -235,8 +235,8 @@ finally {
 ";
 
         public static async Task<(bool Success, string Message)> InstallWinGetAsync(
-            IProgress<TaskProgressDetail> progress = null,
-            ILogService logger = null,
+            IProgress<TaskProgressDetail>? progress = null,
+            ILogService? logger = null,
             CancellationToken cancellationToken = default
         )
         {
@@ -244,9 +244,9 @@ finally {
         }
 
         public static async Task<(bool Success, string Message)> InstallWinGetAsync(
-            IPowerShellExecutionService powerShellService,
-            IProgress<TaskProgressDetail> progress = null,
-            ILogService logger = null,
+            IPowerShellExecutionService? powerShellService,
+            IProgress<TaskProgressDetail>? progress = null,
+            ILogService? logger = null,
             CancellationToken cancellationToken = default
         )
         {

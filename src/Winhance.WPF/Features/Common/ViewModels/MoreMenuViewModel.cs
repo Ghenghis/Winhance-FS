@@ -142,7 +142,7 @@ public class MoreMenuViewModel : ObservableObject
 
     public ICommand CloseApplicationCommand { get; }
 
-    public ICommand ChangeLanguageCommand { get; }
+    public ICommand ChangeLanguageCommand { get; } = null!;
 
 
     private void CloseFlyout()
@@ -293,8 +293,8 @@ public class MoreMenuViewModel : ObservableObject
 
         try
         {
-            Type shellType = Type.GetTypeFromProgID("Shell.Application");
-            dynamic shell = Activator.CreateInstance(shellType);
+            Type shellType = Type.GetTypeFromProgID("Shell.Application")!;
+            dynamic shell = Activator.CreateInstance(shellType)!;
             dynamic windows = shell.Windows();
 
             foreach (dynamic window in windows)

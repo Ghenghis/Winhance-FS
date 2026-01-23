@@ -15,12 +15,12 @@ namespace Winhance.WPF.Features.Common.ViewModels
 {
     public class ImportActionOption : ObservableObject
     {
-        private string _key;
-        private string _label;
+        private string _key = string.Empty;
+        private string _label = string.Empty;
         private bool _isSelected;
         private bool _isRadioButton;
-        private string _groupName;
-        private UnifiedConfigurationSectionViewModel _parentSection;
+        private string _groupName = string.Empty;
+        private UnifiedConfigurationSectionViewModel? _parentSection;
 
         public string Key
         {
@@ -72,8 +72,8 @@ namespace Winhance.WPF.Features.Common.ViewModels
     public class UnifiedConfigurationDialogViewModel : ObservableObject
     {
         private readonly ILocalizationService _localization;
-        private string _title;
-        private string _description;
+        private string _title = string.Empty;
+        private string _description = string.Empty;
         private bool _isSaveDialog;
 
         public string Title
@@ -323,8 +323,8 @@ namespace Winhance.WPF.Features.Common.ViewModels
                 }
             }
 
-            OkCommand = null;
-            CancelCommand = null;
+            OkCommand = null!;
+            CancelCommand = null!;
         }
 
         public (Dictionary<string, bool> sections, ImportOptions options) GetResult()
@@ -443,12 +443,12 @@ namespace Winhance.WPF.Features.Common.ViewModels
 
     public class UnifiedConfigurationSectionViewModel : ObservableObject
     {
-        private string _name;
-        private string _description;
+        private string _name = string.Empty;
+        private string _description = string.Empty;
         private bool _isSelected;
         private bool _isAvailable;
         private int _itemCount;
-        private string _sectionKey;
+        private string _sectionKey = string.Empty;
         private bool _hasSubSections;
         private bool _hasActionOptions;
 

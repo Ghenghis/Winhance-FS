@@ -7,7 +7,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services.WinGet.Utilitie
         private string _lastLine = "";
         private readonly string _appName;
 
-        public WinGetOutputParser(string appName = null)
+        public WinGetOutputParser(string appName = null!)
         {
             _appName = appName;
         }

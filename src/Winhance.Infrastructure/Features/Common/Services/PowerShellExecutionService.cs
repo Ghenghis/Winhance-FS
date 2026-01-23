@@ -203,7 +203,7 @@ public class PowerShellExecutionService(ILogService logService) : IPowerShellExe
         return output;
     }
 
-    private static string FilterPowerShellOutput(string rawOutput)
+    private static string? FilterPowerShellOutput(string? rawOutput)
     {
         if (string.IsNullOrWhiteSpace(rawOutput))
             return null;

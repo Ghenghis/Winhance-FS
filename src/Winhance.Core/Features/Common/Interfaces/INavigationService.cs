@@ -11,7 +11,7 @@ namespace Winhance.Core.Features.Common.Interfaces
         Task NavigateToAsync(string viewName);
         Task NavigateToAsync(string viewName, object parameter);
 
-        string CurrentView { get; }
+        string? CurrentView { get; }
 
         event EventHandler<NavigationEventArgs>? Navigated;
         event EventHandler<NavigationEventArgs>? Navigating;

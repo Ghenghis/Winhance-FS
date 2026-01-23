@@ -20,11 +20,11 @@ public class AutounattendScriptBuilder
 
     private class PowerSettingData
     {
-        public string SubgroupGuid { get; set; }
-        public string SettingGuid { get; set; }
+        public string SubgroupGuid { get; set; } = string.Empty;
+        public string SettingGuid { get; set; } = string.Empty;
         public int AcValue { get; set; }
         public int DcValue { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
     }
 
     public AutounattendScriptBuilder(IServiceProvider serviceProvider, ILogService logService, IComboBoxResolver comboBoxResolver)

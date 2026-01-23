@@ -238,7 +238,7 @@ namespace Winhance.WPF.Features.Common.Services
                 return sectionResults;
             }
 
-            return null;
+            return null!;
         }
 
         public async Task<(Dictionary<string, bool> sections, ImportOptions options)?> ShowUnifiedConfigurationImportDialogAsync(
@@ -268,12 +268,12 @@ namespace Winhance.WPF.Features.Common.Services
                 return dialog.GetResult();
             }
 
-            return null;
+            return null!;
         }
 
         public async Task<(bool? Result, bool DontShowAgain)> ShowDonationDialogAsync(
-            string title = null,
-            string supportMessage = null
+            string? title = null,
+            string? supportMessage = null
         )
         {
             try
@@ -311,11 +311,11 @@ namespace Winhance.WPF.Features.Common.Services
                     return dialog.SelectedOption;
                 }
 
-                return null;
+                return null!;
             }
             catch (Exception)
             {
-                return null;
+                return null!;
             }
         }
 
@@ -396,8 +396,8 @@ namespace Winhance.WPF.Features.Common.Services
             int successCount,
             int totalCount,
             IEnumerable<string> successItems,
-            IEnumerable<string> failedItems = null,
-            IEnumerable<string> skippedItems = null,
+            IEnumerable<string>? failedItems = null,
+            IEnumerable<string>? skippedItems = null,
             bool hasConnectivityIssues = false,
             bool isUserCancelled = false
         )

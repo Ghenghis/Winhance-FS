@@ -18,7 +18,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
         private readonly ILogService _logService;
         private readonly object _statsLock = new();
 
-        public ViewPoolService(ILogService logService, Dictionary<Type, int> poolSizes = null)
+        public ViewPoolService(ILogService logService, Dictionary<Type, int>? poolSizes = null)
         {
             _logService = logService ?? throw new ArgumentNullException(nameof(logService));
             _maxPoolSizes = new ConcurrentDictionary<Type, int>(poolSizes ?? new Dictionary<Type, int>());

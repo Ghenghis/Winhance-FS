@@ -113,7 +113,7 @@ public class ScheduledTaskService(ILogService logService) : IScheduledTaskServic
         });
     }
 
-    private bool RegisterTaskInternal(string taskName, string scriptPath, string username, TaskTriggerType triggerType, string command = null)
+    private bool RegisterTaskInternal(string taskName, string? scriptPath, string? username, TaskTriggerType triggerType, string? command = null)
     {
         var taskService = CreateTaskService();
         var folder = GetOrCreateWinhanceFolder(taskService);
@@ -138,8 +138,12 @@ public class ScheduledTaskService(ILogService logService) : IScheduledTaskServic
 
     private dynamic CreateTaskService()
     {
-        Type taskSchedulerType = Type.GetTypeFromProgID("Schedule.Service");
-        dynamic taskService = Activator.CreateInstance(taskSchedulerType);
+        Type? taskSchedulerType = Type.GetTypeFromProgID("Schedule.Service");
+        if (taskSchedulerType == null)
+            throw new InvalidOperationException("Could not find Schedule.Service COM type");
+
+        dynamic taskService = Activator.CreateInstance(taskSchedulerType)
+            ?? throw new InvalidOperationException("Could not create Schedule.Service instance");
         taskService.Connect();
         return taskService;
     }
@@ -157,7 +161,7 @@ public class ScheduledTaskService(ILogService logService) : IScheduledTaskServic
         }
     }
 
-    private dynamic GetWinhanceFolder(dynamic taskService)
+    private dynamic? GetWinhanceFolder(dynamic taskService)
     {
         try
         {
@@ -192,7 +196,7 @@ public class ScheduledTaskService(ILogService logService) : IScheduledTaskServic
     }
 
 
-    private dynamic CreateTaskDefinition(dynamic taskService, string scriptPath, string command, string username, TaskTriggerType triggerType)
+    private dynamic CreateTaskDefinition(dynamic taskService, string? scriptPath, string? command, string? username, TaskTriggerType triggerType)
     {
         var taskDefinition = taskService.NewTask(0);
 
@@ -244,13 +248,16 @@ public class ScheduledTaskService(ILogService logService) : IScheduledTaskServic
     {
         if (!File.Exists(script.ActualScriptPath) && !string.IsNullOrEmpty(script.Content))
         {
-            string directoryPath = Path.GetDirectoryName(script.ActualScriptPath);
-            if (!Directory.Exists(directoryPath))
+            string? directoryPath = Path.GetDirectoryName(script.ActualScriptPath);
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
             }
 
-            File.WriteAllText(script.ActualScriptPath, script.Content);
+            if (!string.IsNullOrEmpty(script.ActualScriptPath))
+            {
+                File.WriteAllText(script.ActualScriptPath, script.Content);
+            }
         }
     }
 

@@ -11,7 +11,7 @@ public class LegacyCapabilityService(
     ILogService logService,
     IPowerShellExecutionService powerShellExecutionService) : ILegacyCapabilityService
 {
-    public async Task<bool> EnableCapabilityAsync(string capabilityName, string displayName = null, CancellationToken cancellationToken = default)
+    public async Task<bool> EnableCapabilityAsync(string capabilityName, string? displayName = null, CancellationToken cancellationToken = default)
     {
         displayName ??= capabilityName;
 
@@ -93,7 +93,7 @@ public class LegacyCapabilityService(
         }
     }
 
-    public async Task<bool> DisableCapabilityAsync(string capabilityName, string displayName = null, CancellationToken cancellationToken = default)
+    public async Task<bool> DisableCapabilityAsync(string capabilityName, string? displayName = null, CancellationToken cancellationToken = default)
     {
         displayName ??= capabilityName;
 

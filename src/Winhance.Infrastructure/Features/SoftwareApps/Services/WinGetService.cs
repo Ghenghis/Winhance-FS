@@ -18,9 +18,9 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
         ILocalizationService localization) : IWinGetService
     {
         private readonly ILocalizationService _localization = localization;
-        private string _wingetExePath = null;
+        private string? _wingetExePath = null;
 
-        private async Task<string> GetWinGetFromAppXAsync(CancellationToken cancellationToken = default)
+        private async Task<string?> GetWinGetFromAppXAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -53,7 +53,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             }
         }
 
-        private async Task<string> ResolveWinGetPathAsync(CancellationToken cancellationToken = default)
+        private async Task<string?> ResolveWinGetPathAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             }
         }
 
-        public async Task<bool> InstallPackageAsync(string packageId, string displayName = null, CancellationToken cancellationToken = default)
+        public async Task<bool> InstallPackageAsync(string packageId, string? displayName = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(packageId))
                 throw new ArgumentException("Package ID cannot be null or empty", nameof(packageId));
@@ -241,7 +241,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             }
         }
 
-        public async Task<bool> UninstallPackageAsync(string packageId, string displayName = null, CancellationToken cancellationToken = default)
+        public async Task<bool> UninstallPackageAsync(string packageId, string? displayName = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(packageId))
                 throw new ArgumentException("Package ID cannot be null or empty", nameof(packageId));
@@ -358,7 +358,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             }
         }
 
-        private async Task<(int ExitCode, string Output)> ExecuteProcessAsync(string fileName, string arguments, string displayName, CancellationToken cancellationToken, string operationContext = null)
+        private async Task<(int ExitCode, string Output)> ExecuteProcessAsync(string fileName, string arguments, string displayName, CancellationToken cancellationToken, string? operationContext = null)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -453,7 +453,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             return $"Processing {displayName ?? "operation"}...";
         }
 
-        private string GetErrorContextMessage(string packageId, int exitCode, string output = null)
+        private string GetErrorContextMessage(string packageId, int exitCode, string? output = null)
         {
             if (!string.IsNullOrEmpty(output) && IsNetworkRelatedError(output))
             {
@@ -476,7 +476,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             };
         }
 
-        private string GetUninstallErrorMessage(string packageId, int exitCode, string output = null)
+        private string GetUninstallErrorMessage(string packageId, int exitCode, string? output = null)
         {
             return exitCode switch
             {
@@ -557,7 +557,7 @@ namespace Winhance.Infrastructure.Features.SoftwareApps.Services
             }
         }
 
-        public async Task<bool> EnsureWinGetUpToDateAsync(IProgress<TaskProgressDetail> progress = null, CancellationToken cancellationToken = default)
+        public async Task<bool> EnsureWinGetUpToDateAsync(IProgress<TaskProgressDetail>? progress = null, CancellationToken cancellationToken = default)
         {
             try
             {

@@ -6,7 +6,7 @@ namespace Winhance.Core.Features.SoftwareApps.Models;
 
 public record ItemDefinition : BaseDefinition
 {
-    public InputType InputType { get; init; } = InputType.CheckBox;
+    public new InputType InputType { get; init; } = InputType.CheckBox;
     public string? AppxPackageName { get; init; }
     public string? WinGetPackageId { get; init; }
     public string? CapabilityName { get; init; }

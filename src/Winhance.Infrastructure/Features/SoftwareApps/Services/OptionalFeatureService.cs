@@ -11,7 +11,7 @@ public class OptionalFeatureService(
     ILogService logService,
     IPowerShellExecutionService powerShellExecutionService) : IOptionalFeatureService
 {
-    public async Task<bool> EnableFeatureAsync(string featureName, string displayName = null, CancellationToken cancellationToken = default)
+    public async Task<bool> EnableFeatureAsync(string featureName, string? displayName = null, CancellationToken cancellationToken = default)
     {
         displayName ??= featureName;
 
@@ -96,7 +96,7 @@ public class OptionalFeatureService(
         }
     }
 
-    public async Task<bool> DisableFeatureAsync(string featureName, string displayName = null, CancellationToken cancellationToken = default)
+    public async Task<bool> DisableFeatureAsync(string featureName, string? displayName = null, CancellationToken cancellationToken = default)
     {
         displayName ??= featureName;
 

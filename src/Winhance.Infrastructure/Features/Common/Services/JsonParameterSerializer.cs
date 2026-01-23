@@ -18,7 +18,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
         public int MaxParameterSize { get; set; } = 1024 * 1024; // 1MB default
         public bool UseCompression { get; set; } = true;
 
-        public string Serialize(object parameter)
+        public string? Serialize(object? parameter)
         {
             if (parameter == null) return null;
 
@@ -39,7 +39,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
         }
 
         // Corrected signature to match IParameterSerializer
-        public object Deserialize(Type targetType, string value)
+        public object? Deserialize(Type targetType, string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
 
@@ -70,7 +70,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
             }
         }
 
-        public T Deserialize<T>(string serialized)
+        public T? Deserialize<T>(string? serialized)
         {
             if (string.IsNullOrWhiteSpace(serialized)) return default;
 

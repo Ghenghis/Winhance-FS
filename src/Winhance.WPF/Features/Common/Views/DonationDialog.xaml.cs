@@ -52,7 +52,7 @@ namespace Winhance.WPF.Features.Common.Views
             Close();
         }
 
-        public static async Task<DonationDialog> ShowDonationDialogAsync(string title = null, string supportMessage = null)
+        public static async Task<DonationDialog> ShowDonationDialogAsync(string? title = null, string? supportMessage = null)
         {
             try
             {

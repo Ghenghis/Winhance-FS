@@ -20,7 +20,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
         : Winhance.Core.Features.Common.Interfaces.INavigationService
     {
         private readonly Stack<Type> _backStack = new();
-        private readonly Stack<(Type ViewModelType, object Parameter)> _forwardStack = new();
+        private readonly Stack<(Type ViewModelType, object? Parameter)> _forwardStack = new();
         private readonly List<string> _navigationHistory = new();
         private readonly Dictionary<string, (Type ViewType, Type ViewModelType)> _viewMappings =
             new();
@@ -28,13 +28,13 @@ namespace Winhance.Infrastructure.Features.Common.Services
         private readonly IParameterSerializer _parameterSerializer;
         private readonly ILogService _logService;
         private readonly IViewPoolService _viewPoolService;
-        private object _currentParameter;
-        private string _currentRoute;
+        private object? _currentParameter;
+        private string? _currentRoute;
         private const int MaxHistorySize = 50;
-        private ICommand _navigateCommand;
+        private ICommand? _navigateCommand;
 
         public ICommand NavigateCommand =>
-            _navigateCommand ??= new RelayCommand<string>(route => NavigateTo(route));
+            _navigateCommand ??= new RelayCommand<string>(route => NavigateTo(route!));
         public FrameNavigationService(
             IServiceProvider serviceProvider,
             IParameterSerializer parameterSerializer,
@@ -49,11 +49,11 @@ namespace Winhance.Infrastructure.Features.Common.Services
 
         public bool CanGoBack => _backStack.Count > 1;
         public IReadOnlyList<string> NavigationHistory => _navigationHistory.AsReadOnly();
-        public string CurrentView => _currentRoute;
+        public string? CurrentView => _currentRoute;
 
-        public event EventHandler<Winhance.Core.Features.Common.Interfaces.NavigationEventArgs> Navigated;
-        public event EventHandler<Winhance.Core.Features.Common.Interfaces.NavigationEventArgs> Navigating;
-        public event EventHandler<Winhance.Core.Features.Common.Interfaces.NavigationEventArgs> NavigationFailed;
+        public event EventHandler<Winhance.Core.Features.Common.Interfaces.NavigationEventArgs>? Navigated;
+        public event EventHandler<Winhance.Core.Features.Common.Interfaces.NavigationEventArgs>? Navigating;
+        public event EventHandler<Winhance.Core.Features.Common.Interfaces.NavigationEventArgs>? NavigationFailed;
 
         public void Initialize() { }
 
@@ -80,7 +80,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
                     catch (Exception)
                     {
                         var args = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                            CurrentView,
+                            CurrentView!,
                             viewName,
                             null,
                             false
@@ -93,7 +93,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
             catch (Exception)
             {
                 var args = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                    CurrentView,
+                    CurrentView!,
                     viewName,
                     null,
                     false
@@ -120,7 +120,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
             }
 
             var navigatingArgs = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                _currentRoute,
+                _currentRoute!,
                 route,
                 null,
                 false
@@ -180,7 +180,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
                     catch (Exception)
                     {
                         var args = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                            CurrentView,
+                            CurrentView!,
                             viewName,
                             parameter,
                             false
@@ -193,7 +193,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
             catch (Exception)
             {
                 var args = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                    CurrentView,
+                    CurrentView!,
                     viewName,
                     parameter,
                     false
@@ -247,8 +247,8 @@ namespace Winhance.Infrastructure.Features.Common.Services
         private async Task NavigateInternalAsync(
             Type viewType,
             Type viewModelType,
-            object parameter,
-            object preloadedViewModel = null,
+            object? parameter,
+            object? preloadedViewModel = null,
             CancellationToken cancellationToken = default
         )
         {
@@ -284,7 +284,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
             }
 
             // Find the route for this view/viewmodel for event args
-            string route = null;
+            string? route = null;
             foreach (var mapping in _viewMappings)
             {
                 if (mapping.Value.ViewType == viewType)
@@ -298,8 +298,8 @@ namespace Winhance.Infrastructure.Features.Common.Services
             var targetView = route;
 
             var args = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                sourceView,
-                targetView,
+                sourceView!,
+                targetView!,
                 parameter,
                 true
             );
@@ -381,8 +381,8 @@ namespace Winhance.Infrastructure.Features.Common.Services
             // Raise the Navigated event which will update the UI
             _logService?.Log(LogLevel.Info, $"[NavigateInternalAsync] Raising Navigated event. SourceView: {sourceView}, TargetView: {targetView}");
             var navigatedArgs = new Winhance.Core.Features.Common.Interfaces.NavigationEventArgs(
-                sourceView,
-                targetView,
+                sourceView ?? string.Empty,
+                targetView ?? string.Empty,
                 viewModel,
                 false
             );
@@ -423,11 +423,11 @@ namespace Winhance.Infrastructure.Features.Common.Services
             _navigationHistory.Clear();
         }
 
-        private object _currentViewModel;
-        public object CurrentViewModel => _currentViewModel;
+        private object? _currentViewModel;
+        public object? CurrentViewModel => _currentViewModel;
 
-        private object _currentViewInstance;
-        public object CurrentViewInstance => _currentViewInstance;
+        private object? _currentViewInstance;
+        public object? CurrentViewInstance => _currentViewInstance;
 
         private Type GetViewTypeForViewModel(Type viewModelType)
         {
@@ -441,7 +441,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
             }
 
             // If no mapping found, try the old way as fallback
-            var viewName = viewModelType.FullName.Replace("ViewModel", "View");
+            var viewName = viewModelType.FullName?.Replace("ViewModel", "View") ?? viewModelType.Name.Replace("ViewModel", "View");
             var viewType = Type.GetType(viewName);
 
             if (viewType == null)

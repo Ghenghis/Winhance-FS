@@ -34,7 +34,7 @@ namespace Winhance.WPF
     /// </summary>
     public partial class App : Application
     {
-        private readonly IHost _host;
+        private IHost? _host;
         private BackupResult? _backupResult;
         private ScriptMigrationResult? _migrationResult;
         private Mutex? _singleInstanceMutex;
@@ -43,7 +43,7 @@ namespace Winhance.WPF
         /// <summary>
         /// Gets the current service provider for dependency injection.
         /// </summary>
-        public IServiceProvider ServiceProvider => _host.Services;
+        public IServiceProvider ServiceProvider => _host?.Services ?? throw new InvalidOperationException("Host not initialized");
 
         public App()
         {
@@ -145,7 +145,7 @@ namespace Winhance.WPF
             catch (Exception ex)
             {
                 LogStartupError("Error creating host in constructor", ex);
-                _host = null; // Ensure it's null if creation failed
+                _host = null!; // Ensure it's null if creation failed
                 // Don't throw - let the app continue so we can see the error and shut down gracefully
             }
         }
@@ -198,8 +198,10 @@ namespace Winhance.WPF
 
                 // Show startup notifications
                 var startupNotifications = _host.Services.GetRequiredService<IStartupNotificationService>();
-                await startupNotifications.ShowBackupNotificationAsync(_backupResult);
-                startupNotifications.ShowMigrationNotification(_migrationResult);
+                if (_backupResult != null)
+                    await startupNotifications.ShowBackupNotificationAsync(_backupResult);
+                if (_migrationResult != null)
+                    startupNotifications.ShowMigrationNotification(_migrationResult);
 
                 // Check for updates
                 await CheckForUpdatesAsync(mainWindow);
