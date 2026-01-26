@@ -1,0 +1,197 @@
+name: Audit31 - CI Gates
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Audit profile to run'
+        required: false
+        default: 'fast'
+        type: choice
+        options:
+          - fast
+          - full
+          - security
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # ============================================================
+  # P0 GATES - These MUST pass for PR merge
+  # ============================================================
+  
+  p0-gates:
+    name: P0 Gates (Blocking)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install Python Tools
+        run: pip install psutil detect-secrets
+      
+      - name: Run Fast Audit (P0 Gates)
+        run: python tools/audit-framework/audit.py fast
+      
+      - name: Upload P0 Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p0-audit-reports
+          path: audit-reports/latest/
+
+  # ============================================================
+  # WARN GATES - Non-blocking, tracked for burn-down
+  # ============================================================
+  
+  warn-gates:
+    name: Warn Gates (Non-blocking)
+    runs-on: windows-latest
+    needs: p0-gates
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install Python Tools
+        run: |
+          pip install psutil ruff mypy bandit
+      
+      - name: dotnet format (warn only)
+        run: dotnet format --verify-no-changes
+        continue-on-error: true
+      
+      - name: XAML Binding Audit (warn only)
+        run: python tools/audit-framework/xaml-binding-audit.py
+        continue-on-error: true
+      
+      - name: mypy (warn only)
+        run: python -m mypy src/ --ignore-missing-imports
+        continue-on-error: true
+      
+      - name: Upload Warn Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warn-audit-reports
+          path: audit-reports/
+
+  # ============================================================
+  # FULL AUDIT - Nightly / Pre-release
+  # ============================================================
+  
+  full-audit:
+    name: Full Audit (Nightly)
+    runs-on: windows-latest
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs: p0-gates
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install Python Tools
+        run: |
+          pip install psutil ruff mypy pyright bandit pip-audit detect-secrets semgrep
+      
+      - name: Run Full Audit
+        run: python tools/audit-framework/audit.py full
+        continue-on-error: true
+      
+      - name: Upload Full Audit Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-audit-reports
+          path: audit-reports/latest/
+
+  # ============================================================
+  # RUST AUDIT
+  # ============================================================
+  
+  rust-audit:
+    name: Rust Audit
+    runs-on: ubuntu-latest
+    needs: p0-gates
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: src/nexus_core
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit cargo-machete
+      
+      - name: cargo fmt
+        run: cargo fmt --check
+      
+      - name: cargo clippy (P0)
+        run: cargo clippy --all-targets -- -D warnings
+      
+      - name: cargo audit (warn)
+        run: cargo audit
+        continue-on-error: true
+      
+      - name: cargo machete (warn)
+        run: cargo machete
+        continue-on-error: true
+
+  # ============================================================
+  # CI SUMMARY
+  # ============================================================
+  
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [p0-gates, warn-gates]
+    if: always()
+    steps:
+      - name: Check P0 Gates
+        if: needs.p0-gates.result != 'success'
+        run: |
+          echo "❌ P0 GATES FAILED - PR cannot be merged"
+          exit 1
+      
+      - name: CI Passed
+        run: |
+          echo "✅ P0 Gates passed"
+          echo "⚠️ Check warn-gates job for non-blocking issues"

@@ -185,3 +185,133 @@ indent_size = 2
 # UniFFI definition files
 [*.udl]
 indent_size = 4
+
+# =============================================================================
+# ROSLYN ANALYZER SEVERITY RULES
+# =============================================================================
+
+[*.cs]
+# Security rules - treat as errors (except MD5 for non-security file hashing)
+dotnet_diagnostic.CA2100.severity = error  # SQL injection
+dotnet_diagnostic.CA2119.severity = error  # Seal methods that satisfy private interfaces
+dotnet_diagnostic.CA5350.severity = warning  # Weak crypto - warning only (used for file hashing)
+dotnet_diagnostic.CA5351.severity = warning  # MD5/SHA1 - warning only (used for file dedup, not security)
+
+# Reliability rules
+dotnet_diagnostic.CA2000.severity = warning  # Dispose objects before losing scope
+dotnet_diagnostic.CA2007.severity = none     # ConfigureAwait (not needed in WPF)
+dotnet_diagnostic.CA2012.severity = warning  # Use ValueTasks correctly
+
+# Performance rules
+dotnet_diagnostic.CA1822.severity = suggestion  # Mark members as static
+dotnet_diagnostic.CA1860.severity = warning     # Avoid using 'Enumerable.Any()' extension method
+dotnet_diagnostic.CA1861.severity = warning     # Avoid constant arrays as arguments
+
+# Code quality rules
+dotnet_diagnostic.CA1062.severity = suggestion  # Validate arguments of public methods
+dotnet_diagnostic.CA1303.severity = none        # Do not pass literals as localized parameters
+dotnet_diagnostic.CA1304.severity = suggestion  # Specify CultureInfo
+dotnet_diagnostic.CA1305.severity = suggestion  # Specify IFormatProvider
+dotnet_diagnostic.CA1307.severity = suggestion  # Specify StringComparison
+dotnet_diagnostic.CA1310.severity = warning     # Specify StringComparison for correctness
+
+# StyleCop rules
+dotnet_diagnostic.SA1101.severity = none  # Prefix local calls with this
+dotnet_diagnostic.SA1200.severity = none  # Using directives should be placed correctly
+dotnet_diagnostic.SA1309.severity = none  # Field names should not begin with underscore
+dotnet_diagnostic.SA1633.severity = none  # File should have header
+dotnet_diagnostic.SA1600.severity = none  # Elements should be documented
+dotnet_diagnostic.SA1602.severity = none  # Enumeration items should be documented
+
+# Meziantou rules
+dotnet_diagnostic.MA0004.severity = warning  # Use ConfigureAwait
+dotnet_diagnostic.MA0006.severity = warning  # Use string.Equals
+dotnet_diagnostic.MA0011.severity = warning  # IFormatProvider is missing
+dotnet_diagnostic.MA0076.severity = warning  # Do not use implicit culture-sensitive ToString
+
+# Roslynator rules
+dotnet_diagnostic.RCS1036.severity = suggestion  # Remove unnecessary blank line
+dotnet_diagnostic.RCS1037.severity = suggestion  # Remove trailing white-space
+dotnet_diagnostic.RCS1194.severity = suggestion  # Implement exception constructors
+dotnet_diagnostic.RCS1075.severity = suggestion  # Empty catch clause - suggestion only
+
+# =============================================================================
+# RULES WITHOUT AUTO-FIXERS - Configured for practical use
+# =============================================================================
+
+# SA1401: Fields should be private - suggestion (public fields OK for DTOs/records)
+dotnet_diagnostic.SA1401.severity = suggestion
+
+# SA1402: File may only contain a single type - none (multiple related types OK)
+dotnet_diagnostic.SA1402.severity = none
+
+# SA1649: File name should match first type name - none (multiple related types OK)
+dotnet_diagnostic.SA1649.severity = none
+
+# SA1204: Static elements should appear before instance - suggestion only
+dotnet_diagnostic.SA1204.severity = suggestion
+
+# SA1214: Readonly fields should appear before non-readonly - suggestion only
+dotnet_diagnostic.SA1214.severity = suggestion
+
+# SA1203: Constants should appear before fields - suggestion only
+dotnet_diagnostic.SA1203.severity = suggestion
+
+# SA1316: Tuple element names should use correct casing - suggestion only
+dotnet_diagnostic.SA1316.severity = suggestion
+
+# SA1611: Element parameters should be documented - none (too noisy)
+dotnet_diagnostic.SA1611.severity = none
+
+# SA1615: Element return value should be documented - none (too noisy)
+dotnet_diagnostic.SA1615.severity = none
+
+# SA1616: Element return value documentation should have text - none
+dotnet_diagnostic.SA1616.severity = none
+
+# SA1117: Parameters should be on same line or separate lines - suggestion
+dotnet_diagnostic.SA1117.severity = suggestion
+
+# SA1118: Parameter should not span multiple lines - suggestion
+dotnet_diagnostic.SA1118.severity = suggestion
+
+# SA1115: Parameter should follow comma - suggestion
+dotnet_diagnostic.SA1115.severity = suggestion
+
+# SA1108: Block statements should not contain embedded comments - none
+dotnet_diagnostic.SA1108.severity = none
+
+# SA1414: Tuple types in signatures should have element names - suggestion
+dotnet_diagnostic.SA1414.severity = suggestion
+
+# SA1625: Element documentation should not be copied and pasted - suggestion
+dotnet_diagnostic.SA1625.severity = suggestion
+
+# SA1601: Partial elements should be documented - none
+dotnet_diagnostic.SA1601.severity = none
+
+# SA1201: Elements should appear in correct order - suggestion only
+dotnet_diagnostic.SA1201.severity = suggestion
+
+# SA1202: Elements should be ordered by access - suggestion only  
+dotnet_diagnostic.SA1202.severity = suggestion
+
+# CA1860: Prefer Length/Count over Any() - suggestion only (no auto-fix)
+dotnet_diagnostic.CA1860.severity = suggestion
+
+# CA1861: Avoid constant arrays as arguments - suggestion (no auto-fix available)
+dotnet_diagnostic.CA1861.severity = suggestion
+
+# CS8600/CS8603/CS8618: Nullable reference type warnings - suggestion for gradual adoption
+dotnet_diagnostic.CS8600.severity = suggestion  # Converting null literal
+dotnet_diagnostic.CS8603.severity = suggestion  # Possible null reference return
+dotnet_diagnostic.CS8618.severity = suggestion  # Non-nullable field uninitialized
+
+# SA1116: Split parameters should start on line after declaration - suggestion
+dotnet_diagnostic.SA1116.severity = suggestion
+
+# CS1503: Argument type mismatch - keep as error (real bugs)
+dotnet_diagnostic.CS1503.severity = error
+
+# CA2000: Dispose objects - suggestion only (many false positives in async code)
+dotnet_diagnostic.CA2000.severity = suggestion
