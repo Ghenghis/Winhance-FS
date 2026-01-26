@@ -1,0 +1,112 @@
+<UserControl x:Class="Winhance.WPF.Features.FileManager.Controls.TreeMapControl"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks" mc:Ignorable="d" d:DesignHeight="400" d:DesignWidth="600">
+
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <!-- TreeMap Item Style -->
+      <Style x:Key="TreeMapItemStyle" TargetType="Border">
+        <Setter Property="BorderBrush" Value="#40000000" />
+        <Setter Property="BorderThickness" Value="0.5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Style.Triggers>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHueLightBrush}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+          </Trigger>
+        </Style.Triggers>
+      </Style>
+
+      <!-- TreeMap Text Style -->
+      <Style x:Key="TreeMapTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="Effect">
+          <Setter.Value>
+            <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="1" />
+          </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+          <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}" Value="50">
+            <Setter Property="FontSize" Value="8" />
+          </DataTrigger>
+          <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}" Value="100">
+            <Setter Property="FontSize" Value="10" />
+          </DataTrigger>
+          <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}" Value="200">
+            <Setter Property="FontSize" Value="12" />
+          </DataTrigger>
+        </Style.Triggers>
+      </Style>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Grid Background="{DynamicResource ContentSectionBackground}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <Border Grid.Row="0" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource MainContainerBorderBrush}" BorderThickness="0,0,0,1" Padding="16,12">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Orientation="Horizontal">
+          <iconPacks:PackIconMaterial Kind="ChartTree" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource PrimaryTextColor}" />
+          <TextBlock Text="Storage TreeMap" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button x:Name="ZoomInButton" Click="ZoomInButton_Click" Style="{DynamicResource IconButtonStyle}" ToolTip="Zoom In" Margin="4,0">
+            <iconPacks:PackIconMaterial Kind="MagnifyPlus" Width="16" Height="16" />
+          </Button>
+          <Button x:Name="ZoomOutButton" Click="ZoomOutButton_Click" Style="{DynamicResource IconButtonStyle}" ToolTip="Zoom Out" Margin="4,0">
+            <iconPacks:PackIconMaterial Kind="MagnifyMinus" Width="16" Height="16" />
+          </Button>
+          <Button x:Name="ResetButton" Click="ResetButton_Click" Style="{DynamicResource IconButtonStyle}" ToolTip="Reset View" Margin="4,0">
+            <iconPacks:PackIconMaterial Kind="Restore" Width="16" Height="16" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- TreeMap Canvas -->
+    <Border Grid.Row="1" Background="{DynamicResource ContentSectionBackground}" BorderBrush="{DynamicResource MainContainerBorderBrush}" BorderThickness="1" Margin="16">
+      <Grid>
+        <Canvas x:Name="TreeMapCanvas" ClipToBounds="True" MouseLeftButtonDown="TreeMapCanvas_MouseLeftButtonDown" MouseWheel="TreeMapCanvas_MouseWheel">
+          <Canvas.LayoutTransform>
+            <ScaleTransform x:Name="ZoomTransform" CenterX="0" CenterY="0" />
+          </Canvas.LayoutTransform>
+        </Canvas>
+        <TextBlock x:Name="EmptyMessage" Text="Click 'Analyze' to visualize folder sizes" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="{DynamicResource SubTextColor}" Visibility="Visible"/>
+      </Grid>
+    </Border>
+
+    <!-- Footer Info -->
+    <Border Grid.Row="2" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource MainContainerBorderBrush}" BorderThickness="0,1,0,0" Padding="16,8">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock x:Name="PathTextBlock" Grid.Column="0" Text="{Binding CurrentPath}" Foreground="{DynamicResource PrimaryTextColor}" FontSize="12" />
+
+        <TextBlock x:Name="SizeTextBlock" Grid.Column="1" Text="{Binding TotalSize, StringFormat='Total: {0}'}" Foreground="{DynamicResource PrimaryTextColor}" FontSize="12" Margin="16,0" />
+
+        <TextBlock x:Name="CountTextBlock" Grid.Column="2" Text="{Binding ItemCount, StringFormat='Items: {0}'}" Foreground="{DynamicResource PrimaryTextColor}" FontSize="12" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

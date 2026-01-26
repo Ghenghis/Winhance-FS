@@ -1,0 +1,315 @@
+<UserControl x:Class="Winhance.WPF.Features.FileManager.Controls.FileListControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:viewModels="clr-namespace:Winhance.WPF.Features.FileManager.ViewModels"
+             xmlns:controls="clr-namespace:Winhance.WPF.Features.FileManager.Controls"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             mc:Ignorable="d" 
+             d:DesignHeight="400" d:DesignWidth="600"
+             d:DataContext="{d:DesignInstance Type=viewModels:FileListViewModel}">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Features/Common/Resources/Styles/TableViewStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- View Mode Templates -->
+            <DataTemplate x:Key="DetailsViewTemplate">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="30"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="140"/>
+                    </Grid.ColumnDefinitions>
+                    <iconPacks:PackIconMaterial Grid.Column="0" Kind="{Binding Icon}" Width="16" Height="16" 
+                                               VerticalAlignment="Center" HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="5,0"/>
+                    <TextBlock Grid.Column="2" Text="{Binding SizeDisplay}" VerticalAlignment="Center" Margin="5,0" 
+                               HorizontalAlignment="Right" Foreground="{DynamicResource SubTextColor}"/>
+                    <TextBlock Grid.Column="3" Text="{Binding DateModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" 
+                               VerticalAlignment="Center" Margin="5,0" HorizontalAlignment="Right" 
+                               Foreground="{DynamicResource SubTextColor}"/>
+                </Grid>
+            </DataTemplate>
+            
+            <DataTemplate x:Key="IconsViewTemplate">
+                <Grid Width="80" Height="100">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <iconPacks:PackIconMaterial Grid.Row="0" Kind="{Binding Icon}" Width="48" Height="48" 
+                                               VerticalAlignment="Center" HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                    <TextBlock Grid.Row="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" 
+                               TextAlignment="Center" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                </Grid>
+            </DataTemplate>
+            
+            <DataTemplate x:Key="ListViewTemplate">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="30"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <iconPacks:PackIconMaterial Grid.Column="0" Kind="{Binding Icon}" Width="16" Height="16" 
+                                               VerticalAlignment="Center" HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="5,0"/>
+                </Grid>
+            </DataTemplate>
+            
+            <DataTemplate x:Key="TilesViewTemplate">
+                <Grid Width="200" Height="50">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="80"/>
+                    </Grid.ColumnDefinitions>
+                    <iconPacks:PackIconMaterial Grid.Column="0" Kind="{Binding Icon}" Width="32" Height="32" 
+                                               VerticalAlignment="Center" HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="5,0"/>
+                    <TextBlock Grid.Column="2" Text="{Binding SizeDisplay}" VerticalAlignment="Center" 
+                               HorizontalAlignment="Right" Foreground="{DynamicResource SubTextColor}"/>
+                    <TextBlock Grid.Column="3" Text="{Binding DateModified, StringFormat='{}{0:yyyy-MM-dd}'}" 
+                               VerticalAlignment="Center" HorizontalAlignment="Right" 
+                               Foreground="{DynamicResource SubTextColor}"/>
+                </Grid>
+            </DataTemplate>
+            
+            <DataTemplate x:Key="ThumbnailViewTemplate">
+                <Grid Width="120" Height="120">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Background="{DynamicResource CardBackground}" CornerRadius="4" Margin="2">
+                        <Grid>
+                            <Image Source="{Binding ThumbnailPath}" Stretch="Uniform" 
+                                   Visibility="{Binding HasThumbnail, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <iconPacks:PackIconMaterial Kind="{Binding Icon}" Width="48" Height="48" 
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource PrimaryTextColor}"
+                                                       Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                        </Grid>
+                    </Border>
+                    <TextBlock Grid.Row="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" 
+                               TextAlignment="Center" FontSize="10" Margin="2" VerticalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryTextColor}"/>
+                </Grid>
+            </DataTemplate>
+            
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource CardBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="{DynamicResource MainContainerBorderBrush}" 
+                CornerRadius="4,4,0,0" Padding="8" Visibility="{Binding ShowToolbar, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Navigation -->
+                <Button Grid.Column="0" Width="28" Height="28" Command="{Binding NavigateBackCommand}" 
+                        Style="{DynamicResource IconButtonStyle}" ToolTip="Back">
+                    <iconPacks:PackIconMaterial Kind="ArrowLeft" Width="14" Height="14"/>
+                </Button>
+                <Button Grid.Column="1" Width="28" Height="28" Command="{Binding NavigateUpCommand}" 
+                        Style="{DynamicResource IconButtonStyle}" ToolTip="Up" Margin="2,0,0,0">
+                    <iconPacks:PackIconMaterial Kind="ArrowUp" Width="14" Height="14"/>
+                </Button>
+                <Button Grid.Column="2" Width="28" Height="28" Command="{Binding RefreshCommand}" 
+                        Style="{DynamicResource IconButtonStyle}" ToolTip="Refresh" Margin="2,0,0,0">
+                    <iconPacks:PackIconMaterial Kind="Refresh" Width="14" Height="14"/>
+                </Button>
+                
+                <!-- View Mode Switcher -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="10,0,0,0">
+                    <Button Width="24" Height="24" Command="{Binding SetViewModeCommand}" CommandParameter="Details"
+                            Style="{DynamicResource ViewModeButtonStyle}" ToolTip="Details View">
+                        <iconPacks:PackIconMaterial Kind="ViewList" Width="12" Height="12"/>
+                    </Button>
+                    <Button Width="24" Height="24" Command="{Binding SetViewModeCommand}" CommandParameter="Icons"
+                            Style="{DynamicResource ViewModeButtonStyle}" ToolTip="Icons View" Margin="2,0,0,0">
+                        <iconPacks:PackIconMaterial Kind="ViewModule" Width="12" Height="12"/>
+                    </Button>
+                    <Button Width="24" Height="24" Command="{Binding SetViewModeCommand}" CommandParameter="List"
+                            Style="{DynamicResource ViewModeButtonStyle}" ToolTip="List View" Margin="2,0,0,0">
+                        <iconPacks:PackIconMaterial Kind="ViewSequential" Width="12" Height="12"/>
+                    </Button>
+                    <Button Width="24" Height="24" Command="{Binding SetViewModeCommand}" CommandParameter="Tiles"
+                            Style="{DynamicResource ViewModeButtonStyle}" ToolTip="Tiles View" Margin="2,0,0,0">
+                        <iconPacks:PackIconMaterial Kind="ViewDashboard" Width="12" Height="12"/>
+                    </Button>
+                    <Button Width="24" Height="24" Command="{Binding SetViewModeCommand}" CommandParameter="Thumbnails"
+                            Style="{DynamicResource ViewModeButtonStyle}" ToolTip="Thumbnails View" Margin="2,0,0,0">
+                        <iconPacks:PackIconMaterial Kind="Image" Width="12" Height="12"/>
+                    </Button>
+                </StackPanel>
+                
+                <!-- Search -->
+                <Grid Grid.Column="4" Width="200" Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <iconPacks:PackIconMaterial Grid.Column="0" Kind="Magnify" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Foreground="{DynamicResource SubTextColor}" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                             VerticalContentAlignment="Center" Height="24"
+                             Style="{DynamicResource SearchTextBoxStyle}"/>
+                    <Button Grid.Column="2" Width="20" Height="20" Command="{Binding ClearSearchCommand}" 
+                            Style="{DynamicResource IconButtonStyle}" Visibility="{Binding HasSearchText, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <iconPacks:PackIconMaterial Kind="Close" Width="10" Height="10"/>
+                    </Button>
+                </Grid>
+                
+                <!-- Sort Options -->
+                <Button Grid.Column="6" Width="28" Height="28" Command="{Binding ToggleSortOrderCommand}" 
+                        Style="{DynamicResource IconButtonStyle}" ToolTip="Sort Order" Margin="10,0,0,0">
+                    <iconPacks:PackIconMaterial Kind="{Binding SortAscending, Converter={StaticResource BoolToSortIconConverter}}" 
+                                               Width="14" Height="14"/>
+                </Button>
+                <Button Grid.Column="7" Width="28" Height="28" Command="{Binding ShowSortOptionsCommand}" 
+                        Style="{DynamicResource IconButtonStyle}" ToolTip="Sort Options" Margin="2,0,0,0">
+                    <iconPacks:PackIconMaterial Kind="Sort" Width="14" Height="14"/>
+                </Button>
+            </Grid>
+        </Border>
+        
+        <!-- File List -->
+        <controls:SelectionListView x:Name="FileListView" Grid.Row="1" 
+                                    ItemsSource="{Binding FilteredItems}"
+                                    SelectedItem="{Binding SelectedItem}"
+                                    SelectedItems="{Binding SelectedItems}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    SelectionMode="Extended"
+                                    VirtualizingPanel.IsVirtualizing="True"
+                                    VirtualizingPanel.VirtualizationMode="Recycling"
+                                    ScrollViewer.CanContentScroll="True"
+                                    Foreground="{DynamicResource PrimaryTextColor}"
+                                    ItemContainerStyle="{DynamicResource ThemedListViewItem}"
+                                    MouseDoubleClick="FileListView_MouseDoubleClick"
+                                    PreviewKeyDown="FileListView_PreviewKeyDown"
+                                    AllowDrop="True"
+                                    PreviewMouseLeftButtonDown="FileListView_PreviewMouseLeftButtonDown"
+                                    PreviewMouseMove="FileListView_PreviewMouseMove"
+                                    Drop="FileListView_Drop"
+                                    DragOver="FileListView_DragOver">
+            
+            <!-- Details View -->
+            <ListView.View>
+                <GridView x:Name="DetailsGridView">
+                    <GridViewColumn Header="" Width="30">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <iconPacks:PackIconMaterial Kind="{Binding Icon}" Width="16" Height="16" 
+                                                           Foreground="{DynamicResource PrimaryTextColor}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Name" Width="250" DisplayMemberBinding="{Binding Name}">
+                        <GridViewColumn.HeaderContainerStyle>
+                            <Style TargetType="GridViewColumnHeader">
+                                <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Style>
+                        </GridViewColumn.HeaderContainerStyle>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Size" Width="100" DisplayMemberBinding="{Binding SizeDisplay}">
+                        <GridViewColumn.HeaderContainerStyle>
+                            <Style TargetType="GridViewColumnHeader">
+                                <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Style>
+                        </GridViewColumn.HeaderContainerStyle>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Type" Width="80" DisplayMemberBinding="{Binding Type}">
+                        <GridViewColumn.HeaderContainerStyle>
+                            <Style TargetType="GridViewColumnHeader">
+                                <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Style>
+                        </GridViewColumn.HeaderContainerStyle>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Modified" Width="150" DisplayMemberBinding="{Binding DateModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}">
+                        <GridViewColumn.HeaderContainerStyle>
+                            <Style TargetType="GridViewColumnHeader">
+                                <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Style>
+                        </GridViewColumn.HeaderContainerStyle>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+            
+            <!-- Context Menu -->
+            <ListView.ContextMenu>
+                <ContextMenu ItemsSource="{Binding ContextMenuItems}">
+                    <ContextMenu.Resources>
+                        <HierarchicalDataTemplate DataType="{x:Type viewModels:ContextMenuItemViewModel}" ItemsSource="{Binding SubItems}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <iconPacks:PackIconMaterial Grid.Column="0" Kind="{Binding Icon}" Width="16" Height="16" 
+                                                           VerticalAlignment="Center" Margin="0,0,8,0"
+                                                           Visibility="{Binding Icon, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Header}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding InputGestureText}" VerticalAlignment="Center" 
+                                           Foreground="{DynamicResource SubTextColor}" Margin="10,0,0,0"/>
+                            </Grid>
+                        </HierarchicalDataTemplate>
+                    </ContextMenu.Resources>
+                </ContextMenu>
+            </ListView.ContextMenu>
+            
+        </controls:SelectionListView>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="1" VerticalAlignment="Bottom" Background="{DynamicResource MainContainerBorderBrush}" 
+                CornerRadius="0,0,4,4" Padding="8,4" Height="28"
+                Visibility="{Binding ShowStatusBar, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="{DynamicResource SubTextColor}"/>
+                <TextBlock Grid.Column="1" Text="{Binding ItemCount, StringFormat='{}{0} items'}" 
+                          Foreground="{DynamicResource SubTextColor}" Margin="10,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding SelectedCount, StringFormat='{}{0} selected'}" 
+                          Foreground="{DynamicResource SubTextColor}" FontWeight="SemiBold"/>
+            </Grid>
+        </Border>
+        
+    </Grid>
+
+</UserControl>
