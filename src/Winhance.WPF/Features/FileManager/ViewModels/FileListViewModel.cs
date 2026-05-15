@@ -23,6 +23,8 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private readonly ISortingService? _sortingService;
         private readonly IViewModeService? _viewModeService;
         private readonly IServiceProvider? _serviceProvider;
+        private readonly Stack<string> _backHistory = new();
+        private readonly Stack<string> _forwardHistory = new();
 
         [ObservableProperty]
         private ObservableCollection<FileItemViewModel> _items = new();
@@ -53,6 +55,18 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
         [ObservableProperty]
         private bool _sortAscending = true;
+
+        [ObservableProperty]
+        private bool _foldersFirst = true;
+
+        [ObservableProperty]
+        private bool _isSortOptionsOpen;
+
+        [ObservableProperty]
+        private bool _canNavigateBack;
+
+        [ObservableProperty]
+        private bool _canNavigateForward;
 
         [ObservableProperty]
         private string _statusMessage = "Ready";
@@ -100,6 +114,9 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                     HasSearchText = !string.IsNullOrEmpty(SearchText);
                     ApplyFilter();
                     break;
+                case nameof(FoldersFirst):
+                    ApplySortingAndFilter();
+                    break;
                 case nameof(SelectedItems):
                     OnPropertyChanged(nameof(SelectedCount));
                     UpdateStatusMessage();
@@ -132,7 +149,26 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         /// </summary>
         public async Task LoadPathAsync(string path)
         {
+            await LoadPathAsync(path, addToHistory: true);
+        }
+
+        private async Task LoadPathAsync(string path, bool addToHistory)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            if (addToHistory
+                && !string.IsNullOrWhiteSpace(CurrentPath)
+                && !string.Equals(CurrentPath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                _backHistory.Push(CurrentPath);
+                _forwardHistory.Clear();
+            }
+
             CurrentPath = path;
+            UpdateNavigationState();
             
             try
             {
@@ -149,8 +185,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                         Items.Add(new FileItemViewModel(file));
                     }
 
-                    ApplySorting();
-                    ApplyFilter();
+                    ApplySortingAndFilter();
                 }
             }
             catch (Exception ex)
@@ -192,9 +227,44 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         /// Navigate back in history.
         /// </summary>
         [RelayCommand]
-        private void NavigateBack()
+        private async Task NavigateBackAsync()
         {
-            // Implementation for navigation history
+            if (_backHistory.Count == 0)
+            {
+                StatusMessage = "No previous location";
+                UpdateNavigationState();
+                return;
+            }
+
+            var targetPath = _backHistory.Pop();
+            if (!string.IsNullOrWhiteSpace(CurrentPath))
+            {
+                _forwardHistory.Push(CurrentPath);
+            }
+
+            await LoadPathAsync(targetPath, addToHistory: false);
+        }
+
+        /// <summary>
+        /// Navigate forward in history.
+        /// </summary>
+        [RelayCommand]
+        private async Task NavigateForwardAsync()
+        {
+            if (_forwardHistory.Count == 0)
+            {
+                StatusMessage = "No next location";
+                UpdateNavigationState();
+                return;
+            }
+
+            var targetPath = _forwardHistory.Pop();
+            if (!string.IsNullOrWhiteSpace(CurrentPath))
+            {
+                _backHistory.Push(CurrentPath);
+            }
+
+            await LoadPathAsync(targetPath, addToHistory: false);
         }
 
         /// <summary>
@@ -204,7 +274,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private void SetViewMode(string mode)
         {
             ViewMode = mode;
-            _viewModeService?.SetViewMode(mode);
+            if (_viewModeService != null && TryMapViewMode(mode, out var parsedMode))
+            {
+                _viewModeService.CurrentViewMode = parsedMode;
+            }
         }
 
         /// <summary>
@@ -214,7 +287,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private void ToggleSortOrder()
         {
             SortAscending = !SortAscending;
-            ApplySorting();
+            ApplySortingAndFilter();
         }
 
         /// <summary>
@@ -223,7 +296,20 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [RelayCommand]
         private void ShowSortOptions()
         {
-            // Implementation for sort options dialog
+            IsSortOptionsOpen = !IsSortOptionsOpen;
+            StatusMessage = IsSortOptionsOpen
+                ? $"Sort: {SortColumn}, {(SortAscending ? "ascending" : "descending")}, folders {(FoldersFirst ? "first" : "mixed")}"
+                : "Sort options closed";
+        }
+
+        /// <summary>
+        /// Toggle whether directories should be grouped before files.
+        /// </summary>
+        [RelayCommand]
+        private void ToggleFoldersFirst()
+        {
+            FoldersFirst = !FoldersFirst;
+            StatusMessage = FoldersFirst ? "Folders shown first" : "Files and folders mixed";
         }
 
         /// <summary>
@@ -293,21 +379,58 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 SortAscending = true;
             }
 
+            ApplySortingAndFilter();
+        }
+
+        private void ApplySortingAndFilter()
+        {
             ApplySorting();
+            ApplyFilter();
         }
 
         private void ApplySorting()
         {
-            if (_sortingService != null)
+            var parentDirectoryItems = Items.Where(i => i.IsParentDirectory);
+            var regularItems = Items.Where(i => !i.IsParentDirectory);
+
+            IEnumerable<FileItemViewModel> sorted;
+
+            if (FoldersFirst)
             {
-                var sorted = _sortingService.SortItems(Items, SortColumn, SortAscending);
-                
-                Items.Clear();
-                foreach (var item in sorted)
-                {
-                    Items.Add(item);
-                }
+                sorted = SortRegularItems(regularItems.Where(i => i.IsDirectory))
+                    .Concat(SortRegularItems(regularItems.Where(i => !i.IsDirectory)));
             }
+            else
+            {
+                sorted = SortRegularItems(regularItems);
+            }
+
+            var sortedItems = parentDirectoryItems.Concat(sorted).ToList();
+
+            Items.Clear();
+            foreach (var item in sortedItems)
+            {
+                Items.Add(item);
+            }
+        }
+
+        private IEnumerable<FileItemViewModel> SortRegularItems(IEnumerable<FileItemViewModel> items)
+        {
+            return SortColumn switch
+            {
+                "Size" => SortAscending
+                    ? items.OrderBy(i => i.Size)
+                    : items.OrderByDescending(i => i.Size),
+                "Type" or "Extension" => SortAscending
+                    ? items.OrderBy(i => i.Extension, StringComparer.OrdinalIgnoreCase)
+                    : items.OrderByDescending(i => i.Extension, StringComparer.OrdinalIgnoreCase),
+                "Date Modified" or "Date" or "Modified" => SortAscending
+                    ? items.OrderBy(i => i.LastModified)
+                    : items.OrderByDescending(i => i.LastModified),
+                _ => SortAscending
+                    ? items.OrderBy(i => i.Name, NaturalStringComparer.Instance)
+                    : items.OrderByDescending(i => i.Name, NaturalStringComparer.Instance),
+            };
         }
 
         private void ApplyFilter()
@@ -337,5 +460,31 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
         [ObservableProperty]
         private bool _isLoading;
+
+        private void UpdateNavigationState()
+        {
+            CanNavigateBack = _backHistory.Count > 0;
+            CanNavigateForward = _forwardHistory.Count > 0;
+        }
+
+        private static bool TryMapViewMode(string mode, out Winhance.Core.Features.FileManager.Interfaces.ViewMode viewMode)
+        {
+            viewMode = mode?.Trim().ToLowerInvariant() switch
+            {
+                "details" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.Details,
+                "list" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.List,
+                "icons" or "mediumicons" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.MediumIcons,
+                "smallicons" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.SmallIcons,
+                "largeicons" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.LargeIcons,
+                "extralargeicons" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.ExtraLargeIcons,
+                "tiles" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.Tiles,
+                "content" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.Content,
+                "thumbnail" or "thumbnails" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.Thumbnails,
+                "columns" => Winhance.Core.Features.FileManager.Interfaces.ViewMode.Columns,
+                _ => Winhance.Core.Features.FileManager.Interfaces.ViewMode.Details
+            };
+
+            return !string.IsNullOrWhiteSpace(mode);
+        }
     }
 }

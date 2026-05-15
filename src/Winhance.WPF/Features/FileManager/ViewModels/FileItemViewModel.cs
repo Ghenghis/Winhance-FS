@@ -108,6 +108,15 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [ObservableProperty]
         private bool _isSearchResult;
 
+        [ObservableProperty]
+        private bool _isMarked;
+
+        /// <summary>
+        /// Human-readable file size computed from <see cref="Size"/>.
+        /// Directories display "&lt;DIR&gt;".
+        /// </summary>
+        public string SizeDisplay => IsDirectory ? "<DIR>" : FormatSize(Size);
+
         public FileItemViewModel()
         {
             _fileItem = new FileItem();
@@ -185,6 +194,32 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             InitializeProperties();
         }
 
+        public FileItemViewModel(Winhance.Core.Features.FileManager.Models.FileSystemEntry entry, IServiceProvider? serviceProvider = null)
+        {
+            _serviceProvider = serviceProvider;
+            _selectionService = serviceProvider?.GetService<ISelectionService>();
+            _fileManagerService = serviceProvider?.GetService<IFileManagerService>();
+            _previewService = serviceProvider?.GetService<IPreviewService>();
+
+            _fileItem = new FileItem
+            {
+                Name = entry.Name,
+                FullPath = entry.FullPath,
+                Size = entry.Size,
+                LastModified = entry.DateModified,
+                Created = entry.DateCreated,
+                Extension = entry.Extension,
+                Attributes = entry.Attributes,
+                IsDirectory = entry.IsDirectory,
+                IsHidden = (entry.Attributes & FileAttributes.Hidden) != 0,
+                IsSystem = (entry.Attributes & FileAttributes.System) != 0,
+                IsReadOnly = (entry.Attributes & FileAttributes.ReadOnly) != 0,
+                IsParentDirectory = false
+            };
+
+            InitializeProperties();
+        }
+
         private void InitializeProperties()
         {
             _name = _fileItem.Name;
@@ -208,6 +243,13 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             _hasPreview = _previewService?.HasPreview(_fileItem) ?? false;
             _previewImage = _previewService?.GetPreviewImage(_fileItem);
         }
+
+        public string FormattedSize => SizeFormatted;
+        public string Type => IsDirectory ? "Folder" : TypeDescription;
+        public DateTime CreatedDate => Created;
+        public DateTime ModifiedDate => LastModified;
+        public DateTime DateModified => LastModified;
+        public DateTime AccessedDate => _fileItem.AccessedDate == default ? LastModified : _fileItem.AccessedDate;
 
         // Commands
         [RelayCommand]
@@ -360,6 +402,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 }
             }
             catch
+            {
                 // Handle error
             }
         }
@@ -403,27 +446,41 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private static string GetIcon(string extension, bool isDirectory)
         {
             if (isDirectory)
-            {
-                return "📁";
-            }
+                return "Folder";
 
             return extension.ToLowerInvariant() switch
             {
-                ".txt" => "📄",
-                ".doc" or ".docx" => "📘",
-                ".xls" or ".xlsx" => "📗",
-                ".ppt" or ".pptx" => "📙",
-                ".pdf" => "📕",
-                ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" => "🖼️",
-                ".mp4" or ".avi" or ".mkv" or ".mov" => "🎬",
-                ".mp3" or ".wav" or ".flac" => "🎵",
-                ".zip" or ".rar" or ".7z" => "📦",
-                ".exe" => "⚙️",
-                ".dll" or ".sys" => "🔧",
-                ".ini" or ".cfg" or ".conf" => "⚙️",
-                ".log" => "📋",
-                _ => "📄"
+                ".txt" => "FileDocument",
+                ".doc" or ".docx" => "FileWord",
+                ".xls" or ".xlsx" => "FileExcel",
+                ".ppt" or ".pptx" => "FilePowerpoint",
+                ".pdf" => "FilePdfBox",
+                ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => "FileImage",
+                ".mp4" or ".avi" or ".mkv" or ".mov" or ".wmv" => "FileVideo",
+                ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" => "FileMusic",
+                ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => "FolderZip",
+                ".exe" or ".msi" => "ApplicationCog",
+                ".dll" or ".sys" => "Cog",
+                ".ini" or ".cfg" or ".conf" or ".json" or ".yaml" or ".xml" => "FileCode",
+                ".cs" or ".py" or ".js" or ".ts" or ".cpp" or ".h" or ".java" => "CodeBraces",
+                ".log" => "FormatListBulleted",
+                ".iso" or ".img" => "Disc",
+                _ => "File"
             };
+        }
+
+        // Keep Icon in sync when IsDirectory or Extension change (e.g. via object-initializer syntax)
+        partial void OnIsDirectoryChanged(bool value)
+        {
+            Icon = GetIcon(_extension, value);
+            OnPropertyChanged(nameof(Type));
+        }
+
+        partial void OnExtensionChanged(string value)
+        {
+            Icon = GetIcon(value, _isDirectory);
+            TypeDescription = GetFileType(value);
+            OnPropertyChanged(nameof(Type));
         }
 
         private static string GetAttributesDescription(FileAttributes attributes)

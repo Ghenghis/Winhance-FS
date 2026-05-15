@@ -814,8 +814,8 @@ public class AutounattendScriptBuilder
 
             // Determine if this content belongs in the current pass (System vs User)
             // We check for HKEY_CURRENT_USER usage to identify User-specific content
-            bool isHkcuContent = content.IndexOf("HKEY_CURRENT_USER") >= 0 ||
-                                 content.IndexOf("HKCU") >= 0;
+            bool isHkcuContent = content.IndexOf("HKEY_CURRENT_USER", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 content.IndexOf("HKCU", StringComparison.OrdinalIgnoreCase) >= 0;
 
             if (isHkcuContent != isHkcuPass)
             {
@@ -1487,17 +1487,27 @@ function Get-FileFromWeb {
     }
 }
 
-$installerPath = ""C:\ProgramData\Winhance\Unattend\WinhanceInstaller.exe""
-$downloadUrl = ""https://github.com/memstechtips/Winhance/releases/latest/download/Winhance.Installer.exe""
+$installerPath = ""C:\ProgramData\Winhance\Unattend\Winhance-FS-Latest.zip""
+$releaseApiUrl = ""https://api.github.com/repos/Ghenghis/Winhance-FS/releases/latest""
 
 try {
-    Write-Host ""Downloading Winhance Installer from GitHub..."" -ForegroundColor Cyan
+    Write-Host ""Checking Winhance-FS releases on GitHub..."" -ForegroundColor Cyan
+    $release = Invoke-RestMethod -Uri $releaseApiUrl -Headers @{ ""User-Agent"" = ""Winhance-FS-Unattend"" }
+    $asset = $release.assets |
+        Where-Object { $_.name -match ""Winhance-(FS-)?x64.*\.zip$"" -and $_.name -notmatch ""FrameworkDependent"" } |
+        Select-Object -First 1
+    if (-not $asset) {
+        throw ""No x64 Winhance-FS release ZIP was found on GitHub.""
+    }
+
+    $downloadUrl = $asset.browser_download_url
+    Write-Host ""Downloading Winhance-FS from GitHub..."" -ForegroundColor Cyan
     Get-FileFromWeb -URL $downloadUrl -File $installerPath
     Write-Host """"
     Write-Host ""Download completed successfully!"" -ForegroundColor Green
-    Write-Host ""Launching Winhance Installer..."" -ForegroundColor Cyan
+    Write-Host ""Opening Winhance-FS package..."" -ForegroundColor Cyan
     Start-Process -FilePath $installerPath
-    Write-Host ""Installer launched."" -ForegroundColor Green
+    Write-Host ""Package opened."" -ForegroundColor Green
 } catch {
     Write-Host """"
     Write-Host ""Error: $($_.Exception.Message)"" -ForegroundColor Red
@@ -1553,14 +1563,14 @@ try {
 
     private string ExtractTaskNameFromCommand(string command)
     {
-        var tnIndex = command.IndexOf("/TN");
+        var tnIndex = command.IndexOf("/TN", StringComparison.OrdinalIgnoreCase);
         if (tnIndex == -1)
         {
             return string.Empty;
         }
 
         var afterTN = command.Substring(tnIndex + 3).Trim();
-        var startQuote = afterTN.IndexOf('"');
+        var startQuote = afterTN.IndexOf('"', StringComparison.Ordinal);
         if (startQuote == -1)
         {
             return string.Empty;

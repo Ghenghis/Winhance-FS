@@ -1167,7 +1167,7 @@ jobs:
     name: Create Release
     needs: [rust-build, build, msix-build, msix-bundle, appx-build, appx-bundle, installer-build, msi-build, chocolatey-build, winget-build, squirrel-build, clickonce-build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
@@ -1183,17 +1183,21 @@ jobs:
       - name: Get version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         id: notes
         run: |
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^ 2>/dev/null || echo "")
+          CURRENT_TAG="${{ steps.version.outputs.version }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
           cat << 'HEADER' > release_body.md
-          ## Winhance ${{ steps.version.outputs.version }}
+          ## Winhance-FS ${{ steps.version.outputs.version }}
 
           ### Downloads - Self-Contained (Includes .NET Runtime)
 
@@ -1286,7 +1290,7 @@ jobs:
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "Initial release" >> release_body.md
           else
-            git log --pretty=format:"- %s" $PREVIOUS_TAG..$CURRENT_TAG --no-merges >> release_body.md
+            git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD --no-merges >> release_body.md
           fi
 
           echo "" >> release_body.md
@@ -1302,12 +1306,20 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
           name: Winhance ${{ steps.version.outputs.version }}
           body_path: release_body.md
           draft: false
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
           files: |
             ./artifacts/**/*.zip
+            ./artifacts/**/*.exe
+            ./artifacts/**/*.msix
+            ./artifacts/**/*.msixbundle
+            ./artifacts/**/*.appx
+            ./artifacts/**/*.appxbundle
+            ./artifacts/**/*.nupkg
             ./artifacts/**/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:converters="clr-namespace:Winhance.WPF.Features.Common.Converters"
+                    xmlns:fileManagerConverters="clr-namespace:Winhance.WPF.Features.FileManager.Converters"
                     xmlns:oldConverters="clr-namespace:Winhance.WPF.Converters"
                     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
     <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
@@ -25,10 +26,18 @@
     <converters:BoolToChevronConverter x:Key="BoolToChevronConverter"/>
     <converters:BooleanToThemeConverter x:Key="BooleanToThemeConverter"/>
     <converters:BooleanToThemeIconConverter x:Key="BooleanToThemeIconConverter"/>
+    <converters:BoolToStringConverter x:Key="BoolToStringConverter"/>
+    <converters:BoolToSortIconConverter x:Key="BoolToSortIconConverter"/>
+    <converters:BoolToTypeConverter x:Key="BoolToTypeConverter"/>
+    <converters:BoolToPlayPauseIconConverter x:Key="BoolToPlayPauseIconConverter"/>
+    <converters:BoolToMuteIconConverter x:Key="BoolToMuteIconConverter"/>
+    <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+    <converters:EqualityConverter x:Key="EqualityConverter"/>
     <converters:BooleanConverter x:Key="BooleanConverter"/>
 
     <converters:IsPrimaryToVisibilityConverter x:Key="IsPrimaryToVisibilityConverter"/>
     <converters:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter"/>
+    <converters:EnumBooleanConverter x:Key="EnumBooleanConverter"/>
     <converters:StringEqualityConverter x:Key="StringEqualityConverter"/>
     <converters:BooleanToValueConverter x:Key="BooleanToValueConverter"/>
     <converters:BooleanToRotationConverter x:Key="BooleanToRotationConverter"/>
@@ -38,9 +47,13 @@
     <converters:PowerModeVisibilityConverter x:Key="PowerModeVisibilityConverter"/>
     <converters:IconPackConverter x:Key="IconPackConverter"/>
     <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+    <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
+    <converters:RuleTypeToVisibilityConverter x:Key="RuleTypeToVisibilityConverter"/>
     <converters:BooleanToFilterTooltipConverter x:Key="BooleanToFilterTooltipConverter"/>
     <converters:BooleanToFilterIconConverter x:Key="BooleanToFilterIconConverter"/>
     <converters:CoalesceConverter x:Key="CoalesceConverter"/>
+    <fileManagerConverters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+    <converters:InverseBooleanConverter x:Key="InverseBoolConverter"/>
 
     <converters:PowerPlanStatusToColorConverter x:Key="PowerPlanStatusToColorConverter"/>
     <converters:PowerPlanStatusToTextConverter x:Key="PowerPlanStatusToTextConverter"/>

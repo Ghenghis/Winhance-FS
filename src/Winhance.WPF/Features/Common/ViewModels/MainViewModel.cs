@@ -271,7 +271,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
             {
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "https://github.com/memstechtips/Winhance/issues",
+                    FileName = "https://github.com/Ghenghis/Winhance-FS/issues",
                     UseShellExecute = true,
                 };
                 Process.Start(psi);

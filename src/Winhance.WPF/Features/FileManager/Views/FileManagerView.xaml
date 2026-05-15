@@ -18,6 +18,9 @@
     <DataTemplate x:Key="OrganizerViewTemplate" DataType="{x:Type viewModels:OrganizerViewModel}">
       <views:OrganizerView />
     </DataTemplate>
+    <DataTemplate x:Key="SpaceRecoveryViewTemplate" DataType="{x:Type viewModels:SpaceRecoveryViewModel}">
+      <views:SpaceRecoveryView />
+    </DataTemplate>
   </UserControl.Resources>
 
   <Grid>
@@ -198,6 +201,9 @@
               </DataTemplate>
               <DataTemplate DataType="{x:Type viewModels:OrganizerViewModel}">
                 <views:OrganizerView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type viewModels:SpaceRecoveryViewModel}">
+                <views:SpaceRecoveryView />
               </DataTemplate>
             </ContentControl.Resources>
           </ContentControl>

@@ -78,6 +78,12 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
             services.AddTransient<DualPaneBrowserViewModel>();
             services.AddTransient<BatchRenameViewModel>();
             services.AddTransient<OrganizerViewModel>();
+            services.AddTransient<SpaceRecoveryViewModel>();
+            services.AddTransient<TabContainerViewModel>();
+            services.AddTransient<SearchResultsViewModel>();
+            services.AddTransient<FavoritesPanelViewModel>();
+            services.AddTransient<AdvancedSelectionViewModel>();
+            services.AddTransient<ContextMenuViewModel>();
             return services;
         }
 
