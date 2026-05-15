@@ -176,6 +176,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 {
                     await OrganizerViewModel.AnalyzeAsync();
                 }
+                else if (IsSpaceRecoveryTabSelected && SpaceRecoveryViewModel != null)
+                {
+                    await SpaceRecoveryViewModel.AnalyzeCommand.ExecuteAsync(null);
+                }
 
                 StatusMessage = "Ready";
             }

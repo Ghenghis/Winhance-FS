@@ -72,6 +72,59 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private bool _isLeftPaneActive = true;
 
         [ObservableProperty]
+        private string _leftPanePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        [ObservableProperty]
+        private string _rightPanePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        [ObservableProperty]
+        private ObservableCollection<FileItemViewModel> _leftPaneItems = new();
+
+        [ObservableProperty]
+        private ObservableCollection<FileItemViewModel> _rightPaneItems = new();
+
+        [ObservableProperty]
+        private ObservableCollection<FileItemViewModel> _selectedLeftItems = new();
+
+        [ObservableProperty]
+        private ObservableCollection<FileItemViewModel> _selectedRightItems = new();
+
+        [ObservableProperty]
+        private FileItemViewModel? _selectedLeftItem;
+
+        [ObservableProperty]
+        private FileItemViewModel? _selectedRightItem;
+
+        partial void OnSelectedLeftItemChanged(FileItemViewModel? value)
+        {
+            IsLeftPaneActive = true;
+            SyncSingleSelection(SelectedLeftItems, value);
+        }
+
+        partial void OnSelectedRightItemChanged(FileItemViewModel? value)
+        {
+            IsLeftPaneActive = false;
+            SyncSingleSelection(SelectedRightItems, value);
+        }
+
+        private static void SyncSingleSelection(ObservableCollection<FileItemViewModel> selectedItems, FileItemViewModel? selectedItem)
+        {
+            if (selectedItem == null || selectedItem.IsParentDirectory)
+            {
+                selectedItems.Clear();
+                return;
+            }
+
+            if (selectedItems.Count == 1 && ReferenceEquals(selectedItems[0], selectedItem))
+            {
+                return;
+            }
+
+            selectedItems.Clear();
+            selectedItems.Add(selectedItem);
+        }
+
+        [ObservableProperty]
         private bool _isLoading;
 
         [ObservableProperty]
@@ -459,6 +512,54 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             StatusMessage = "View: Tiles";
         }
 
+        [RelayCommand]
+        private void SetThumbnailsView()
+        {
+            ViewMode = "Thumbnails";
+            StatusMessage = "View: Thumbnails";
+        }
+
+        [RelayCommand]
+        private void ShowSearch()
+        {
+            ShowSearchPanel = !ShowSearchPanel;
+            if (ShowSearchPanel)
+            {
+                SearchFocusRequested?.Invoke(this, EventArgs.Empty);
+            }
+            StatusMessage = ShowSearchPanel ? "Search panel open" : "Search panel closed";
+        }
+
+        [RelayCommand]
+        private async Task RefreshAll()
+        {
+            await RefreshAsync();
+            StatusMessage = "All panes refreshed";
+        }
+
+        [RelayCommand]
+        private void ToggleActivePane()
+        {
+            IsLeftPaneActive = !IsLeftPaneActive;
+            StatusMessage = IsLeftPaneActive ? "Left pane active" : "Right pane active";
+        }
+
+        [RelayCommand]
+        private void CompareWithOtherPanel()
+        {
+            var activeItems = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
+            var otherItems = IsLeftPaneActive ? SelectedRightItems : SelectedLeftItems;
+
+            var activePaths = activeItems.Select(i => i.FullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var otherPaths = otherItems.Select(i => i.FullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var onlyInActive = activePaths.Except(otherPaths).Count();
+            var onlyInOther = otherPaths.Except(activePaths).Count();
+            var inBoth = activePaths.Intersect(otherPaths).Count();
+
+            StatusMessage = $"Compare: {inBoth} matching, {onlyInActive} only in active pane, {onlyInOther} only in other pane";
+        }
+
         /// <summary>
         /// Sort items based on current sort settings.
         /// </summary>
@@ -621,7 +722,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                             FullPath = entry.FullPath,
                             IsDirectory = entry.IsDirectory,
                             Size = entry.Size,
-                            DateModified = entry.DateModified,
+                            LastModified = entry.DateModified,
                             Extension = entry.Extension,
                         });
                     }
@@ -652,7 +753,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                                 Name = dir.Name,
                                 FullPath = dir.FullName,
                                 IsDirectory = true,
-                                DateModified = dir.LastWriteTime,
+                                LastModified = dir.LastWriteTime,
                             });
                         }
                         catch (Exception)
@@ -670,7 +771,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                                 FullPath = file.FullName,
                                 IsDirectory = false,
                                 Size = file.Length,
-                                DateModified = file.LastWriteTime,
+                                LastModified = file.LastWriteTime,
                                 Extension = file.Extension,
                             });
                         }
@@ -1333,120 +1434,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 StatusMessage = $"Error: {ex.Message}";
             }
         }
-    }
-
-    /// <summary>
-    /// ViewModel for a file/folder item.
-    /// </summary>
-    public partial class FileItemViewModel : ObservableObject
-    {
-        [ObservableProperty]
-        private string _name = string.Empty;
-
-        [ObservableProperty]
-        private string _fullPath = string.Empty;
-
-        [ObservableProperty]
-        private bool _isDirectory;
-
-        [ObservableProperty]
-        private bool _isParentDirectory;
-
-        [ObservableProperty]
-        private long _size;
-
-        [ObservableProperty]
-        private DateTime _dateModified;
-
-        [ObservableProperty]
-        private string _extension = string.Empty;
-
-        [ObservableProperty]
-        private bool _isSelected;
-
-        public string SizeDisplay => IsDirectory ? string.Empty : FormatSize(Size);
-
-        public string Icon => IsParentDirectory ? "ArrowUp" : (IsDirectory ? "Folder" : GetFileIcon(Extension));
-
-        private static string FormatSize(long bytes)
-        {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            int order = 0;
-            double size = bytes;
-            while (size >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                size /= 1024;
-            }
-
-            return $"{size:0.##} {sizes[order]}";
-        }
-
-        private static string GetFileIcon(string extension)
-        {
-            return extension.ToLower() switch
-            {
-                ".pdf" => "FilePdfBox",
-                ".doc" or ".docx" => "FileWordBox",
-                ".xls" or ".xlsx" => "FileExcelBox",
-                ".ppt" or ".pptx" => "FilePowerpointBox",
-                ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" => "FileImageBox",
-                ".mp3" or ".wav" or ".flac" => "FileMusicBox",
-                ".mp4" or ".mkv" or ".avi" => "FileVideoBox",
-                ".zip" or ".rar" or ".7z" => "FolderZip",
-                ".exe" => "Application",
-                ".py" => "LanguagePython",
-                ".cs" => "LanguageCsharp",
-                ".js" or ".ts" => "LanguageJavascript",
-                ".rs" => "LanguageRust",
-                _ => "File",
-            };
-        }
-    }
-
-    /// <summary>
-    /// ViewModel for a drive item.
-    /// </summary>
-    public partial class DriveItemViewModel : ObservableObject
-    {
-        [ObservableProperty]
-        private string _name = string.Empty;
-
-        [ObservableProperty]
-        private string _label = string.Empty;
-
-        [ObservableProperty]
-        private long _totalSize;
-
-        [ObservableProperty]
-        private long _freeSpace;
-
-        [ObservableProperty]
-        private string _driveType = string.Empty;
-
-        public long UsedSpace => TotalSize - FreeSpace;
-
-        public double UsedPercentage => TotalSize > 0 ? (double)UsedSpace / TotalSize * 100 : 0;
-
-        public string SpaceDisplay => $"{FormatSize(FreeSpace)} free of {FormatSize(TotalSize)}";
-
-        private static string FormatSize(long bytes)
-        {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-            int order = 0;
-            double size = bytes;
-            while (size >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                size /= 1024;
-            }
-
-            return $"{size:0.##} {sizes[order]}";
-        }
 
         // Selection commands (WS-SEL features)
         [RelayCommand]
-        private void SelectAll()
+        private void Select()
         {
             var items = IsLeftPaneActive ? LeftPaneItems : RightPaneItems;
             var selectedItems = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
@@ -1587,14 +1578,14 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         }
 
         [RelayCommand]
-        private void NavigateLeft()
+        private void NavigateLeftKey()
         {
             // Navigate to parent folder
             NavigateUpCommand.Execute(null);
         }
 
         [RelayCommand]
-        private void NavigateRight()
+        private void NavigateRightKey()
         {
             // Navigate into selected folder
             var current = IsLeftPaneActive ? SelectedLeftItem : SelectedRightItem;
@@ -1764,6 +1755,47 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 MessageBoxImage.Information);
             
             StatusMessage = "Command palette shown";
+        }
+    }
+
+    /// <summary>
+    /// ViewModel for a drive item.
+    /// </summary>
+    public partial class DriveItemViewModel : ObservableObject
+    {
+        [ObservableProperty]
+        private string _name = string.Empty;
+
+        [ObservableProperty]
+        private string _label = string.Empty;
+
+        [ObservableProperty]
+        private long _totalSize;
+
+        [ObservableProperty]
+        private long _freeSpace;
+
+        [ObservableProperty]
+        private string _driveType = string.Empty;
+
+        public long UsedSpace => TotalSize - FreeSpace;
+
+        public double UsedPercentage => TotalSize > 0 ? (double)UsedSpace / TotalSize * 100 : 0;
+
+        public string SpaceDisplay => $"{FormatSize(FreeSpace)} free of {FormatSize(TotalSize)}";
+
+        private static string FormatSize(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            int order = 0;
+            double size = bytes;
+            while (size >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                size /= 1024;
+            }
+
+            return $"{size:0.##} {sizes[order]}";
         }
     }
 

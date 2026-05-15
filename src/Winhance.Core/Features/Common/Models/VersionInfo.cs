@@ -14,50 +14,55 @@ namespace Winhance.Core.Features.Common.Models
 
         public static VersionInfo FromTag(string tag)
         {
-            // Parse version tag in format v25.05.02 or v25.05.02-beta
-            if (string.IsNullOrEmpty(tag) || !tag.StartsWith("v", StringComparison.Ordinal))
+            // Supports date-style tags such as v25.05.02 and semantic tags such as v1.0.0-alpha.
+            if (string.IsNullOrWhiteSpace(tag))
             {
                 return new VersionInfo();
             }
 
-            string versionString = tag.Substring(1); // Remove 'v' prefix
+            string normalizedTag = tag.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                ? tag
+                : $"v{tag}";
+            string versionString = normalizedTag.Substring(1); // Remove 'v' prefix
 
-            // Check if it's a beta version and extract the base version
-            bool isBeta = versionString.Contains("-beta", StringComparison.Ordinal);
-            if (isBeta)
-            {
-                versionString = versionString.Split('-')[0]; // Get the part before -beta,
-            }
+            // Strip prerelease and build metadata before parsing numeric components.
+            versionString = versionString.Split('-')[0].Split('+')[0];
 
             string[] parts = versionString.Split('.');
 
-            if (parts.Length != 3)
+            if (parts.Length < 2 || parts.Length > 4)
             {
                 return new VersionInfo();
             }
 
-            if (!int.TryParse(parts[0], out int year) ||
-                !int.TryParse(parts[1], out int month) ||
-                !int.TryParse(parts[2], out int day))
+            foreach (string part in parts)
             {
-                return new VersionInfo();
+                if (!int.TryParse(part, out _))
+                {
+                    return new VersionInfo();
+                }
             }
 
-            // Construct a date from the version components
-            DateTime releaseDate;
-            try
+            DateTime releaseDate = DateTime.MinValue;
+            if (parts.Length == 3 &&
+                int.TryParse(parts[0], out int year) &&
+                int.TryParse(parts[1], out int month) &&
+                int.TryParse(parts[2], out int day) &&
+                year >= 20)
             {
-                releaseDate = new DateTime(2000 + year, month, day);
-            }
-            catch (Exception)
-            {
-                // Invalid date components
-                return new VersionInfo();
+                try
+                {
+                    releaseDate = new DateTime(2000 + year, month, day);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // Semantic versions such as v1.0.0 are still valid; they just do not encode a date.
+                }
             }
 
             return new VersionInfo
             {
-                Version = tag, // Keep the original tag with -beta if present
+                Version = normalizedTag, // Keep prerelease suffixes such as -alpha or -beta.
                 ReleaseDate = releaseDate,
             };
         }
@@ -69,7 +74,68 @@ namespace Winhance.Core.Features.Common.Models
                 return true;
             }
 
-            return ReleaseDate > other.ReleaseDate;
+            if (string.Equals(
+                NormalizeVersion(Version),
+                NormalizeVersion(other.Version),
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (ReleaseDate != DateTime.MinValue && other.ReleaseDate != DateTime.MinValue)
+            {
+                return ReleaseDate > other.ReleaseDate;
+            }
+
+            if (TryParseComparableVersion(Version, out Version? thisVersion) &&
+                TryParseComparableVersion(other.Version, out Version? otherVersion))
+            {
+                return thisVersion > otherVersion;
+            }
+
+            if (ReleaseDate != DateTime.MinValue || other.ReleaseDate != DateTime.MinValue)
+            {
+                return ReleaseDate > other.ReleaseDate;
+            }
+
+            return false;
+        }
+
+        private static string NormalizeVersion(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                return string.Empty;
+            }
+
+            string versionString = tag.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                ? tag.Substring(1)
+                : tag;
+
+            return versionString.Split('+')[0];
+        }
+
+        private static bool TryParseComparableVersion(string tag, out Version? version)
+        {
+            version = null;
+
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                return false;
+            }
+
+            string versionString = tag.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                ? tag.Substring(1)
+                : tag;
+            versionString = versionString.Split('-')[0].Split('+')[0];
+
+            string[] parts = versionString.Split('.');
+            if (parts.Length == 2)
+            {
+                versionString += ".0";
+            }
+
+            return System.Version.TryParse(versionString, out version);
         }
 
         public override string ToString()

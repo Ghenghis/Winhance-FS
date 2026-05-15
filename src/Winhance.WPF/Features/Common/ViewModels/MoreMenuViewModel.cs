@@ -167,7 +167,7 @@ public class MoreMenuViewModel : ObservableObject
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "https://github.com/memstechtips/Winhance/issues",
+                FileName = "https://github.com/Ghenghis/Winhance-FS/issues",
                 UseShellExecute = true,
             };
             Process.Start(psi);
@@ -188,7 +188,7 @@ public class MoreMenuViewModel : ObservableObject
             var latestVersion = await _versionService.CheckForUpdateAsync();
             var currentVersion = _versionService.GetCurrentVersion();
 
-            if (latestVersion != null && latestVersion.Version != currentVersion.Version)
+            if (latestVersion?.IsUpdateAvailable == true)
             {
                 _logService.LogInformation("Showing update dialog");
                 await UpdateDialog.ShowAsync(

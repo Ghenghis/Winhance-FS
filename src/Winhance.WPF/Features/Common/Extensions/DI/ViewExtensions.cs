@@ -4,6 +4,7 @@ using Winhance.WPF.Features.Customize.Views;
 using Winhance.WPF.Features.Optimize.Views;
 using Winhance.WPF.Features.SoftwareApps.Views;
 using Winhance.WPF.Features.AdvancedTools.Views;
+using Winhance.WPF.Features.FileManager.Views;
 
 namespace Winhance.WPF.Features.Common.Extensions.DI
 {
@@ -27,6 +28,7 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
                 .AddCustomizationViews()
                 .AddSoftwareAppViews()
                 .AddAdvancedToolsViews()
+                .AddFileManagerViews()
                 .AddDialogViews();
         }
 
@@ -115,6 +117,24 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
         public static IServiceCollection AddAdvancedToolsViews(this IServiceCollection services)
         {
             services.AddTransient<WimUtilView>();
+            return services;
+        }
+
+        /// <summary>
+        /// Registers File Manager feature Views.
+        /// </summary>
+        /// <param name="services">The service collection to configure</param>
+        /// <returns>The service collection for method chaining</returns>
+        public static IServiceCollection AddFileManagerViews(this IServiceCollection services)
+        {
+            services.AddTransient<FileManagerView>();
+            services.AddTransient<DualPaneBrowserView>();
+            services.AddTransient<BatchRenameView>();
+            services.AddTransient<OrganizerView>();
+            services.AddTransient<SpaceRecoveryView>();
+            services.AddTransient<SearchResultsView>();
+            services.AddTransient<TabContainerView>();
+
             return services;
         }
 
