@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -20,6 +22,7 @@ namespace Winhance.Infrastructure.Features.Common.Services
         private const string RepositoryOwner = "Ghenghis";
         private const string RepositoryName = "Winhance-FS";
         private const string LatestReleaseApiUrl = $"https://api.github.com/repos/{RepositoryOwner}/{RepositoryName}/releases/latest";
+        private const string ReleasesApiUrl = $"https://api.github.com/repos/{RepositoryOwner}/{RepositoryName}/releases";
         private const string LatestReleasePageUrl = $"https://github.com/{RepositoryOwner}/{RepositoryName}/releases/latest";
         private const string UserAgent = "Winhance-FS-Update-Checker";
         private string? _latestReleaseDownloadUrl;
@@ -307,6 +310,159 @@ namespace Winhance.Infrastructure.Features.Common.Services
                 Version = versionTag,
                 ReleaseDate = now,
             };
+        }
+
+        /// <inheritdoc />
+        public async Task<VersionHistory> GetVersionHistoryAsync(int count = 10)
+        {
+            try
+            {
+                _logService.Log(LogLevel.Info, $"Fetching version history (last {count} releases)...");
+                
+                string apiUrl = $"https://api.github.com/repos/{RepositoryOwner}/{RepositoryName}/releases?per_page={count}";
+                HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logService.Log(LogLevel.Info, "No releases found.");
+                    return new VersionHistory();
+                }
+                
+                response.EnsureSuccessStatusCode();
+                
+                string responseBody = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(responseBody);
+                
+                var history = new VersionHistory();
+                VersionInfo currentVersion = GetCurrentVersion();
+                history.CurrentVersion = currentVersion.Version;
+                
+                foreach (JsonElement release in doc.RootElement.EnumerateArray())
+                {
+                    string tagName = release.GetProperty("tag_name").GetString() ?? "v0.0.0";
+                    string htmlUrl = release.GetProperty("html_url").GetString() ?? string.Empty;
+                    string body = release.TryGetProperty("body", out JsonElement bodyElement) 
+                        ? bodyElement.GetString() ?? string.Empty 
+                        : string.Empty;
+                    
+                    DateTime publishedAt = release.TryGetProperty("published_at", out JsonElement publishedElement) &&
+                                          DateTime.TryParse(publishedElement.GetString(), out DateTime published)
+                                          ? published
+                                          : DateTime.MinValue;
+                    
+                    bool isPrerelease = release.TryGetProperty("prerelease", out JsonElement prereleaseElement) &&
+                                       prereleaseElement.GetBoolean();
+                    
+                    string? assetUrl = SelectBestReleaseAssetUrl(release);
+                    
+                    var entry = new VersionHistoryEntry
+                    {
+                        Version = tagName,
+                        DisplayName = tagName,
+                        ReleaseDate = publishedAt,
+                        DownloadUrl = assetUrl ?? htmlUrl,
+                        ReleaseNotes = body.Length > 500 ? body.Substring(0, 500) + "..." : body,
+                        IsStable = !isPrerelease,
+                        IsInstalled = tagName == currentVersion.Version,
+                    };
+                    
+                    history.AddOrUpdateEntry(entry);
+                }
+                
+                _logService.Log(LogLevel.Info, $"Fetched {history.Entries.Count} releases.");
+                return history;
+            }
+            catch (Exception ex)
+            {
+                _logService.Log(LogLevel.Error, $"Error fetching version history: {ex.Message}", ex);
+                return new VersionHistory { CurrentVersion = GetCurrentVersion().Version };
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task DownloadAndInstallVersionAsync(string version)
+        {
+            try
+            {
+                _logService.Log(LogLevel.Info, $"Downloading version {version}...");
+                
+                // Get the specific release
+                string apiUrl = $"https://api.github.com/repos/{RepositoryOwner}/{RepositoryName}/releases/tags/{version}";
+                HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    throw new InvalidOperationException($"Version {version} not found on GitHub.");
+                }
+                
+                response.EnsureSuccessStatusCode();
+                
+                string responseBody = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(responseBody);
+                
+                string? downloadUrl = SelectBestReleaseAssetUrl(doc.RootElement);
+                if (string.IsNullOrWhiteSpace(downloadUrl))
+                {
+                    throw new InvalidOperationException($"No downloadable asset found for version {version}.");
+                }
+                
+                // Download the installer
+                string fileName = Path.GetFileName(new Uri(downloadUrl).LocalPath);
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    fileName = $"Winhance-FS-{version}-Setup.exe";
+                }
+                
+                string tempPath = Path.Combine(Path.GetTempPath(), fileName);
+                
+                byte[] installerBytes = await _httpClient.GetByteArrayAsync(downloadUrl);
+                await File.WriteAllBytesAsync(tempPath, installerBytes);
+                
+                _logService.Log(LogLevel.Info, $"Version {version} downloaded to {tempPath}, launching...");
+                
+                // Launch the installer
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = tempPath,
+                    UseShellExecute = true,
+                });
+                
+                _logService.Log(LogLevel.Info, $"Version {version} installer launched successfully");
+            }
+            catch (Exception ex)
+            {
+                _logService.Log(LogLevel.Error, $"Error downloading version {version}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<VersionHistoryEntry?> GetPreviousVersionAsync()
+        {
+            try
+            {
+                var history = await GetVersionHistoryAsync(10);
+                return history.GetPreviousVersion();
+            }
+            catch (Exception ex)
+            {
+                _logService.Log(LogLevel.Error, $"Error getting previous version: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        /// <inheritdoc />
+        public bool CanRollback()
+        {
+            try
+            {
+                var history = GetVersionHistoryAsync(5).GetAwaiter().GetResult();
+                return history.AvailableForRollback.Any();
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

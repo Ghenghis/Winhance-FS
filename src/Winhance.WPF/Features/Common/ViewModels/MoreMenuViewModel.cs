@@ -110,6 +110,16 @@ public class MoreMenuViewModel : ObservableObject
             canExecute: () => true
         );
 
+        OpenVersionHistoryCommand = new RelayCommand(
+            execute: () =>
+            {
+                _logService.LogInformation("OpenVersionHistoryCommand executed");
+                CloseFlyout();
+                VersionHistoryDialog.Show(_versionService);
+            },
+            canExecute: () => true
+        );
+
     }
 
     private string GetVersionInfo()
@@ -141,6 +151,8 @@ public class MoreMenuViewModel : ObservableObject
     public ICommand OpenScriptsCommand { get; }
 
     public ICommand CloseApplicationCommand { get; }
+
+    public ICommand OpenVersionHistoryCommand { get; }
 
     public ICommand ChangeLanguageCommand { get; } = null!;
 
