@@ -44,6 +44,11 @@ if (-not $SkipTests) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+# Publish into a clean folder so files from older builds never end up in the archive.
+if (Test-Path -LiteralPath $publishDir) {
+    Remove-Item -LiteralPath $publishDir -Recurse -Force
+}
+
 dotnet publish $project `
     --configuration Release `
     --runtime $Runtime `

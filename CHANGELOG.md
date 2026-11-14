@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.2.0] - 2026-11-14
 
 ### Fixed
 - **Build:** the WPF project compiles again (381 errors → 0). Duplicate ViewModel classes were removed and
