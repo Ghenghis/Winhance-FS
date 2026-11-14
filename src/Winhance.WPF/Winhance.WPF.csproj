@@ -46,19 +46,19 @@
     <ProjectReference Include="..\Winhance.Infrastructure\Winhance.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="MahApps.Metro.IconPacks.Material" Version="6.1.0" />
-    <PackageReference Include="MahApps.Metro.IconPacks.MaterialDesign" Version="6.1.0" />
-    <PackageReference Include="MahApps.Metro.IconPacks.Lucide" Version="6.1.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
-    <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
-    <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
-    <PackageReference Include="System.IO.Packaging" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.10" />
-    <PackageReference Include="System.Text.Json" Version="9.0.2" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="MahApps.Metro.IconPacks.Material" />
+    <PackageReference Include="MahApps.Metro.IconPacks.MaterialDesign" />
+    <PackageReference Include="MahApps.Metro.IconPacks.Lucide" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Win32.Registry" />
+    <PackageReference Include="System.Data.SqlClient" />
+    <PackageReference Include="System.DirectoryServices.Protocols" />
+    <PackageReference Include="System.Formats.Asn1" />
+    <PackageReference Include="System.IO.Packaging" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 </Project>
 

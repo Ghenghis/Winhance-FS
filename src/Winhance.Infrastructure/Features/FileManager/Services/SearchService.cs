@@ -709,22 +709,22 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             // Sort
             IOrderedEnumerable<SearchResult> sorted = options.SortBy switch
             {
-                SearchSortBy.Name => options.SortDescending
+                SearchSortMode.Name => options.SortDescending
                     ? filtered.OrderByDescending(r => r.Name)
                     : filtered.OrderBy(r => r.Name),
-                SearchSortBy.Size => options.SortDescending
+                SearchSortMode.Size => options.SortDescending
                     ? filtered.OrderByDescending(r => r.Size)
                     : filtered.OrderBy(r => r.Size),
-                SearchSortBy.DateModified => options.SortDescending
+                SearchSortMode.DateModified => options.SortDescending
                     ? filtered.OrderByDescending(r => r.DateModified)
                     : filtered.OrderBy(r => r.DateModified),
-                SearchSortBy.DateCreated => options.SortDescending
+                SearchSortMode.DateCreated => options.SortDescending
                     ? filtered.OrderByDescending(r => r.DateCreated)
                     : filtered.OrderBy(r => r.DateCreated),
-                SearchSortBy.Extension => options.SortDescending
+                SearchSortMode.Extension => options.SortDescending
                     ? filtered.OrderByDescending(r => r.Extension)
                     : filtered.OrderBy(r => r.Extension),
-                SearchSortBy.Path => options.SortDescending
+                SearchSortMode.Path => options.SortDescending
                     ? filtered.OrderByDescending(r => r.FullPath)
                     : filtered.OrderBy(r => r.FullPath),
                 _ => options.SortDescending

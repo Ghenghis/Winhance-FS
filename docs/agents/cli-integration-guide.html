@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Winhance-FS — CLI Integration Guide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1a1a2e; --bg-card: #16213e; --bg-deeper: #0f0e17;
+    --border: #2a2a4a; --text: #e0e0e0; --text-muted: #8888aa;
+    --accent: #00d4ff; --accent-dim: #007a99;
+    --accent-2: #e94560; --accent-3: #533483;
+    --green: #2ecc71; --red: #e74c3c; --yellow: #f39c12; --blue: #3498db;
+    --code-bg: #0d0d1a; --sidebar-w: 270px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); display: flex; min-height: 100vh;
+    font-size: 15px; line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: #66e7ff; text-decoration: underline; }
+
+  nav.sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+    background: var(--bg-deeper); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; padding-bottom: 2rem;
+  }
+  .sidebar-header { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+  .sidebar-header .logo { color: var(--accent); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.04em; }
+  .sidebar-header .subtitle { color: var(--text-muted); font-size: 0.74rem; margin-top: 0.2rem; }
+  nav.sidebar ul { list-style: none; padding: 0.5rem 0; }
+  nav.sidebar ul li a { display: block; padding: 0.4rem 1.1rem; color: var(--text-muted);
+    text-decoration: none; font-size: 0.83rem; border-left: 2px solid transparent;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+  }
+  nav.sidebar ul li a:hover { color: var(--accent); background: rgba(0,212,255,0.05); border-left-color: var(--accent); }
+  nav.sidebar .nav-section { padding: 0.85rem 1rem 0.25rem; color: var(--accent);
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  }
+  nav.sidebar .related-docs { padding: 0.75rem 1rem; border-top: 1px solid var(--border); margin-top: 0.5rem; }
+  nav.sidebar .related-docs p { color: var(--text-muted); font-size: 0.7rem;
+    margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  nav.sidebar .related-docs a { display: block; color: var(--accent-dim); font-size: 0.8rem;
+    text-decoration: none; padding: 0.2rem 0;
+  }
+  nav.sidebar .related-docs a:hover { color: var(--accent); }
+
+  main { margin-left: var(--sidebar-w); flex: 1; padding: 2.2rem 2.5rem 4rem; max-width: 1180px; }
+
+  .page-header { border-bottom: 2px solid var(--border); padding-bottom: 1.3rem; margin-bottom: 2rem; }
+  .page-header .doc-id { color: var(--accent); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .page-header h1 { font-size: 2.05rem; font-weight: 800; color: #fff; margin: 0.35rem 0 0.6rem; }
+  .page-header .meta { color: var(--text-muted); font-size: 0.85rem; }
+  .page-header .meta span { margin-right: 1.4rem; }
+
+  .section { margin-bottom: 2.6rem; }
+  .section h2 { font-size: 1.3rem; font-weight: 600; color: var(--accent);
+    border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; margin-bottom: 1.1rem;
+  }
+  .section h3 { font-size: 1.02rem; font-weight: 600; color: #c8d8f0; margin: 1.3rem 0 0.6rem; }
+  .section h4 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin: 1rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .callout { padding: 0.85rem 1.1rem; border-radius: 6px; border-left: 3px solid; margin: 1rem 0; font-size: 0.9rem; }
+  .callout-info  { background: rgba(52,152,219,0.08);  border-color: var(--blue);   }
+  .callout-warn  { background: rgba(243,156,18,0.08);  border-color: var(--yellow); }
+  .callout-error { background: rgba(231,76,60,0.08);   border-color: var(--red);    }
+  .callout-ok    { background: rgba(46,204,113,0.08);  border-color: var(--green);  }
+  .callout strong { color: #fff; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.95rem 1.15rem; overflow-x: auto; margin: 0.7rem 0; font-size: 0.8rem;
+    font-family: 'Cascadia Code', Consolas, monospace; line-height: 1.55;
+  }
+  pre.lang-ps::before { content: 'PowerShell'; display: block;
+    background: rgba(0,212,255,0.06); color: var(--accent);
+    margin: -0.95rem -1.15rem 0.7rem;
+    padding: 0.3rem 1.15rem; font-size: 0.7rem; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); text-transform: uppercase;
+  }
+  pre.lang-yaml::before { content: 'YAML'; display: block;
+    background: rgba(243,156,18,0.06); color: var(--yellow);
+    margin: -0.95rem -1.15rem 0.7rem;
+    padding: 0.3rem 1.15rem; font-size: 0.7rem; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); text-transform: uppercase;
+  }
+  pre.lang-sh::before { content: 'Shell'; display: block;
+    background: rgba(46,204,113,0.06); color: var(--green);
+    margin: -0.95rem -1.15rem 0.7rem;
+    padding: 0.3rem 1.15rem; font-size: 0.7rem; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); text-transform: uppercase;
+  }
+  pre.lang-toml::before { content: 'TOML'; display: block;
+    background: rgba(233,69,96,0.06); color: var(--accent-2);
+    margin: -0.95rem -1.15rem 0.7rem;
+    padding: 0.3rem 1.15rem; font-size: 0.7rem; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); text-transform: uppercase;
+  }
+  code { font-family: 'Cascadia Code', Consolas, monospace; font-size: 0.85em;
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 3px;
+    padding: 0.1em 0.4em; color: #a8d8ea;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+  .kw { color: #569cd6; } .str { color: #ce9178; } .var { color: #9cdcfe; } .cmt { color: #6a9955; } .num { color: #b5cea8; } .type { color: #4ec9b0; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 0.7rem 0; }
+  table.data-table thead th { background: var(--bg-deeper); color: var(--accent);
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 0.6rem 0.85rem; text-align: left;
+    border-bottom: 2px solid var(--border);
+  }
+  table.data-table tbody tr:nth-child(odd) { background: rgba(255,255,255,0.015); }
+  table.data-table tbody td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+  .badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .badge-pass { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .badge-fail { background: rgba(231,76,60,0.15);  color: var(--red);   border: 1px solid rgba(231,76,60,0.3);  }
+  .badge-warn { background: rgba(243,156,18,0.15); color: var(--yellow); border: 1px solid rgba(243,156,18,0.3); }
+  .badge-info { background: rgba(52,152,219,0.15); color: var(--blue);  border: 1px solid rgba(52,152,219,0.3); }
+
+  .agent-block {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.3rem 1.4rem; margin: 1.2rem 0;
+    position: relative; overflow: hidden;
+  }
+  .agent-block::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
+  .agent-block h3 { margin-top: 0; color: #fff; font-size: 1.15rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .agent-block h3 .num { color: var(--accent); font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 0.85rem; background: rgba(0,212,255,0.1); padding: 0.15rem 0.5rem; border-radius: 4px;
+  }
+
+  footer { margin-left: var(--sidebar-w); padding: 1.5rem 2.5rem; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-muted); font-size: 0.8rem;
+  }
+  footer a { color: var(--accent-dim); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+  p { margin: 0.5rem 0 0.9rem; }
+  ul.disc { padding-left: 1.4rem; }
+  ul.disc li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">Winhance Research</div>
+    <div class="subtitle">CLI Integration · Doc 02 of 03</div>
+  </div>
+  <ul>
+    <li class="nav-section">Setup</li>
+    <li><a href="#layout">Repo Layout</a></li>
+    <li><a href="#shared-context">Shared Context Files</a></li>
+
+    <li class="nav-section">Each CLI</li>
+    <li><a href="#claude-code">1. Claude Code</a></li>
+    <li><a href="#codex">2. Codex CLI</a></li>
+    <li><a href="#goose">3. Goose</a></li>
+    <li><a href="#openhands">4. OpenHands CLI</a></li>
+    <li><a href="#kilo">5. Kilo Code</a></li>
+
+    <li class="nav-section">Switcher</li>
+    <li><a href="#switcher">Unified Launcher</a></li>
+    <li><a href="#routing">Task Routing</a></li>
+    <li><a href="#mcp">MCP Shared Pool</a></li>
+    <li><a href="#workflow">Daily Workflow</a></li>
+    <li><a href="#troubleshoot">Troubleshooting</a></li>
+  </ul>
+  <div class="related-docs">
+    <p>Series</p>
+    <a href="agent-systems-comparison.html">01 — Comparison</a>
+    <a href="cli-integration-guide.html">02 — CLI Integration (this doc)</a>
+    <a href="deployment-isolation-strategy.html">03 — Deployment / Isolation</a>
+    <a href="../index.html">← Master Hub</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="page-header">
+  <div class="doc-id">Research Document 02 of 03</div>
+  <h1>CLI Integration Guide — Top 5 Agents on Windows</h1>
+  <div class="meta">
+    <span><strong>Audience:</strong> Winhance-FS devs</span>
+    <span><strong>Target OS:</strong> Windows 11 + PowerShell 7</span>
+    <span><strong>Goal:</strong> Backend-switchable from one launcher</span>
+  </div>
+</header>
+
+<!-- ============ REPO LAYOUT ============ -->
+<section class="section" id="layout">
+  <h2>Where the Agents Live in the Repo</h2>
+  <p>Each CLI gets its own subdirectory under <code>.agents/</code>. All five read the same shared
+  context (<code>AGENTS.md</code>, <code>CLAUDE.md</code>) so they have a consistent view of project rules.</p>
+
+  <pre class="lang-sh"><code>C:\Winhance-FS-Repo\
+├── .agents\
+│   ├── claude\          <span class="cmt"># CLAUDE.md, hooks, settings.json</span>
+│   ├── codex\           <span class="cmt"># config.toml, profile</span>
+│   ├── goose\           <span class="cmt"># config.yaml + recipes</span>
+│   ├── openhands\       <span class="cmt"># config.toml, microagents</span>
+│   ├── kilo\            <span class="cmt"># .kilocodemodes, custom rules</span>
+│   ├── shared\
+│   │   ├── mcp-servers.json     <span class="cmt"># reused across all five</span>
+│   │   ├── system-prompt.md     <span class="cmt"># common preamble</span>
+│   │   └── task-routing.yaml    <span class="cmt"># which CLI for which task</span>
+│   └── launcher\
+│       ├── winhance-agent.ps1   <span class="cmt"># the unified entry point</span>
+│       └── docker-sandbox.ps1   <span class="cmt"># microVM wrapper</span>
+├── AGENTS.md            <span class="cmt"># universal — Codex, Goose, Kilo, OpenHands read this</span>
+├── CLAUDE.md            <span class="cmt"># Claude Code specific</span>
+└── ...</code></pre>
+
+  <div class="callout callout-info">
+    <strong>Why two manifest files?</strong> Anthropic standardized on <code>CLAUDE.md</code>; the
+    open-source ecosystem (Codex, Goose, Kilo, OpenHands) standardized on <code>AGENTS.md</code>.
+    Keep both. Make <code>CLAUDE.md</code> a one-line file that <code>@</code>-imports <code>AGENTS.md</code>
+    so there's a single source of truth.
+  </div>
+
+  <pre class="lang-sh"><code><span class="cmt"># C:\Winhance-FS-Repo\CLAUDE.md</span>
+<span class="cmt"># See @AGENTS.md for project rules — this file just delegates.</span>
+@AGENTS.md</code></pre>
+</section>
+
+<!-- ============ SHARED CONTEXT ============ -->
+<section class="section" id="shared-context">
+  <h2>Shared Context Files</h2>
+
+  <h3><code>AGENTS.md</code> — Universal Project Brief</h3>
+  <p>Read by Codex, Goose, Kilo, OpenHands automatically. Used by Claude through the import in <code>CLAUDE.md</code>.</p>
+  <pre class="lang-sh"><code><span class="cmt"># Winhance-FS · Agent Instructions</span>
+
+<span class="cmt">## Project</span>
+.NET 8 WPF Windows file manager + system optimizer. Multi-language:
+C# (~616 files), Rust (4 nexus_ crates), Python (analytics).
+
+<span class="cmt">## Build / Test</span>
+- Build:  dotnet build Winhance.sln -c Release
+- Test:   dotnet test Winhance.sln -c Release --no-build
+- Required: 0 errors / 0 warnings before any commit
+
+<span class="cmt">## Hard Rules</span>
+- NEVER add code comments unless the WHY is non-obvious
+- NEVER restore TODO / FIXME / Stub / Demo / Fake tokens in src/
+- NEVER bypass git hooks (--no-verify)
+- ALWAYS prefer editing existing files over creating new ones
+- ALWAYS run `dotnet build` before claiming success
+
+<span class="cmt">## Critical Files</span>
+- src/Winhance.WPF/App.xaml.cs — DI composition root (P0 fix pending here)
+- Directory.Build.props — global NoWarn (treat as debt, do not extend)
+- docs/audit/index.html — read this before opening a new feature
+
+<span class="cmt">## Backend-switchable Stack</span>
+Agents may be invoked via .agents\launcher\winhance-agent.ps1 with:
+  -Backend Claude | Codex | Goose | OpenHands | Kilo</code></pre>
+
+  <h3><code>shared/mcp-servers.json</code> — Common MCP Pool</h3>
+  <p>All five CLIs point at the same MCP servers so they share filesystem, search, and memory access.</p>
+  <pre class="lang-yaml"><code>{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem",
+               "C:\\Winhance-FS-Repo"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "project-mcp": {
+      "command": "node",
+      "args": ["C:\\Winhance-FS-Repo\\.agents\\shared\\project-mcp\\index.js"]
+    }
+  }
+}</code></pre>
+</section>
+
+<!-- ============ AGENT 1 — CLAUDE CODE ============ -->
+<section class="section" id="claude-code">
+  <h2>1 · Claude Code <small style="color:var(--text-muted); font-weight: 400; font-size: 0.7em;">(default driver)</small></h2>
+
+  <h4>Install</h4>
+  <pre class="lang-ps"><code><span class="cmt"># Per Anthropic docs — Claude Code CLI</span>
+npm install -g @anthropic-ai/claude-code
+
+<span class="cmt"># OR via standalone installer:</span>
+iwr https://claude.ai/install.ps1 -UseBasicParsing | iex
+
+claude --version   <span class="cmt"># sanity check</span></code></pre>
+
+  <h4>Project Config</h4>
+  <pre class="lang-ps"><code><span class="cmt"># C:\Winhance-FS-Repo\.agents\claude\settings.json</span>
+{
+  "mcpServers": "@../shared/mcp-servers.json",
+  "hooks": {
+    "PostToolUse": [{
+      "tool": "Write|Edit",
+      "command": "dotnet build Winhance.sln -c Release --no-restore"
+    }]
+  },
+  "permissions": { "allow": ["Read", "Edit", "Write", "Bash(dotnet*)", "Bash(git status)"] }
+}</code></pre>
+
+  <h4>Run</h4>
+  <pre class="lang-ps"><code>cd C:\Winhance-FS-Repo
+claude
+<span class="cmt"># or scripted:</span>
+claude -p "fix the DI gap in src/Winhance.WPF/App.xaml.cs per docs/audit/12-di-registration.html"</code></pre>
+
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    Project memory lives in <code>CLAUDE.md</code> (already created above with the @AGENTS.md import).
+    Subagents and slash commands live in <code>.claude/agents/</code> and <code>.claude/commands/</code>.
+  </p>
+</section>
+
+<!-- ============ AGENT 2 — CODEX ============ -->
+<section class="section" id="codex">
+  <h2>2 · Codex CLI <small style="color:var(--text-muted); font-weight: 400; font-size: 0.7em;">(OpenAI · Rust binary)</small></h2>
+
+  <h4>Install</h4>
+  <pre class="lang-ps"><code><span class="cmt"># Codex CLI — Rust binary distributed via npm + standalone</span>
+npm install -g @openai/codex
+
+<span class="cmt"># sign in with ChatGPT Plus/Pro/Team:</span>
+codex login
+
+codex --version</code></pre>
+
+  <h4>Project Config</h4>
+  <pre class="lang-toml"><code><span class="cmt"># C:\Winhance-FS-Repo\.agents\codex\config.toml</span>
+model = <span class="str">"gpt-5-codex"</span>
+approval_policy = <span class="str">"on-failure"</span>
+sandbox_mode = <span class="str">"workspace-write"</span>
+notify = [<span class="str">"powershell"</span>, <span class="str">"-c"</span>, <span class="str">"echo done"</span>]
+
+[mcp_servers.filesystem]
+command = <span class="str">"npx"</span>
+args = [<span class="str">"-y"</span>, <span class="str">"@modelcontextprotocol/server-filesystem"</span>, <span class="str">"C:\\Winhance-FS-Repo"</span>]
+
+[shell_environment_policy]
+inherit = <span class="str">"all"</span>
+include_only = [<span class="str">"PATH"</span>, <span class="str">"DOTNET_*"</span>, <span class="str">"NUGET_*"</span>]</code></pre>
+
+  <h4>Run</h4>
+  <pre class="lang-ps"><code>cd C:\Winhance-FS-Repo
+codex                              <span class="cmt"># interactive</span>
+codex exec "run dotnet test and fix any red"   <span class="cmt"># non-interactive</span>
+codex --profile=audit "audit src/Winhance.Infrastructure for crypto issues"</code></pre>
+</section>
+
+<!-- ============ AGENT 3 — GOOSE ============ -->
+<section class="section" id="goose">
+  <h2>3 · Goose <small style="color:var(--text-muted); font-weight: 400; font-size: 0.7em;">(Block · open source · 29k★)</small></h2>
+
+  <h4>Install on Windows</h4>
+  <pre class="lang-ps"><code><span class="cmt"># Recommended: Scoop or direct binary</span>
+scoop install goose
+<span class="cmt"># or:</span>
+iwr https://github.com/block/goose/releases/latest/download/goose-windows.zip -OutFile goose.zip
+Expand-Archive goose.zip -DestinationPath C:\Tools\goose
+
+<span class="cmt"># Add C:\Tools\goose to PATH, then:</span>
+goose configure</code></pre>
+
+  <h4>Project Config</h4>
+  <pre class="lang-yaml"><code><span class="cmt"># C:\Winhance-FS-Repo\.agents\goose\config.yaml</span>
+GOOSE_PROVIDER: anthropic            <span class="cmt"># or "openai", "google", "ollama", "openrouter"</span>
+GOOSE_MODEL: claude-opus-4-7
+GOOSE_MODE: smart_approve            <span class="cmt"># auto / smart_approve / approve / chat</span>
+
+extensions:
+  filesystem:
+    enabled: true
+    bundled: true
+  developer:
+    enabled: true                    <span class="cmt"># shell + file edit + screen capture</span>
+  computercontroller:
+    enabled: false                   <span class="cmt"># keep off unless needed</span>
+  jetbrains:
+    enabled: false
+
+<span class="cmt"># MCP servers from the shared pool:</span>
+mcp_servers:
+  sequential-thinking:
+    type: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]</code></pre>
+
+  <h4>Run</h4>
+  <pre class="lang-ps"><code>cd C:\Winhance-FS-Repo
+goose session                        <span class="cmt"># interactive REPL</span>
+goose run --instructions audit-task.md  <span class="cmt"># one-shot</span>
+goose run --recipe recipes/fix-di-gap.yaml</code></pre>
+
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    Goose recipes are YAML task definitions — reuse them for repeated workflows
+    (e.g. "audit-then-PR", "warning-sweep"). Best fit when you want free local-model bulk work via Ollama.
+  </p>
+</section>
+
+<!-- ============ AGENT 4 — OPENHANDS ============ -->
+<section class="section" id="openhands">
+  <h2>4 · OpenHands CLI <small style="color:var(--text-muted); font-weight: 400; font-size: 0.7em;">(Apache 2.0 · 68k★)</small></h2>
+
+  <h4>Install on Windows</h4>
+  <pre class="lang-ps"><code><span class="cmt"># Requires Python 3.12+ and uv 0.11.6+</span>
+winget install Python.Python.3.12
+pipx install uv      <span class="cmt"># if uv not already installed</span>
+
+<span class="cmt"># Install OpenHands CLI:</span>
+uvx --python 3.12 --from openhands-ai openhands
+
+<span class="cmt"># Or pin a binary release:</span>
+iwr https://github.com/OpenHands/OpenHands-CLI/releases/latest/download/openhands-windows.exe `
+  -OutFile C:\Tools\openhands.exe</code></pre>
+
+  <h4>Project Config</h4>
+  <pre class="lang-toml"><code><span class="cmt"># C:\Winhance-FS-Repo\.agents\openhands\config.toml</span>
+[core]
+workspace_base = <span class="str">"C:\\Winhance-FS-Repo"</span>
+debug = <span class="kw">false</span>
+
+[llm]
+model = <span class="str">"anthropic/claude-opus-4-7"</span>
+api_key = <span class="str">"$ANTHROPIC_API_KEY"</span>
+
+[agent]
+type = <span class="str">"CodeActAgent"</span>          <span class="cmt"># or BrowsingAgent, etc.</span>
+
+[runtime]
+type = <span class="str">"docker"</span>                <span class="cmt"># auto-sandboxes execution</span></code></pre>
+
+  <h4>Run</h4>
+  <pre class="lang-ps"><code>cd C:\Winhance-FS-Repo
+openhands cli
+<span class="cmt"># or for non-interactive:</span>
+openhands cli --task "Fix the DI gap per audit doc 12"</code></pre>
+
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    OpenHands defaults to a Docker runtime — it spins up a sandbox container for every command.
+    On Windows ensure Docker Desktop is running before you launch.
+  </p>
+</section>
+
+<!-- ============ AGENT 5 — KILO ============ -->
+<section class="section" id="kilo">
+  <h2>5 · Kilo Code <small style="color:var(--text-muted); font-weight: 400; font-size: 0.7em;">(multi-mode orchestrator)</small></h2>
+
+  <h4>Install</h4>
+  <pre class="lang-ps"><code><span class="cmt"># Kilo CLI install (npm):</span>
+npm install -g kilocode
+
+<span class="cmt"># Or via VS Code marketplace if you want the IDE companion too:</span>
+<span class="cmt"># ext install kilocode.kilo-code</span>
+
+kilo --version</code></pre>
+
+  <h4>Project Config — Mode Definitions</h4>
+  <pre class="lang-yaml"><code><span class="cmt"># C:\Winhance-FS-Repo\.kilocodemodes</span>
+modes:
+  orchestrator:
+    description: <span class="str">"Splits work, delegates to Architect/Coder/Debugger"</span>
+    model: claude-opus-4-7
+  architect:
+    description: <span class="str">"Plans, never edits"</span>
+    model: claude-opus-4-7
+  coder:
+    description: <span class="str">"Implements per plan"</span>
+    model: claude-sonnet-4-6
+  debugger:
+    description: <span class="str">"Reads logs, fixes red tests"</span>
+    model: gpt-5-codex
+  ask:
+    description: <span class="str">"Read-only questions"</span>
+    model: claude-haiku-4-5</code></pre>
+
+  <h4>Run</h4>
+  <pre class="lang-ps"><code>cd C:\Winhance-FS-Repo
+kilo                                 <span class="cmt"># picks mode based on prompt</span>
+kilo --mode=orchestrator "fan out audit 12 fix across 4 worktrees"
+kilo --mode=architect "design the AddFileManagerServices DI ext"
+kilo agent-manager                   <span class="cmt"># opens multi-session panel</span></code></pre>
+
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    Kilo's Agent Manager gives you the "20 agents" workflow — multiple sessions each in their own
+    git worktree, supervised from one terminal pane. Best when work splits cleanly into independent
+    chunks (per-feature audits, per-file refactors).
+  </p>
+</section>
+
+<!-- ============ SWITCHER ============ -->
+<section class="section" id="switcher">
+  <h2>The Unified Launcher — Backend Switch in One Flag</h2>
+
+  <pre class="lang-ps"><code><span class="cmt"># C:\Winhance-FS-Repo\.agents\launcher\winhance-agent.ps1</span>
+<span class="kw">param</span>(
+  [ValidateSet(<span class="str">"Claude"</span>, <span class="str">"Codex"</span>, <span class="str">"Goose"</span>, <span class="str">"OpenHands"</span>, <span class="str">"Kilo"</span>)]
+  [<span class="kw">string</span>]<span class="var">$Backend</span> = <span class="str">"Claude"</span>,
+
+  [<span class="kw">string</span>]<span class="var">$Task</span>,
+  [<span class="kw">switch</span>]<span class="var">$Sandbox</span>,
+  [<span class="kw">switch</span>]<span class="var">$ReadOnly</span>
+)
+
+<span class="var">$repo</span> = <span class="str">"C:\Winhance-FS-Repo"</span>
+<span class="var">$cfgDir</span> = <span class="str">"</span><span class="var">$repo</span><span class="str">\.agents\</span><span class="var">$($Backend.ToLower())</span><span class="str">"</span>
+
+<span class="kw">if</span> (<span class="var">$Sandbox</span>) {
+  <span class="cmt"># Hand off to Docker Sandbox microVM (see Doc 03)</span>
+  & <span class="str">"</span><span class="var">$repo</span><span class="str">\.agents\launcher\docker-sandbox.ps1"</span> -Backend <span class="var">$Backend</span> -Task <span class="var">$Task</span>
+  <span class="kw">return</span>
+}
+
+<span class="kw">switch</span> (<span class="var">$Backend</span>) {
+  <span class="str">"Claude"</span>     { & claude <span class="var">$Task</span> }
+  <span class="str">"Codex"</span>      { & codex exec --profile <span class="var">$cfgDir</span> <span class="var">$Task</span> }
+  <span class="str">"Goose"</span>      { & goose run --config <span class="var">$cfgDir</span>\config.yaml --instructions <span class="var">$Task</span> }
+  <span class="str">"OpenHands"</span>  { & openhands cli --config <span class="var">$cfgDir</span>\config.toml --task <span class="var">$Task</span> }
+  <span class="str">"Kilo"</span>       { & kilo --modes <span class="var">$cfgDir</span>\.kilocodemodes <span class="var">$Task</span> }
+}</code></pre>
+
+  <h4>Usage</h4>
+  <pre class="lang-ps"><code><span class="cmt"># Daily driver:</span>
+.\.agents\launcher\winhance-agent.ps1 -Backend Claude -Task <span class="str">"work on the audit P0 list"</span>
+
+<span class="cmt"># Free local-model batch:</span>
+.\.agents\launcher\winhance-agent.ps1 -Backend Goose -Task <span class="str">"./recipes/warning-sweep.yaml"</span>
+
+<span class="cmt"># Autonomous overnight job in a microVM:</span>
+.\.agents\launcher\winhance-agent.ps1 -Backend OpenHands -Task <span class="str">"close all P2 items"</span> -Sandbox</code></pre>
+</section>
+
+<!-- ============ ROUTING ============ -->
+<section class="section" id="routing">
+  <h2>Task Routing — Which CLI for Which Job</h2>
+  <table class="data-table">
+    <thead><tr><th>Task Type</th><th>Recommended Backend</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Complex multi-file refactor</td><td><strong>Claude Code</strong></td><td>Highest SWE-bench score; CLAUDE.md durable context.</td></tr>
+      <tr><td>Code audit / read-only review</td><td><strong>Claude Code</strong> or <strong>Aider --read-only</strong></td><td>Best reasoning; minimal action surface.</td></tr>
+      <tr><td>Overnight autonomous "close all P2"</td><td><strong>OpenHands CLI</strong></td><td>Designed for ticket-to-PR loops.</td></tr>
+      <tr><td>Bulk doc/comment cleanup</td><td><strong>Goose</strong> + Ollama (local)</td><td>$0 marginal cost; fits cheap-and-many work.</td></tr>
+      <tr><td>Parallel per-feature audits</td><td><strong>Kilo Code</strong> Agent Manager</td><td>Native worktree-isolated multi-session.</td></tr>
+      <tr><td>Run tests, fix red</td><td><strong>Codex CLI</strong></td><td>Low-token loop, GPT-5-Codex specialty.</td></tr>
+      <tr><td>Architectural design / spec drafting</td><td><strong>Kilo</strong> Architect mode or <strong>Aider</strong> architect mode</td><td>Two-model proposer/editor pipeline.</td></tr>
+      <tr><td>Quick read-only question</td><td>any <code>--read-only</code></td><td>Cheapest model on the cheapest backend.</td></tr>
+    </tbody>
+  </table>
+
+  <pre class="lang-yaml"><code><span class="cmt"># .agents/shared/task-routing.yaml — machine-readable</span>
+routes:
+  - match: { type: refactor, scope: multi-file }
+    backend: Claude
+  - match: { type: audit }
+    backend: Claude
+  - match: { type: autonomous, duration: long }
+    backend: OpenHands
+    sandbox: true
+  - match: { type: bulk, cost: low }
+    backend: Goose
+    model: ollama/qwen2.5-coder
+  - match: { type: parallel-fanout }
+    backend: Kilo
+    mode: orchestrator
+  - match: { type: test-fix-loop }
+    backend: Codex</code></pre>
+</section>
+
+<!-- ============ MCP ============ -->
+<section class="section" id="mcp">
+  <h2>Shared MCP Pool — One Server Bank, Five Clients</h2>
+  <p>
+    All five CLIs speak MCP. Run the heavy MCP servers (filesystem, project-mcp, sequential-thinking)
+    <strong>once on the host</strong>, then point every CLI's config at the same set. This avoids
+    duplicate indexing, gives every agent the same code search, and keeps memory in one place.
+  </p>
+  <div class="callout callout-ok">
+    <strong>Pattern:</strong> the same <code>.agents/shared/mcp-servers.json</code> is referenced from
+    Claude's <code>settings.json</code>, Goose's <code>config.yaml</code> (under <code>mcp_servers:</code>),
+    Codex's <code>config.toml</code> (under <code>[mcp_servers.*]</code>), OpenHands' config, and Kilo's
+    mode definitions. Update once, all five inherit.
+  </div>
+</section>
+
+<!-- ============ DAILY WORKFLOW ============ -->
+<section class="section" id="workflow">
+  <h2>Daily Workflow Example</h2>
+  <pre class="lang-ps"><code><span class="cmt"># Morning: kick off a long autonomous job in a sandbox</span>
+.\.agents\launcher\winhance-agent.ps1 -Backend OpenHands `
+  -Task <span class="str">"close P2-1 through P2-3 from the handoff"</span> -Sandbox
+
+<span class="cmt"># Meanwhile, do interactive work on the P0 DI fix:</span>
+.\.agents\launcher\winhance-agent.ps1 -Backend Claude `
+  -Task <span class="str">"wire up AddFileManagerServices() in App.xaml.cs"</span>
+
+<span class="cmt"># When OpenHands signals, review its PR draft with Aider (architect mode):</span>
+aider --architect --browser
+
+<span class="cmt"># End of day, fan out the warning-sweep across 4 worktrees:</span>
+.\.agents\launcher\winhance-agent.ps1 -Backend Kilo `
+  -Task <span class="str">"orchestrator: 4-way fan-out on src/Winhance.WPF/Features/{FileManager,Optimize,Customize,SoftwareApps}"</span></code></pre>
+</section>
+
+<!-- ============ TROUBLESHOOTING ============ -->
+<section class="section" id="troubleshoot">
+  <h2>Troubleshooting</h2>
+  <table class="data-table">
+    <thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Two agents fight over the same file</td><td>Both writing to the same worktree</td><td>Use Kilo Agent Manager or git worktrees; one branch per agent.</td></tr>
+      <tr><td>Build green locally, red in sandbox</td><td>Sandbox missing .NET 8 SDK</td><td>Pre-install SDK in the microVM base image (Doc 03).</td></tr>
+      <tr><td>OpenHands hangs on first prompt</td><td>Docker Desktop not running</td><td>Start Docker Desktop or set <code>runtime=local</code>.</td></tr>
+      <tr><td>Codex won't accept the project context</td><td><code>AGENTS.md</code> too long</td><td>Trim to &lt; 200 lines; move detail to feature-folder READMEs.</td></tr>
+      <tr><td>Goose Ollama model slow</td><td>CPU inference</td><td>Switch <code>GOOSE_PROVIDER</code> to a cloud one for that session, or move Ollama to GPU.</td></tr>
+      <tr><td>Kilo modes ignored</td><td><code>.kilocodemodes</code> not at repo root</td><td>Symlink from <code>.agents/kilo/.kilocodemodes</code> to repo root.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  <div>Winhance-FS Research · Doc 02 — CLI Integration Guide · 2026-05-13</div>
+  <div><a href="agent-systems-comparison.html">← 01 Comparison</a> &nbsp;|&nbsp; <a href="deployment-isolation-strategy.html">03 Deployment →</a> &nbsp;|&nbsp; <a href="../index.html">Master Hub</a></div>
+</footer>
+
+</body>
+</html>

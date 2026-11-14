@@ -166,6 +166,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 if (_organizerService != null)
                 {
                     var plan = await _organizerService.AnalyzeAsync(SourcePath, SelectedStrategy);
+                    _analyzedPlan = plan;
 
                     Categories.Clear();
                     foreach (var category in plan.Categories)
@@ -239,7 +240,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                             unclassified++;
                         }
                     }
-                    catch { }
+                    catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                    {
+                        // Skip items that cannot be read (locked or access denied); the scan continues.
+                    }
                 }
 
                 var destBase = MoveToSameFolder ? SourcePath : DestinationPath;
@@ -314,21 +318,15 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
             try
             {
-                var plan = new OrganizationPlan
+                var plan = BuildExecutionPlan(out var problem);
+                if (plan == null)
                 {
-                    SourcePath = SourcePath,
-                    DestinationPath = MoveToSameFolder ? SourcePath : DestinationPath,
-                    Strategy = SelectedStrategy,
-                    Categories = Categories.Where(c => c.IsSelected).Select(c => new OrganizationCategory
-                    {
-                        Name = c.Name,
-                        DestinationFolder = c.DestinationFolder,
-                        FileCount = c.FileCount,
-                        TotalSize = c.TotalSize,
-                    }).ToList(),
-                };
+                    StatusMessage = problem;
+                    return;
+                }
 
                 var result = await _organizerService.ExecuteAsync(plan);
+                _analyzedPlan = null; // files have moved; a new Analyze is required before applying again
 
                 if (result.Success)
                 {
@@ -349,6 +347,93 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             {
                 IsLoading = false;
             }
+        }
+
+        private OrganizationPlan? _analyzedPlan;
+
+        /// <summary>
+        /// Builds the plan to execute from the last analysis: only the categories still ticked,
+        /// with each file's destination re-rooted to the category's (possibly edited) folder or to
+        /// the "Move to" destination.
+        /// </summary>
+        private OrganizationPlan? BuildExecutionPlan(out string problem)
+        {
+            problem = string.Empty;
+            if (_analyzedPlan == null ||
+                !string.Equals(System.IO.Path.GetFullPath(_analyzedPlan.SourcePath).TrimEnd('\\'),
+                               System.IO.Path.GetFullPath(SourcePath).TrimEnd('\\'),
+                               StringComparison.OrdinalIgnoreCase) ||
+                _analyzedPlan.Strategy != SelectedStrategy)
+            {
+                problem = "Click Analyze first (the source folder or strategy changed since the last analysis)";
+                return null;
+            }
+
+            var moveElsewhere = !MoveToSameFolder;
+            if (moveElsewhere && string.IsNullOrWhiteSpace(DestinationPath))
+            {
+                problem = "Choose a destination folder for \"Move to\"";
+                return null;
+            }
+
+            var categories = new System.Collections.Generic.List<OrganizationCategory>();
+            foreach (var selected in Categories.Where(c => c.IsSelected))
+            {
+                var analyzed = _analyzedPlan.Categories.FirstOrDefault(c => c.Name == selected.Name);
+                if (analyzed == null)
+                {
+                    continue;
+                }
+
+                var targetFolder = selected.DestinationFolder;
+                if (moveElsewhere)
+                {
+                    var relative = System.IO.Path.GetRelativePath(_analyzedPlan.SourcePath, analyzed.DestinationFolder);
+                    targetFolder = System.IO.Path.Combine(
+                        DestinationPath,
+                        relative.StartsWith("..", StringComparison.Ordinal) || System.IO.Path.IsPathRooted(relative) ? selected.Name : relative);
+                }
+
+                var items = analyzed.Items.Select(i => new OrganizationItem
+                {
+                    SourcePath = i.SourcePath,
+                    FileName = i.FileName,
+                    Size = i.Size,
+                    Category = i.Category,
+                    Extension = i.Extension,
+                    DateModified = i.DateModified,
+                    Confidence = i.Confidence,
+                    // keep any sub-path the analysis produced under the category folder (e.g. year/month)
+                    DestinationPath = System.IO.Path.Combine(
+                        targetFolder,
+                        System.IO.Path.GetRelativePath(analyzed.DestinationFolder, i.DestinationPath)),
+                }).ToList();
+
+                categories.Add(new OrganizationCategory
+                {
+                    Name = analyzed.Name,
+                    DestinationFolder = targetFolder,
+                    FileCount = items.Count,
+                    TotalSize = items.Sum(i => i.Size),
+                    Items = items,
+                });
+            }
+
+            if (categories.Count == 0 || categories.All(c => !c.Items.Any()))
+            {
+                problem = "No files selected to organize";
+                return null;
+            }
+
+            return new OrganizationPlan
+            {
+                SourcePath = _analyzedPlan.SourcePath,
+                DestinationPath = moveElsewhere ? DestinationPath : _analyzedPlan.SourcePath,
+                Strategy = _analyzedPlan.Strategy,
+                Categories = categories,
+                TotalFiles = categories.Sum(c => c.FileCount),
+                TotalSize = categories.Sum(c => c.TotalSize),
+            };
         }
 
         private System.Collections.Generic.List<(string source, string dest)>? _undoLog;

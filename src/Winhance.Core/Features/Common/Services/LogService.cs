@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Winhance.Core.Features.Common.Enums;
 using Winhance.Core.Features.Common.Interfaces;
 using Winhance.Core.Features.Common.Models;
@@ -168,6 +169,12 @@ namespace Winhance.Core.Features.Common.Services
                     System.Diagnostics.Debug.WriteLine($"WINHANCE WRITE LOG FAILURE: {ex.Message}");
                 }
             }
+        }
+
+        public Task LogPerformanceAsync(string operation, TimeSpan duration, string? source = null)
+        {
+            LogInformation($"[PERF] {operation} completed in {duration.TotalMilliseconds:F1}ms{(source != null ? $" ({source})" : "")}");
+            return Task.CompletedTask;
         }
 
         // Implement IDisposable pattern to ensure logs are stopped

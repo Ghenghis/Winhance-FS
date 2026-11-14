@@ -69,7 +69,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                         // Apply each rule in order
                         foreach (var rule in rulesList)
                         {
-                            newName = ApplyRule(newName, extension, rule, ref counter);
+                            newName = ApplyRule(newName, extension, rule, ref counter, filePath);
                         }
 
                         // Restore extension (unless changed by a rule)
@@ -349,7 +349,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             }
         }
 
-        private string ApplyRule(string name, string extension, RenameRule rule, ref int counter)
+        private string ApplyRule(string name, string extension, RenameRule rule, ref int counter, string filePath)
         {
             return rule.Type switch
             {
@@ -358,7 +358,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                 RenameRuleType.RemoveText => ApplyRemoveText(name, rule),
                 RenameRuleType.Counter => ApplyCounter(name, rule, ref counter),
                 RenameRuleType.ChangeCase => ApplyChangeCase(name, rule),
-                RenameRuleType.DateTime => ApplyDateTime(name, rule),
+                RenameRuleType.DateTime => ApplyDateTime(name, rule, filePath),
                 RenameRuleType.RegularExpression => ApplyRegex(name, rule),
                 _ => name,
             };
@@ -458,12 +458,14 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             };
         }
 
-        private string ApplyDateTime(string name, RenameRule rule)
+        private string ApplyDateTime(string name, RenameRule rule, string filePath)
         {
+            // ExifTaken has no EXIF reader yet and falls back to the file's modified date.
             var dateTime = rule.DateSource switch
             {
                 DateSource.CurrentDate => DateTime.Now,
-                _ => DateTime.Now,
+                DateSource.FileCreated => File.GetCreationTime(filePath),
+                _ => File.GetLastWriteTime(filePath),
             };
 
             try

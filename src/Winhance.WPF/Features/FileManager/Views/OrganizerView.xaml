@@ -25,7 +25,7 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal">
           <TextBlock Text="Source:" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" Width="80" />
           <TextBox Text="{Binding SourcePath, Mode=TwoWay}" Width="400" Height="32" VerticalContentAlignment="Center" Background="{DynamicResource MainContainerBorderBrush}" Foreground="{DynamicResource PrimaryTextColor}" />
-          <Button Content="Browse..." Width="80" Height="32" Margin="10,0,0,0" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="Browse..." Width="80" Height="32" Margin="10,0,0,0" Command="{Binding BrowseSourceCommand}" Style="{DynamicResource SecondaryButtonStyle}" />
           <TextBlock Text="{Binding TotalFiles, StringFormat='{}{0} files'}" FontSize="14" Margin="20,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AccentColor}" />
           <TextBlock Text="|" FontSize="14" Margin="10,0" VerticalAlignment="Center" Foreground="{DynamicResource SubTextColor}" />
           <TextBlock FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource SubTextColor}">
@@ -54,7 +54,7 @@
         <TextBlock Text="Destination:" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" Width="80" />
         <RadioButton Content="Same folder with subfolders" IsChecked="{Binding MoveToSameFolder}" Margin="0,0,20,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
         <RadioButton Content="Move to:" IsChecked="{Binding MoveToSameFolder, Converter={StaticResource InverseBooleanConverter}}" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
-        <TextBox Text="{Binding DestinationPath, Mode=TwoWay}" Width="300" Height="28" IsEnabled="{Binding MoveToSameFolder, Converter={StaticResource InverseBooleanConverter}}" VerticalContentAlignment="Center" Background="{DynamicResource MainContainerBorderBrush}" Foreground="{DynamicResource PrimaryTextColor}" />
+        <TextBox Text="{Binding DestinationPath, Mode=TwoWay}" Width="300" Height="28" IsEnabled="{Binding MoveToSameFolder, Converter={StaticResource InverseBooleanConverter}}" VerticalContentAlignment="Center" Background="{DynamicResource MainContainerBorderBrush}" Foreground="{DynamicResource PrimaryTextColor}" /> <Button Content="Browse..." Width="80" Height="28" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}" IsEnabled="{Binding MoveToSameFolder, Converter={StaticResource InverseBooleanConverter}}" Style="{DynamicResource SecondaryButtonStyle}" />
       </StackPanel>
     </Border>
 
@@ -98,7 +98,7 @@
         </TreeView>
 
         <!-- Empty State -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding Categories.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding Categories.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Invert}">
           <iconPacks:PackIconMaterial Kind="FolderSearch" Width="64" Height="64" Foreground="{DynamicResource SubTextColor}" HorizontalAlignment="Center" />
           <TextBlock Text="Click 'Analyze' to preview organization" FontSize="16" Margin="0,15,0,0" Foreground="{DynamicResource SubTextColor}" HorizontalAlignment="Center" />
         </StackPanel>
@@ -121,7 +121,7 @@
         <!-- Right Side - Buttons -->
         <StackPanel Grid.Column="1" Orientation="Horizontal">
           <Button Content="Analyze" Width="100" Height="35" Margin="0,0,10,0" Command="{Binding AnalyzeCommand}" Style="{DynamicResource SecondaryButtonStyle}" />
-          <Button Content="Preview Changes" Width="120" Height="35" Margin="0,0,10,0" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="Preview Changes" Width="120" Height="35" Margin="0,0,10,0" Command="{Binding AnalyzeCommand}" ToolTip="Re-analyze the source folder and show where each category will go" Style="{DynamicResource SecondaryButtonStyle}" />
           <Button Content="Apply Organization" Width="140" Height="35" Margin="0,0,10,0" Command="{Binding ApplyOrganizationCommand}" Style="{DynamicResource PrimaryButtonStyle}" />
           <Button Content="Undo" Width="80" Height="35" Command="{Binding UndoOrganizationCommand}" IsEnabled="{Binding CanUndo}" Style="{DynamicResource SecondaryButtonStyle}" />
         </StackPanel>

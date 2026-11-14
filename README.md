@@ -76,401 +76,101 @@ Your support makes a big difference and is very much appreciated!
 
 ## Features Overview
 
-```
-┌────────────────────────────────────────────────────────────────────────────────┐
-│                           FEATURE STATUS LEGEND                                 │
-├────────────────────────────────────────────────────────────────────────────────┤
-│  ✅ COMPLETE     Feature fully implemented with UI and backend                 │
-│  ⚠️  BACKEND     Backend/CLI available, UI in development                      │
-│  🚧 PLANNED      Documented for future implementation                          │
-└────────────────────────────────────────────────────────────────────────────────┘
-```
+| Status | Meaning |
+|--------|---------|
+| ✅ **Available** | In the app, end-to-end tested |
+| ⚠️ **Backend only** | Implemented in the backend or CLI; no UI in the app yet |
+| 🚧 **Planned** | Not implemented yet |
+
+| Area | Status |
+|------|--------|
+| [File Browser](#file-browser--available) | ✅ Available |
+| [Batch Rename](#batch-rename--available) | ✅ Available |
+| [Smart Organizer](#smart-organizer--available) | ✅ Available |
+| [Space Recovery](#space-recovery--available) | ✅ Available |
+| [Undo / transaction log](#undo-and-safety) | ✅ Available (rename and organize) |
+| Duplicate Finder | ⚠️ Backend only (`IDuplicateFinderService`) |
+| AI model relocation | ⚠️ Backend and scripts (`scripts/relocation/`) |
+| Rust deep-scan engine (MFT reader, USN journal, Tantivy search) | ⚠️ Backend only (`src/nexus_core`) |
+| MCP server for AI assistants | ⚠️ Separate Python component (`src/nexus_mcp`) |
+| Forensics tools (ADS, shadow copies, entropy, undelete) | 🚧 Planned |
 
 ---
 
-## File Manager ✅ COMPLETE
+## File Browser ✅ Available
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ██████╗ ██╗   ██╗ █████╗ ██╗         ██████╗  █████╗ ███╗   ██╗███████╗        │
-│  ██╔══██╗██║   ██║██╔══██╗██║         ██╔══██╗██╔══██╗████╗  ██║██╔════╝        │
-│  ██║  ██║██║   ██║███████║██║         ██████╔╝███████║██╔██╗ ██║█████╗          │
-│  ██║  ██║██║   ██║██╔══██║██║         ██╔═══╝ ██╔══██║██║╚██╗██║██╔══╝          │
-│  ██████╔╝╚██████╔╝██║  ██║███████╗    ██║     ██║  ██║██║ ╚████║███████╗        │
-│  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝        │
-│                        FILE BROWSER & NAVIGATOR                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+A dual-pane browser in the **File Manager** section of Winhance.
 
-### Dual-Pane Browser
-Side-by-side directory navigation for efficient file management:
+| Action | How |
+|--------|-----|
+| Open file / enter folder | Double-click or **Enter** |
+| Go up / back | **Backspace**, or the ↑ and ← buttons |
+| Copy / move selection to the other pane | **F5** / **F6** |
+| Cut, copy, paste | **Ctrl+X**, **Ctrl+C**, **Ctrl+V** (works with Windows Explorer in both directions) |
+| Rename | **F2** (invalid names are rejected before anything changes) |
+| Delete | **Del** — asks first and sends items to the Recycle Bin |
+| New folder | **Ctrl+Shift+N** |
+| Refresh | **Ctrl+R** |
+| Properties | **Alt+Enter** |
+| Everything above | Right-click menu |
 
-```
-┌────────────────────────────┬────────────────────────────┐
-│  LEFT PANE                 │  RIGHT PANE                │
-│  📂 C:\Users\Documents     │  📂 D:\Backup              │
-├────────────────────────────┼────────────────────────────┤
-│  📁 Projects               │  📁 2024                   │
-│  📁 Downloads              │  📁 Archives               │
-│  📄 report.docx    1.2 MB  │  📄 backup.zip    45 MB    │
-│  📄 data.xlsx      340 KB  │  📄 notes.txt     12 KB    │
-│  📄 image.png      2.1 MB  │  📄 config.json   4 KB     │
-├────────────────────────────┴────────────────────────────┤
-│  [Copy →] [← Copy] [Move →] [← Move] [Delete] [Rename]  │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Features
-
-| Feature | Description |
-|---------|-------------|
-| **Dual-Pane Browser** | Side-by-side navigation with drag & drop |
-| **Tabbed Interface** | Multiple locations in tabs, like a browser |
-| **Quick Navigation** | Bookmarks, recent folders, path bar |
-| **File Preview** | Preview images, text, and documents |
-| **Bulk Selection** | Select multiple files with patterns |
-| **Context Menu** | Right-click access to all operations |
+Multi-select with **Ctrl**/**Shift**. Name conflicts never overwrite: a copy becomes `name (1).ext`.
+Pasting a folder into itself is refused, and moving a folder to another drive copies first and removes the
+source only after the copy completes.
 
 ---
 
-## Batch Rename System ✅ COMPLETE
+## Batch Rename ✅ Available
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ██████╗  █████╗ ████████╗ ██████╗██╗  ██╗    ██████╗ ███████╗███╗   ██╗        │
-│  ██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║    ██╔══██╗██╔════╝████╗  ██║        │
-│  ██████╔╝███████║   ██║   ██║     ███████║    ██████╔╝█████╗  ██╔██╗ ██║        │
-│  ██╔══██╗██╔══██║   ██║   ██║     ██╔══██║    ██╔══██╗██╔══╝  ██║╚██╗██║        │
-│  ██████╔╝██║  ██║   ██║   ╚██████╗██║  ██║    ██║  ██║███████╗██║ ╚████║        │
-│  ╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝    ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝        │
-│                        MULTI-FILE RENAMING SYSTEM                               │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+Rename many files at once with a live preview that updates as you type.
 
-### Live Preview Renaming
+| Rule | Options |
+|------|---------|
+| Find & Replace | Plain text or regular expression, match case |
+| Add Text | Prefix, suffix or at a character index |
+| Remove Text | Remove every match of a regular expression |
+| Counter | Start, step, digits, separator, prefix or suffix |
+| Change Case | lower, UPPER, Title, Sentence, tOGGLE |
+| Change Extension | New extension for every file |
+| Date | File modified, file created or current date, any .NET date format |
+| Regex | Pattern → replacement |
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  BATCH RENAME - Live Preview                                                    │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│  Pattern: [PREFIX]_[COUNTER:4]_[ORIGINAL].[EXT]                                 │
-│  Prefix:  Photo_                                                                │
-│  Counter: Start: 1  Step: 1  Padding: 4                                         │
-├───────────────────────────────────┬─────────────────────────────────────────────┤
-│  ORIGINAL NAME                    │  NEW NAME                                   │
-├───────────────────────────────────┼─────────────────────────────────────────────┤
-│  IMG_20240115_093045.jpg          │  Photo_0001_IMG_20240115_093045.jpg         │
-│  IMG_20240115_093112.jpg          │  Photo_0002_IMG_20240115_093112.jpg         │
-│  IMG_20240115_093156.jpg          │  Photo_0003_IMG_20240115_093156.jpg         │
-│  DSC_4521.jpg                     │  Photo_0004_DSC_4521.jpg                    │
-│  screenshot_2024.png              │  Photo_0005_screenshot_2024.png             │
-├───────────────────────────────────┴─────────────────────────────────────────────┤
-│  [✓] Preview changes  [ ] Create backup  [Apply] [Cancel] [Undo Last]           │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Rename Operations
-
-| Operation | Description | Example |
-|-----------|-------------|---------|
-| **Find & Replace** | Replace text in filenames | `photo` → `image` |
-| **Add Prefix/Suffix** | Add text before/after name | `backup_filename.txt` |
-| **Sequential Numbering** | Add incrementing numbers | `file_001.txt`, `file_002.txt` |
-| **Case Conversion** | Change letter case | `UPPERCASE`, `lowercase`, `Title Case` |
-| **Date Insertion** | Add file/current date | `2024-01-15_filename.txt` |
-| **Regex Patterns** | Advanced pattern matching | Complex transformations |
-| **Extension Change** | Batch change extensions | `.jpeg` → `.jpg` |
+Rules apply in order and can be reordered. Conflicts are flagged in the preview before anything is renamed,
+and **Undo Last Batch** restores the original names.
 
 ---
 
-## Smart Organizer ✅ COMPLETE
+## Smart Organizer ✅ Available
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ███████╗███╗   ███╗ █████╗ ██████╗ ████████╗                                   │
-│  ██╔════╝████╗ ████║██╔══██╗██╔══██╗╚══██╔══╝                                   │
-│  ███████╗██╔████╔██║███████║██████╔╝   ██║                                      │
-│  ╚════██║██║╚██╔╝██║██╔══██║██╔══██╗   ██║                                      │
-│  ███████║██║ ╚═╝ ██║██║  ██║██║  ██║   ██║                                      │
-│  ╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝                                      │
-│  ██████╗ ██████╗  ██████╗  █████╗ ███╗   ██╗██╗███████╗███████╗██████╗          │
-│  ██╔═══██╗██╔══██╗██╔════╝ ██╔══██╗████╗  ██║██║╚══███╔╝██╔════╝██╔══██╗        │
-│  ██║   ██║██████╔╝██║  ███╗███████║██╔██╗ ██║██║  ███╔╝ █████╗  ██████╔╝        │
-│  ██║   ██║██╔══██╗██║   ██║██╔══██║██║╚██╗██║██║ ███╔╝  ██╔══╝  ██╔══██╗        │
-│  ╚██████╔╝██║  ██║╚██████╔╝██║  ██║██║ ╚████║██║███████╗███████╗██║  ██║        │
-│   ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚══════╝╚══════╝╚═╝  ╚═╝        │
-│                    AI-POWERED FILE ORGANIZATION                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+Sorts a folder's files into category subfolders.
 
-### Organization Strategies
-
-| Strategy | Description |
-|----------|-------------|
-| **By Type** | Images, Documents, Videos, Audio, Archives, Code |
-| **By Date** | Year/Month/Day folder hierarchy |
-| **By Project** | Detect and group related project files |
-| **By Size** | Large files, medium files, small files |
-| **Custom Rules** | Define your own organization patterns |
-
-### Preview Before Organize
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ORGANIZATION PREVIEW - Downloads Folder                                        │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  📂 Downloads (147 files, 12.4 GB)                                              │
-│  │                                                                              │
-│  ├─► 📂 Images (43 files)                                                       │
-│  │   ├── photo1.jpg, photo2.png, screenshot.png...                              │
-│  │                                                                              │
-│  ├─► 📂 Documents (28 files)                                                    │
-│  │   ├── report.pdf, invoice.docx, notes.txt...                                 │
-│  │                                                                              │
-│  ├─► 📂 Videos (12 files)                                                       │
-│  │   ├── tutorial.mp4, recording.mov...                                         │
-│  │                                                                              │
-│  ├─► 📂 Archives (15 files)                                                     │
-│  │   ├── backup.zip, project.7z...                                              │
-│  │                                                                              │
-│  └─► 📂 Installers (49 files)                                                   │
-│      ├── setup.exe, installer.msi...                                            │
-│                                                                                 │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│  [Preview Only] [Apply Organization] [Customize Rules] [Cancel]                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+- **Strategies:** by file type, date, project, size or AI category
+- **Preview first:** Analyze shows every category, file count and destination before anything moves
+- **Destination:** subfolders in the same folder, or **Move to** another folder
+- **Undo:** restores every file and removes the folders it created
 
 ---
 
-## Duplicate Finder ✅ COMPLETE
+## Space Recovery ✅ Available
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ██████╗ ██╗   ██╗██████╗ ██╗     ██╗ ██████╗ █████╗ ████████╗███████╗          │
-│  ██╔══██╗██║   ██║██╔══██╗██║     ██║██╔════╝██╔══██╗╚══██╔══╝██╔════╝          │
-│  ██║  ██║██║   ██║██████╔╝██║     ██║██║     ███████║   ██║   █████╗            │
-│  ██║  ██║██║   ██║██╔═══╝ ██║     ██║██║     ██╔══██║   ██║   ██╔══╝            │
-│  ██████╔╝╚██████╔╝██║     ███████╗██║╚██████╗██║  ██║   ██║   ███████╗          │
-│  ╚═════╝  ╚═════╝ ╚═╝     ╚══════╝╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝          │
-│                     FIND & REMOVE DUPLICATE FILES                               │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+Finds space you can get back on a drive:
 
-### Detection Methods
+| Location | Action |
+|----------|--------|
+| Windows temporary files | **Clean** — files older than 24 hours, skipping files in use, after confirmation |
+| LM Studio, Ollama and Hugging Face model folders | **Relocate** to another drive (see `scripts/relocation/`) |
+| NuGet, Cargo, npm and pip package caches | **Review** — reported only, never deleted by the app |
 
-| Method | Speed | Accuracy | Description |
-|--------|-------|----------|-------------|
-| **Quick Hash** | ⚡⚡⚡ | 99.9% | xxHash3 for rapid detection |
-| **Full Hash** | ⚡ | 100% | SHA-256 for verification |
-| **Byte Compare** | ⚡⚡ | 100% | Direct byte-by-byte comparison |
-| **Size Match** | ⚡⚡⚡⚡ | Low | Pre-filter by file size |
-
-### Duplicate Groups
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  DUPLICATE GROUPS FOUND: 23 groups, 847 MB reclaimable                          │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  GROUP 1 (3 files, 45.2 MB each)                                                │
-│  ├── [KEEP]   C:\Users\Photos\vacation\IMG_001.jpg   (2024-01-15)               │
-│  ├── [DELETE] C:\Users\Downloads\IMG_001.jpg         (2024-01-16)               │
-│  └── [DELETE] D:\Backup\Photos\IMG_001.jpg           (2024-01-15)               │
-│                                                                                 │
-│  GROUP 2 (5 files, 12.8 MB each)                                                │
-│  ├── [KEEP]   C:\Projects\app\node_modules\lodash\package.json                  │
-│  ├── [DELETE] C:\Projects\web\node_modules\lodash\package.json                  │
-│  ├── [DELETE] C:\Projects\api\node_modules\lodash\package.json                  │
-│  └── ... 2 more                                                                 │
-│                                                                                 │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│  [Select All Duplicates] [Smart Select] [Delete Selected] [Move to Trash]       │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+Results show size and file count for each location, plus a treemap.
 
 ---
 
-## Deep Scan Engine ✅ COMPLETE
+## Undo and safety
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ██████╗ ███████╗███████╗██████╗     ███████╗ ██████╗ █████╗ ███╗   ██╗         │
-│  ██╔══██╗██╔════╝██╔════╝██╔══██╗    ██╔════╝██╔════╝██╔══██╗████╗  ██║         │
-│  ██║  ██║█████╗  █████╗  ██████╔╝    ███████╗██║     ███████║██╔██╗ ██║         │
-│  ██║  ██║██╔══╝  ██╔══╝  ██╔═══╝     ╚════██║██║     ██╔══██║██║╚██╗██║         │
-│  ██████╔╝███████╗███████╗██║         ███████║╚██████╗██║  ██║██║ ╚████║         │
-│  ╚═════╝ ╚══════╝╚══════╝╚═╝         ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝         │
-│              ULTRA-FAST FILE INDEXING POWERED BY RUST                           │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Performance Comparison
-
-```
-┌────────────────────────────────────────────────────────────────────────────────┐
-│  INDEXING PERFORMANCE BENCHMARK                                                 │
-├────────────────────┬──────────────┬──────────────┬──────────────────────────────┤
-│  METHOD            │  1M FILES    │  10M FILES   │  IMPROVEMENT                 │
-├────────────────────┼──────────────┼──────────────┼──────────────────────────────┤
-│  Windows API       │  45 seconds  │  8 minutes   │  baseline                    │
-│  Everything Search │  2 seconds   │  20 seconds  │  22x faster                  │
-│  Winhance-FS (MFT) │  <1 second   │  <10 seconds │  45x faster                  │
-└────────────────────┴──────────────┴──────────────┴──────────────────────────────┘
-```
-
-### Technical Features
-
-| Feature | Description |
-|---------|-------------|
-| **Direct MFT Access** | Bypasses Windows file APIs for maximum speed |
-| **SIMD Optimization** | 10+ GB/s search throughput |
-| **USN Journal** | Real-time file change monitoring |
-| **Tantivy Engine** | Full-text search with relevance ranking |
-| **Parallel Scanning** | Multi-threaded drive enumeration |
-
-### Forensics Tools
-
-| Tool | Description |
-|------|-------------|
-| **ADS Detection** | Find NTFS Alternate Data Streams |
-| **VSS Browser** | Access Volume Shadow Copies |
-| **Entropy Analysis** | Detect encrypted/compressed files |
-| **Magic Bytes** | Identify files by binary signature |
-| **Deleted Recovery** | Recover recently deleted files |
-
----
-
-## MCP Server Integration ✅ COMPLETE
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ███╗   ███╗ ██████╗██████╗     ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗│
-│  ████╗ ████║██╔════╝██╔══██╗    ██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
-│  ██╔████╔██║██║     ██████╔╝    ███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝│
-│  ██║╚██╔╝██║██║     ██╔═══╝     ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗│
-│  ██║ ╚═╝ ██║╚██████╗██║         ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║│
-│  ╚═╝     ╚═╝ ╚═════╝╚═╝         ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝│
-│                    AI TOOL INTEGRATION VIA MODEL CONTEXT PROTOCOL               │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Available MCP Tools
-
-| Tool | Description | Usage |
-|------|-------------|-------|
-| `nexus_search` | Search files with filters | "Find all PDF files larger than 10MB" |
-| `nexus_index` | Build/update file index | "Index my D: drive" |
-| `nexus_organize` | AI organization suggestions | "Organize my Downloads folder" |
-| `nexus_space` | Disk space analysis | "Analyze space usage on C:" |
-| `nexus_models` | AI model management | "Find all .gguf model files" |
-| `nexus_rollback` | Undo file operations | "Rollback last 3 operations" |
-| `nexus_similar` | Find similar files | "Find files similar to this one" |
-
-### Configuration
-
-**Claude Code / Windsurf IDE:**
-```json
-{
-  "mcpServers": {
-    "winhance-fs": {
-      "command": "python",
-      "args": ["-m", "nexus_mcp.server"],
-      "cwd": "C:/Program Files/Winhance-FS"
-    }
-  }
-}
-```
-
----
-
-## Transaction System ✅ COMPLETE
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  ████████╗██████╗  █████╗ ███╗   ██╗███████╗ █████╗  ██████╗████████╗██╗ ██████╗│
-│  ╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔════╝██╔══██╗██╔════╝╚══██╔══╝██║██╔═══██╗
-│     ██║   ██████╔╝███████║██╔██╗ ██║███████╗███████║██║        ██║   ██║██║   ██║│
-│     ██║   ██╔══██╗██╔══██║██║╚██╗██║╚════██║██╔══██║██║        ██║   ██║██║   ██║│
-│     ██║   ██║  ██║██║  ██║██║ ╚████║███████║██║  ██║╚██████╗   ██║   ██║╚██████╔╝│
-│     ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝   ╚═╝   ╚═╝ ╚═════╝ │
-│                    SAFE OPERATIONS WITH FULL ROLLBACK                           │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### How It Works
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  TRANSACTION WORKFLOW                                                           │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐                │
-│    │ 1. LOG   │───►│ 2. BACKUP│───►│ 3. EXECUTE│───►│ 4. VERIFY│               │
-│    │ Operation│    │ Original │    │ Operation │    │ Success  │               │
-│    └──────────┘    └──────────┘    └──────────┘    └────┬─────┘               │
-│                                                          │                      │
-│                         ┌────────────────────────────────┼────────────────┐     │
-│                         ▼                                ▼                │     │
-│                   ┌──────────┐                     ┌──────────┐           │     │
-│                   │ ROLLBACK │◄───── If Failed ────│  COMMIT  │           │     │
-│                   │ Restore  │                     │ Complete │           │     │
-│                   └──────────┘                     └──────────┘           │     │
-│                                                                           │     │
-└───────────────────────────────────────────────────────────────────────────┴─────┘
-```
-
-### Rollback Capabilities
-
-| Operation | Rollback Method |
-|-----------|-----------------|
-| **Move** | Move back + remove symlink |
-| **Delete** | Restore from backup/VSS |
-| **Rename** | Rename back to original |
-| **Organize** | Full directory restoration |
-
----
-
-## AI Model Manager ⚠️ BACKEND ONLY
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│   █████╗ ██╗    ███╗   ███╗ ██████╗ ██████╗ ███████╗██╗     ███████╗           │
-│  ██╔══██╗██║    ████╗ ████║██╔═══██╗██╔══██╗██╔════╝██║     ██╔════╝           │
-│  ███████║██║    ██╔████╔██║██║   ██║██║  ██║█████╗  ██║     ███████╗           │
-│  ██╔══██║██║    ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝  ██║     ╚════██║           │
-│  ██║  ██║██║    ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗███████╗███████║           │
-│  ╚═╝  ╚═╝╚═╝    ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝           │
-│                    MANAGE YOUR AI/ML MODEL COLLECTIONS                          │
-│                    (Available via MCP tools - UI coming soon)                   │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Supported Platforms
-
-| Platform | Model Location | Status |
-|----------|----------------|--------|
-| **LM Studio** | `~/.lmstudio/models` | ✅ |
-| **Ollama** | `~/.ollama/models` | ✅ |
-| **HuggingFace** | `~/.cache/huggingface` | ✅ |
-| **ComfyUI** | `ComfyUI/models` | ✅ |
-| **Stable Diffusion** | `models/Stable-diffusion` | ✅ |
-
-### Model Relocation Example
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  BEFORE:                                                                        │
-│  C:\Users\You\.lmstudio\models\  (337 GB on SSD - CRITICAL LOW SPACE)           │
-│                                                                                 │
-│  AFTER RELOCATION:                                                              │
-│  D:\AI-Models\.lmstudio\models\  (moved to HDD)                                 │
-│  C:\Users\You\.lmstudio\models → symlink to D:\                                 │
-│                                                                                 │
-│  RESULT: 337 GB freed on C: drive, models still accessible!                     │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+- Batch rename and organize operations are recorded and can be undone from the app.
+- Deletes go to the Recycle Bin; nothing is permanently deleted without a confirmation that says so.
+- The clipboard follows the Windows convention (copy vs. move), so files cut or copied in Explorer
+  behave the same when pasted into Winhance, and vice versa.
 
 ---
 

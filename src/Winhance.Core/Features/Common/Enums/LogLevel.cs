@@ -7,5 +7,6 @@ namespace Winhance.Core.Features.Common.Enums
         Error,
         Success,
         Debug,
+        Critical,
     }
 }

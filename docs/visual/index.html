@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Winhance — The Ultimate Windows File Manager &amp; System Optimizer</title>
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       CSS CUSTOM PROPERTIES — Color System
+    ═══════════════════════════════════════════════════════════════ */
+    :root {
+      --bg-primary: #0d0d1a;
+      --bg-secondary: #1a0a2e;
+      --bg-tertiary: #0a1628;
+      --bg-card: rgba(255, 255, 255, 0.04);
+      --bg-card-hover: rgba(255, 255, 255, 0.08);
+
+      --accent-cyan: #00d4ff;
+      --accent-cyan-dim: rgba(0, 212, 255, 0.15);
+      --accent-cyan-glow: rgba(0, 212, 255, 0.4);
+      --accent-purple: #7c3aed;
+      --accent-purple-dim: rgba(124, 58, 237, 0.15);
+      --accent-purple-glow: rgba(124, 58, 237, 0.4);
+      --accent-pink: #ec4899;
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.4);
+      --accent-orange: #f97316;
+
+      --text-primary: #f0f0ff;
+      --text-secondary: #a0a0c0;
+      --text-muted: #606080;
+
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow-cyan: rgba(0, 212, 255, 0.3);
+      --border-glow-purple: rgba(124, 58, 237, 0.3);
+
+      --shadow-cyan: 0 0 40px rgba(0, 212, 255, 0.15);
+      --shadow-purple: 0 0 40px rgba(124, 58, 237, 0.15);
+      --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+
+      --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --transition-fast: 150ms ease;
+      --transition-mid: 300ms ease;
+      --transition-slow: 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BASE RESET & GLOBAL STYLES
+    ═══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      cursor: none;
+      line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       CUSTOM CURSOR
+    ═══════════════════════════════════════════════════════════════ */
+    #cursor-dot {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 99999;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s, background 0.2s;
+      box-shadow: 0 0 12px var(--accent-cyan), 0 0 24px var(--accent-cyan-glow);
+    }
+    #cursor-ring {
+      position: fixed;
+      width: 36px;
+      height: 36px;
+      border: 1.5px solid rgba(0, 212, 255, 0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 99998;
+      transform: translate(-50%, -50%);
+      transition: width 0.4s cubic-bezier(0.16,1,0.3,1),
+                  height 0.4s cubic-bezier(0.16,1,0.3,1),
+                  border-color 0.3s;
+    }
+    body:has(a:hover, button:hover) #cursor-dot {
+      width: 12px; height: 12px;
+      background: var(--accent-purple);
+      box-shadow: 0 0 20px var(--accent-purple);
+    }
+    body:has(a:hover, button:hover) #cursor-ring {
+      width: 56px; height: 56px;
+      border-color: var(--accent-purple-glow);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ANIMATED GRADIENT BACKGROUND
+    ═══════════════════════════════════════════════════════════════ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 20%, rgba(124,58,237,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(0,212,255,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 100% at 50% 50%, #0d0d1a 0%, #1a0a2e 50%, #0a1628 100%);
+      pointer-events: none;
+      z-index: 0;
+      animation: bgShift 20s ease-in-out infinite alternate;
+    }
+    @keyframes bgShift {
+      0%   { filter: hue-rotate(0deg); }
+      50%  { filter: hue-rotate(15deg); }
+      100% { filter: hue-rotate(-10deg); }
+    }
+
+    /* Canvas for particles */
+    #particle-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       NAVIGATION
+    ═══════════════════════════════════════════════════════════════ */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 48px;
+      background: rgba(13, 13, 26, 0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: var(--transition-mid);
+    }
+    .nav.scrolled {
+      background: rgba(13, 13, 26, 0.92);
+      box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+    }
+    .nav-logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      transition: color var(--transition-fast);
+      position: relative;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 1.5px;
+      background: var(--accent-cyan);
+      transition: width var(--transition-mid);
+    }
+    .nav-links a:hover { color: var(--accent-cyan); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      padding: 8px 24px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border: none;
+      border-radius: var(--radius-xl);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-decoration: none;
+      cursor: none;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+    }
+    .nav-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,212,255,0.5);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       HERO SECTION
+    ═══════════════════════════════════════════════════════════════ */
+    .hero {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 18px;
+      background: var(--accent-cyan-dim);
+      border: 1px solid var(--border-glow-cyan);
+      border-radius: var(--radius-xl);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeInDown 0.8s ease both;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.8); }
+    }
+
+    .hero-title {
+      font-size: clamp(3.5rem, 8vw, 7rem);
+      font-weight: 900;
+      letter-spacing: -3px;
+      line-height: 0.95;
+      margin-bottom: 16px;
+      animation: fadeInUp 0.8s 0.1s ease both;
+    }
+    .hero-title-gradient {
+      background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 40%, var(--accent-purple) 80%, var(--accent-pink) 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 5s ease infinite;
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      color: var(--text-secondary);
+      font-weight: 400;
+      max-width: 640px;
+      margin: 0 auto 48px;
+      line-height: 1.5;
+      animation: fadeInUp 0.8s 0.2s ease both;
+    }
+    .hero-subtitle em {
+      color: var(--accent-cyan);
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: fadeInUp 0.8s 0.3s ease both;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 40px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border: none;
+      border-radius: var(--radius-xl);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: none;
+      transition: all var(--transition-mid);
+      box-shadow: 0 4px 30px rgba(0,212,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,212,255,0.55), 0 4px 16px rgba(124,58,237,0.3);
+    }
+    .btn-primary:hover::before { opacity: 1; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 40px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-glow-cyan);
+      border-radius: var(--radius-xl);
+      color: var(--accent-cyan);
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: none;
+      transition: all var(--transition-mid);
+      backdrop-filter: blur(8px);
+    }
+    .btn-secondary:hover {
+      background: var(--accent-cyan-dim);
+      border-color: var(--accent-cyan);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      animation: fadeInUp 1s 1s ease both;
+    }
+    .scroll-mouse {
+      width: 22px; height: 36px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      padding-top: 6px;
+    }
+    .scroll-wheel {
+      width: 3px; height: 6px;
+      background: var(--accent-cyan);
+      border-radius: 2px;
+      animation: scrollWheel 1.8s ease-in-out infinite;
+    }
+    @keyframes scrollWheel {
+      0%   { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(10px); opacity: 0; }
+    }
+
+    /* Floating orb decorations */
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .hero-orb-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(124,58,237,0.25) 0%, transparent 70%);
+      top: -100px; right: -100px;
+      animation: orbFloat1 12s ease-in-out infinite alternate;
+    }
+    .hero-orb-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(0,212,255,0.2) 0%, transparent 70%);
+      bottom: -50px; left: -50px;
+      animation: orbFloat2 15s ease-in-out infinite alternate;
+    }
+    .hero-orb-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%);
+      top: 40%; right: 15%;
+      animation: orbFloat3 18s ease-in-out infinite alternate;
+    }
+    @keyframes orbFloat1 {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(-40px, 60px) scale(1.1); }
+    }
+    @keyframes orbFloat2 {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(50px, -40px) scale(0.9); }
+    }
+    @keyframes orbFloat3 {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(-30px, 50px) scale(1.15); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       STATS BAR
+    ═══════════════════════════════════════════════════════════════ */
+    .stats-bar {
+      position: relative;
+      z-index: 2;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 32px 48px;
+      backdrop-filter: blur(8px);
+    }
+    .stats-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      transition: background var(--transition-mid);
+    }
+    .stat-item:hover {
+      background: var(--bg-card);
+    }
+    .stat-number {
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .stat-divider {
+      width: 1px;
+      background: var(--border-subtle);
+      align-self: stretch;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SHARED SECTION STYLES
+    ═══════════════════════════════════════════════════════════════ */
+    section {
+      position: relative;
+      z-index: 2;
+    }
+    .section-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 96px 48px;
+    }
+    .section-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin-bottom: 56px;
+      line-height: 1.7;
+    }
+
+    /* Scroll-reveal animation classes */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1),
+                  transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+    .reveal-delay-6 { transition-delay: 0.6s; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FEATURE CARDS
+    ═══════════════════════════════════════════════════════════════ */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      overflow: hidden;
+      cursor: none;
+      transition: border-color var(--transition-mid), box-shadow var(--transition-mid),
+                  background var(--transition-mid);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      will-change: transform;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.03));
+      pointer-events: none;
+    }
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, var(--accent-cyan-dim), var(--accent-purple-dim));
+      opacity: 0;
+      transition: opacity var(--transition-mid);
+      pointer-events: none;
+      z-index: -1;
+    }
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(0,212,255,0.25);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,212,255,0.15), var(--shadow-cyan);
+    }
+    .feature-card:hover::after { opacity: 1; }
+
+    .card-icon {
+      width: 56px; height: 56px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      font-size: 1.6rem;
+      position: relative;
+    }
+    .card-icon::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0.2;
+      filter: blur(12px);
+      transform: scale(1.4);
+    }
+
+    .icon-cyan   { background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.25); }
+    .icon-purple { background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.25); }
+    .icon-pink   { background: rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.25); }
+    .icon-green  { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); }
+    .icon-orange { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.25); }
+    .icon-blue   { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25); }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+    .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .card-tag {
+      padding: 3px 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      text-decoration: none;
+      margin-top: 20px;
+      transition: gap var(--transition-fast), opacity var(--transition-fast);
+    }
+    .card-link:hover { gap: 10px; opacity: 0.8; }
+    .card-arrow { font-size: 0.9rem; }
+
+    /* Card metric badge */
+    .card-metric {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 4px 10px;
+      background: var(--accent-cyan-dim);
+      border: 1px solid var(--border-glow-cyan);
+      border-radius: var(--radius-xl);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 0.5px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ARCHITECTURE SECTION
+    ═══════════════════════════════════════════════════════════════ */
+    .architecture-section {
+      background: linear-gradient(180deg, transparent, rgba(124,58,237,0.04), transparent);
+    }
+    .arch-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .arch-connector {
+      width: 2px;
+      height: 40px;
+      background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+      margin: 0 auto;
+      position: relative;
+    }
+    .arch-connector::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--accent-purple);
+    }
+
+    .arch-layer {
+      border-radius: var(--radius-lg);
+      padding: 28px 36px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      transition: all var(--transition-mid);
+    }
+    .arch-layer:hover {
+      transform: scale(1.01);
+    }
+    .arch-layer-wpf {
+      background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,212,255,0.03));
+      border: 1px solid rgba(0,212,255,0.3);
+      box-shadow: 0 0 40px rgba(0,212,255,0.08);
+    }
+    .arch-layer-infra {
+      background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.03));
+      border: 1px solid rgba(124,58,237,0.3);
+      box-shadow: 0 0 40px rgba(124,58,237,0.08);
+    }
+    .arch-layer-core {
+      background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03));
+      border: 1px solid rgba(16,185,129,0.3);
+      box-shadow: 0 0 40px rgba(16,185,129,0.08);
+    }
+
+    .arch-layer-icon {
+      font-size: 2.5rem;
+      min-width: 56px;
+      text-align: center;
+    }
+    .arch-layer-content { flex: 1; }
+    .arch-layer-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .arch-layer-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .arch-layer-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .arch-pill {
+      padding: 3px 10px;
+      border-radius: var(--radius-xl);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .pill-cyan   { background: rgba(0,212,255,0.1); color: var(--accent-cyan); border: 1px solid rgba(0,212,255,0.2); }
+    .pill-purple { background: rgba(124,58,237,0.1); color: #a78bfa; border: 1px solid rgba(124,58,237,0.2); }
+    .pill-green  { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+
+    .arch-layer-badge {
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-wpf   { background: rgba(0,212,255,0.1); color: var(--accent-cyan); border: 1px solid rgba(0,212,255,0.25); }
+    .badge-infra { background: rgba(124,58,237,0.1); color: #a78bfa; border: 1px solid rgba(124,58,237,0.25); }
+    .badge-core  { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+
+    /* Dependency annotations */
+    .arch-dep-line {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       TECH STACK
+    ═══════════════════════════════════════════════════════════════ */
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .tech-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: all var(--transition-mid);
+      cursor: none;
+      white-space: nowrap;
+    }
+    .tech-pill:hover {
+      border-color: var(--accent-cyan);
+      background: var(--accent-cyan-dim);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 20px var(--accent-cyan-glow), 0 4px 16px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+    }
+    .tech-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .dot-cyan   { background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); }
+    .dot-purple { background: var(--accent-purple); box-shadow: 0 0 8px var(--accent-purple); }
+    .dot-green  { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    .dot-orange { background: var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange); }
+    .dot-pink   { background: var(--accent-pink); box-shadow: 0 0 8px var(--accent-pink); }
+    .dot-blue   { background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+    .dot-red    { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+    .dot-yellow { background: #eab308; box-shadow: 0 0 8px #eab308; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BUILD STATUS BANNER
+    ═══════════════════════════════════════════════════════════════ */
+    .build-banner {
+      position: relative;
+      z-index: 2;
+      padding: 0 48px 80px;
+    }
+    .build-banner-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .build-banner-card {
+      background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02));
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: var(--radius-lg);
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      animation: bannerGlow 3s ease-in-out infinite;
+    }
+    @keyframes bannerGlow {
+      0%, 100% { box-shadow: 0 0 40px rgba(16,185,129,0.08); }
+      50%       { box-shadow: 0 0 60px rgba(16,185,129,0.18), 0 0 100px rgba(16,185,129,0.06); }
+    }
+    .build-banner-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #10b981, transparent);
+      animation: scanLine 3s linear infinite;
+    }
+    @keyframes scanLine {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(100%); }
+    }
+
+    .build-status-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.35);
+      border-radius: var(--radius-xl);
+      flex-shrink: 0;
+    }
+    .build-dot {
+      width: 10px; height: 10px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: buildPulse 2s ease-in-out infinite;
+    }
+    @keyframes buildPulse {
+      0%, 100% { box-shadow: 0 0 6px #10b981; transform: scale(1); }
+      50%       { box-shadow: 0 0 16px #10b981, 0 0 32px rgba(16,185,129,0.4); transform: scale(1.15); }
+    }
+    .build-status-text {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #10b981;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .build-info { flex: 1; }
+    .build-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 4px;
+    }
+    .build-title span {
+      color: #10b981;
+    }
+    .build-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .build-metrics {
+      display: flex;
+      gap: 24px;
+    }
+    .build-metric {
+      text-align: center;
+    }
+    .build-metric-value {
+      font-size: 1.8rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #10b981;
+      line-height: 1;
+    }
+    .build-metric-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════════════════════ */
+    .footer {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid var(--border-subtle);
+      padding: 40px 48px;
+      text-align: center;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .footer-logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color var(--transition-fast);
+    }
+    .footer-links a:hover { color: var(--accent-cyan); }
+    .footer-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════════════════════════════ */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Neon text highlight */
+    .neon-cyan {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 20px rgba(0,212,255,0.5);
+    }
+    .neon-purple {
+      color: #a78bfa;
+      text-shadow: 0 0 20px rgba(124,58,237,0.5);
+    }
+
+    /* Gradient heading accent */
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .nav { padding: 14px 24px; }
+      .nav-links { display: none; }
+      .section-inner { padding: 64px 24px; }
+      .stats-bar { padding: 24px; }
+      .build-banner { padding: 0 24px 64px; }
+      .build-metrics { display: none; }
+      .footer { padding: 32px 24px; }
+      .footer-inner { flex-direction: column; align-items: center; }
+      .arch-layer { flex-direction: column; text-align: center; }
+      .arch-layer-badge { align-self: center; }
+    }
+    @media (max-width: 480px) {
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .features-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Version badge */
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 14px;
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.25);
+      border-radius: var(--radius-xl);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #a78bfa;
+      letter-spacing: 0.5px;
+      margin-left: 12px;
+      vertical-align: middle;
+    }
+
+    /* Glowing divider */
+    .glow-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-purple), transparent);
+      opacity: 0.3;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- Particle canvas -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NAVIGATION
+═══════════════════════════════════════════════════════════════ -->
+<nav class="nav" id="main-nav">
+  <a href="index.html" class="nav-logo">WINHANCE</a>
+  <ul class="nav-links">
+    <li><a href="features.html">Features</a></li>
+    <li><a href="file-manager.html">File Manager</a></li>
+    <li><a href="ai-agents.html">AI Agents</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+  </ul>
+  <a href="features.html" class="nav-cta">Explore Features</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    v25.12.12 — .NET 9 / WPF
+  </div>
+
+  <h1 class="hero-title">
+    <span class="hero-title-gradient">WINHANCE</span>
+    <span class="version-badge">v25.12.12</span>
+  </h1>
+
+  <p class="hero-subtitle">
+    The <em>Ultimate Windows File Manager</em> &amp; System Optimizer.
+    Built on .NET 9 with a clean 3-tier architecture, AI-powered organization,
+    and a self-healing engine.
+  </p>
+
+  <div class="hero-buttons">
+    <a href="features.html" class="btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Explore Features
+    </a>
+    <a href="architecture.html" class="btn-secondary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      View Architecture
+    </a>
+  </div>
+
+  <div class="hero-scroll-hint">
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+    Scroll to explore
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STATS BAR
+═══════════════════════════════════════════════════════════════ -->
+<div class="stats-bar">
+  <div class="stats-bar-inner">
+    <div class="stat-item reveal">
+      <div class="stat-number" data-target="3">0</div>
+      <div class="stat-label">Projects</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-1">
+      <div class="stat-number" data-target="46">0</div>
+      <div class="stat-label">FM Interfaces</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-2">
+      <div class="stat-number" data-target="38">0</div>
+      <div class="stat-label">FM Services</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-3">
+      <div class="stat-number" data-target="173">0</div>
+      <div class="stat-label">Tests Passing</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-4">
+      <div class="stat-number" data-target="0">1</div>
+      <div class="stat-label">Build Errors</div>
+    </div>
+    <div class="stat-item reveal reveal-delay-5">
+      <div class="stat-number" data-target="18">0</div>
+      <div class="stat-label">Feature Areas</div>
+    </div>
+  </div>
+</div>
+
+<div class="glow-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FEATURES SECTION
+═══════════════════════════════════════════════════════════════ -->
+<section id="features">
+  <div class="section-inner">
+    <div class="reveal">
+      <span class="section-label">Core Capabilities</span>
+      <h2 class="section-title">
+        Everything you need,<br/>
+        <span class="gradient-text">engineered to perfection</span>
+      </h2>
+      <p class="section-desc">
+        From dual-pane browsing to AI-powered organization, Winhance delivers
+        a complete suite of file management and system tools built on clean,
+        testable architecture.
+      </p>
+    </div>
+
+    <div class="features-grid">
+
+      <!-- Card 1: File Manager -->
+      <div class="feature-card reveal reveal-delay-1" data-tilt>
+        <div class="card-metric">46 Interfaces</div>
+        <div class="card-icon icon-cyan">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+        </div>
+        <h3 class="card-title">Advanced File Manager</h3>
+        <p class="card-desc">
+          Dual-pane browser with tabbed navigation, virtual file system,
+          multi-select, column sorting, drag-and-drop, and full file operation
+          pipeline with conflict resolution and undo support.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Dual Pane</span>
+          <span class="card-tag">Tabs</span>
+          <span class="card-tag">Watch Folders</span>
+          <span class="card-tag">Quick Look</span>
+          <span class="card-tag">Hex Editor</span>
+        </div>
+        <a href="file-manager.html" class="card-link">
+          Learn more <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Card 2: System Optimizer -->
+      <div class="feature-card reveal reveal-delay-2" data-tilt>
+        <div class="card-icon icon-purple">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 7.76a6 6 0 0 0 0 8.49"/></svg>
+        </div>
+        <h3 class="card-title">System Optimizer</h3>
+        <p class="card-desc">
+          Privacy hardening, performance tuning, notification control,
+          Windows Update management, gaming optimizations, and customizable
+          taskbar &amp; Start Menu tweaks — all registry-safe.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Privacy</span>
+          <span class="card-tag">Performance</span>
+          <span class="card-tag">Updates</span>
+          <span class="card-tag">Gaming</span>
+          <span class="card-tag">Customize</span>
+        </div>
+        <a href="features.html" class="card-link">
+          Learn more <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Card 3: AI Organization -->
+      <div class="feature-card reveal reveal-delay-3" data-tilt>
+        <div class="card-icon icon-pink">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 0 2h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1 0-2h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="7.5" cy="14.5" r="1.5"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>
+        </div>
+        <h3 class="card-title">AI Organization Engine</h3>
+        <p class="card-desc">
+          ML-powered file categorization, auto-rule learning from user behavior,
+          intelligent cleanup suggestions, and a pluggable AI provider system
+          supporting local and cloud models.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">ML.NET</span>
+          <span class="card-tag">Auto-Rules</span>
+          <span class="card-tag">Categorization</span>
+          <span class="card-tag">Smart Cleanup</span>
+        </div>
+        <a href="ai-agents.html" class="card-link">
+          Learn more <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Card 4: WinGet Manager -->
+      <div class="feature-card reveal reveal-delay-4" data-tilt>
+        <div class="card-icon icon-green">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <h3 class="card-title">WinGet Package Manager</h3>
+        <p class="card-desc">
+          Browse, install, and update applications via the Windows Package
+          Manager API. One-click installs, bulk operations, script-based
+          deployment, and direct download fallback.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">WinGet API</span>
+          <span class="card-tag">Bulk Install</span>
+          <span class="card-tag">Scripts</span>
+          <span class="card-tag">Direct DL</span>
+        </div>
+        <a href="features.html" class="card-link">
+          Learn more <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Card 5: Archive Tools -->
+      <div class="feature-card reveal reveal-delay-5" data-tilt>
+        <div class="card-icon icon-orange">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        </div>
+        <h3 class="card-title">Archive &amp; Compression</h3>
+        <p class="card-desc">
+          Full ZIP/RAR/7z create and extract workflows with progress tracking,
+          password protection, multi-volume support, and integrated archive
+          browsing directly inside the file manager panels.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">ZIP / 7z / RAR</span>
+          <span class="card-tag">Password</span>
+          <span class="card-tag">Multi-Vol</span>
+          <span class="card-tag">In-Panel Browse</span>
+        </div>
+        <a href="file-manager.html" class="card-link">
+          Learn more <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+      <!-- Card 6: Self-Healing -->
+      <div class="feature-card reveal reveal-delay-6" data-tilt>
+        <div class="card-icon icon-blue">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3 class="card-title">Self-Healing System</h3>
+        <p class="card-desc">
+          Constraint-based repair engine (SemFix-inspired) with proactive
+          monitoring, concurrent healing sessions, strategy registry, and
+          full audit trail — the app heals itself at runtime.
+        </p>
+        <div class="card-tags">
+          <span class="card-tag">Proactive Monitor</span>
+          <span class="card-tag">Auto-Repair</span>
+          <span class="card-tag">Strategies</span>
+          <span class="card-tag">Audit Trail</span>
+        </div>
+        <a href="architecture.html" class="card-link">
+          Learn more <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="glow-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ARCHITECTURE
+═══════════════════════════════════════════════════════════════ -->
+<section class="architecture-section" id="architecture">
+  <div class="section-inner">
+    <div class="reveal">
+      <span class="section-label">System Design</span>
+      <h2 class="section-title">
+        Clean 3-tier <span class="gradient-text">architecture</span>
+      </h2>
+      <p class="section-desc">
+        Every layer has a single responsibility. Core defines contracts,
+        Infrastructure implements them, WPF consumes them via dependency
+        injection — zero cross-layer coupling.
+      </p>
+    </div>
+
+    <div class="arch-diagram reveal">
+
+      <!-- WPF Layer -->
+      <div class="arch-layer arch-layer-wpf">
+        <div class="arch-layer-icon">🖥️</div>
+        <div class="arch-layer-content">
+          <div class="arch-layer-title neon-cyan">Winhance.WPF</div>
+          <div class="arch-layer-subtitle">Presentation Layer — Views, ViewModels, Controls</div>
+          <div class="arch-layer-pills">
+            <span class="arch-pill pill-cyan">MVVM</span>
+            <span class="arch-pill pill-cyan">CommunityToolkit</span>
+            <span class="arch-pill pill-cyan">LiveCharts</span>
+            <span class="arch-pill pill-cyan">SkiaSharp</span>
+            <span class="arch-pill pill-cyan">Self-Healing</span>
+            <span class="arch-pill pill-cyan">72 ViewModels</span>
+          </div>
+        </div>
+        <div class="arch-layer-badge badge-wpf">Presentation</div>
+      </div>
+
+      <div class="arch-connector"></div>
+      <div class="arch-dep-line">depends on ↓</div>
+
+      <!-- Infrastructure Layer -->
+      <div class="arch-layer arch-layer-infra">
+        <div class="arch-layer-icon">⚙️</div>
+        <div class="arch-layer-content">
+          <div class="arch-layer-title neon-purple">Winhance.Infrastructure</div>
+          <div class="arch-layer-subtitle">Service Implementations — 38 File Manager Services</div>
+          <div class="arch-layer-pills">
+            <span class="arch-pill pill-purple">AI Organization</span>
+            <span class="arch-pill pill-purple">Nexus Indexer</span>
+            <span class="arch-pill pill-purple">Cloud Sync</span>
+            <span class="arch-pill pill-purple">Archive Engine</span>
+            <span class="arch-pill pill-purple">Transaction Mgr</span>
+            <span class="arch-pill pill-purple">Polly Resilience</span>
+          </div>
+        </div>
+        <div class="arch-layer-badge badge-infra">Infrastructure</div>
+      </div>
+
+      <div class="arch-connector"></div>
+      <div class="arch-dep-line">depends on ↓</div>
+
+      <!-- Core Layer -->
+      <div class="arch-layer arch-layer-core">
+        <div class="arch-layer-icon">🔷</div>
+        <div class="arch-layer-content">
+          <div class="arch-layer-title" style="color:#34d399;">Winhance.Core</div>
+          <div class="arch-layer-subtitle">Domain Contracts — 46 FM Interfaces + Models + Events</div>
+          <div class="arch-layer-pills">
+            <span class="arch-pill pill-green">Pure Interfaces</span>
+            <span class="arch-pill pill-green">Domain Models</span>
+            <span class="arch-pill pill-green">Event Bus</span>
+            <span class="arch-pill pill-green">Agent Tasks</span>
+            <span class="arch-pill pill-green">No Dependencies</span>
+          </div>
+        </div>
+        <div class="arch-layer-badge badge-core">Domain Core</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="glow-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TECH STACK
+═══════════════════════════════════════════════════════════════ -->
+<section id="tech">
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center;">
+      <span class="section-label">Technology Stack</span>
+      <h2 class="section-title" style="text-align:center;">
+        Built on <span class="gradient-text">best-in-class</span> tooling
+      </h2>
+      <p class="section-desc" style="margin: 0 auto 56px; text-align:center;">
+        Every dependency was chosen deliberately. No bloat — only the packages
+        that earn their place.
+      </p>
+    </div>
+
+    <div class="tech-stack reveal">
+      <div class="tech-pill">
+        <span class="tech-dot dot-cyan"></span> .NET 9
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-blue"></span> WPF
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-purple"></span> CommunityToolkit.Mvvm
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-orange"></span> SkiaSharp
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-green"></span> LiveChartsCore
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-cyan"></span> WinGet API
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-red"></span> Polly
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-pink"></span> Microsoft.ML
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-yellow"></span> Serilog
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-purple"></span> MahApps.Metro Icons
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-blue"></span> MS.Extensions.DI
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-green"></span> MS.CodeAnalysis
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-cyan"></span> System.IO.Packaging
+      </div>
+      <div class="tech-pill">
+        <span class="tech-dot dot-orange"></span> xUnit + NSubstitute
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="glow-divider"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     BUILD STATUS BANNER
+═══════════════════════════════════════════════════════════════ -->
+<div class="build-banner">
+  <div class="build-banner-inner">
+    <div class="build-banner-card reveal">
+      <div class="build-status-badge">
+        <div class="build-dot"></div>
+        <span class="build-status-text">BUILD PASSING</span>
+      </div>
+      <div class="build-info">
+        <div class="build-title">
+          All systems <span>green</span> — ready to deploy
+        </div>
+        <div class="build-desc">
+          Winhance v25.12.12 · .NET 9 · Target: net9.0-windows · 3 projects · CI pipeline clean
+        </div>
+      </div>
+      <div class="build-metrics">
+        <div class="build-metric">
+          <div class="build-metric-value">0</div>
+          <div class="build-metric-label">Errors</div>
+        </div>
+        <div class="build-metric">
+          <div class="build-metric-value">0</div>
+          <div class="build-metric-label">Warnings</div>
+        </div>
+        <div class="build-metric">
+          <div class="build-metric-value">173</div>
+          <div class="build-metric-label">Tests</div>
+        </div>
+        <div class="build-metric">
+          <div class="build-metric-value">3</div>
+          <div class="build-metric-label">Projects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════════════ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">WINHANCE</div>
+    <ul class="footer-links">
+      <li><a href="features.html">Features</a></li>
+      <li><a href="file-manager.html">File Manager</a></li>
+      <li><a href="ai-agents.html">AI Agents</a></li>
+      <li><a href="architecture.html">Architecture</a></li>
+    </ul>
+    <div class="footer-meta">v25.12.12 · .NET 9 · Built with care</div>
+  </div>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ── CUSTOM CURSOR ──────────────────────────────────────────── */
+  const dot = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+  let mouseX = -200, mouseY = -200;
+  let ringX = -200, ringY = -200;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX + 'px';
+    dot.style.top  = mouseY + 'px';
+  });
+
+  function animateRing() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top  = ringY + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  /* ── PARTICLE SYSTEM ────────────────────────────────────────── */
+  const canvas = document.getElementById('particle-canvas');
+  const ctx    = canvas.getContext('2d');
+  let W = canvas.width  = window.innerWidth;
+  let H = canvas.height = window.innerHeight;
+
+  window.addEventListener('resize', () => {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  });
+
+  const PARTICLE_COUNT = 50;
+  const particles = [];
+
+  function randBetween(a, b) { return a + Math.random() * (b - a); }
+
+  function createParticle() {
+    const colors = [
+      'rgba(0,212,255,',
+      'rgba(124,58,237,',
+      'rgba(236,72,153,',
+      'rgba(16,185,129,',
+    ];
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    return {
+      x:     randBetween(0, W),
+      y:     randBetween(0, H),
+      vx:    randBetween(-0.3, 0.3),
+      vy:    randBetween(-0.5, -0.1),
+      size:  randBetween(1, 2.8),
+      alpha: randBetween(0.2, 0.7),
+      color: c,
+      twinkleSpeed: randBetween(0.005, 0.02),
+      twinklePhase: randBetween(0, Math.PI * 2),
+    };
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(createParticle());
+  }
+
+  let lastMouse = { x: -999, y: -999 };
+  document.addEventListener('mousemove', e => {
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+  });
+
+  let tick = 0;
+  function drawParticles() {
+    ctx.clearRect(0, 0, W, H);
+    tick++;
+
+    for (let p of particles) {
+      // Twinkle effect
+      p.twinklePhase += p.twinkleSpeed;
+      const alphaMod = p.alpha * (0.6 + 0.4 * Math.sin(p.twinklePhase));
+
+      // Slight mouse attraction
+      const dx = lastMouse.x - p.x;
+      const dy = lastMouse.y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 180) {
+        const force = (180 - dist) / 180 * 0.04;
+        p.vx += dx / dist * force;
+        p.vy += dy / dist * force;
+      }
+
+      // Cap velocity
+      const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (speed > 1.5) { p.vx = p.vx / speed * 1.5; p.vy = p.vy / speed * 1.5; }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) { p.y = H + 10; }
+      if (p.y > H + 10) p.y = -10;
+
+      // Draw
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + alphaMod + ')';
+      ctx.fill();
+
+      // Glow halo for larger particles
+      if (p.size > 2) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+        grad.addColorStop(0, p.color + (alphaMod * 0.3) + ')');
+        grad.addColorStop(1, p.color + '0)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+    }
+
+    // Draw connecting lines between nearby particles
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const d  = Math.sqrt(dx * dx + dy * dy);
+        if (d < 100) {
+          const alpha = (1 - d / 100) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0,212,255,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+  /* ── NAVBAR SCROLL STATE ────────────────────────────────────── */
+  const nav = document.getElementById('main-nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  }, { passive: true });
+
+  /* ── INTERSECTION OBSERVER — SCROLL REVEAL ──────────────────── */
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+  );
+
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+  /* ── ANIMATED COUNTERS ──────────────────────────────────────── */
+  function animateCounter(el, target, duration) {
+    const start = performance.now();
+    const startVal = 0;
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(startVal + (target - startVal) * ease);
+      el.textContent = current.toLocaleString();
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = target.toLocaleString();
+    }
+    requestAnimationFrame(update);
+  }
+
+  const counterObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el     = entry.target;
+          const target = parseInt(el.dataset.target, 10);
+          animateCounter(el, target, 1600);
+          counterObserver.unobserve(el);
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
+
+  document.querySelectorAll('[data-target]').forEach(el => counterObserver.observe(el));
+
+  /* ── 3D CARD TILT ───────────────────────────────────────────── */
+  const tiltCards = document.querySelectorAll('[data-tilt]');
+
+  tiltCards.forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const rect  = card.getBoundingClientRect();
+      const cx    = rect.left + rect.width  / 2;
+      const cy    = rect.top  + rect.height / 2;
+      const dx    = (e.clientX - cx) / (rect.width  / 2);
+      const dy    = (e.clientY - cy) / (rect.height / 2);
+      const rotX  = -dy * 8;
+      const rotY  =  dx * 8;
+      card.style.transform = `perspective(1000px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(6px)`;
+      card.style.transition = 'transform 0.05s linear';
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.style.transform  = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+      card.style.transition = 'transform 0.5s cubic-bezier(0.16,1,0.3,1)';
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>

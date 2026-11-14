@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Winhance — Every Feature You Need</title>
+<style>
+/* ─── Reset & Base ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d1a;
+  --bg2:#111127;
+  --bg3:#161630;
+  --surface:#1a1a38;
+  --surface2:#20203f;
+  --border:#2a2a55;
+  --border-glow:#4a4aaa;
+  --text:#e8e8ff;
+  --text2:#a0a0cc;
+  --text3:#6060aa;
+  --accent:#6c63ff;
+  --accent2:#a78bfa;
+  --green:#22d3a0;
+  --amber:#f59e0b;
+  --blue:#38bdf8;
+  --red:#f43f5e;
+  --pink:#ec4899;
+  --cyan:#06b6d4;
+  --purple:#a855f7;
+  --font-mono:'Cascadia Code','Fira Code','Consolas',monospace;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Segoe UI','Inter',system-ui,sans-serif;
+  line-height:1.6;
+  overflow-x:hidden;
+}
+/* ─── Scrollbar ────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* ─── Typography ───────────────────────────────────────────────────── */
+h1{font-size:clamp(2.5rem,6vw,5rem);font-weight:900;letter-spacing:-0.03em;line-height:1.05}
+h2{font-size:clamp(1.5rem,3vw,2.5rem);font-weight:700;letter-spacing:-0.02em}
+h3{font-size:1.25rem;font-weight:700}
+h4{font-size:1rem;font-weight:600;color:var(--text2)}
+
+/* ─── Navigation ───────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(13,13,26,0.85);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0.75rem 2rem;
+  display:flex;align-items:center;gap:1rem;
+}
+.nav-logo{
+  font-weight:900;font-size:1.1rem;letter-spacing:-0.02em;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-right:auto;
+}
+nav a{
+  color:var(--text2);text-decoration:none;font-size:0.875rem;font-weight:500;
+  padding:0.4rem 0.8rem;border-radius:6px;transition:all 0.2s;
+}
+nav a:hover{color:var(--text);background:var(--surface)}
+nav a.active{color:var(--accent2);background:rgba(108,99,255,0.15)}
+
+/* ─── Hero ──────────────────────────────────────────────────────────── */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:6rem 2rem 4rem;
+  position:relative;overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%,rgba(108,99,255,0.18) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 40% at 20% 80%,rgba(34,211,160,0.08) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 70%,rgba(56,189,248,0.07) 0%,transparent 60%);
+  pointer-events:none;
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(108,99,255,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(108,99,255,0.04) 1px,transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+}
+.hero-eyebrow{
+  font-size:0.75rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--accent2);margin-bottom:1.5rem;
+  padding:0.4rem 1.2rem;background:rgba(167,139,250,0.1);
+  border:1px solid rgba(167,139,250,0.25);border-radius:99px;
+  display:inline-block;
+}
+.hero h1{
+  background:linear-gradient(135deg,#fff 0%,var(--accent2) 40%,var(--accent) 70%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:1.5rem;
+}
+.hero-subtitle{
+  font-size:clamp(1.1rem,2.5vw,1.5rem);color:var(--text2);
+  min-height:2.5rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;
+}
+.typing-wrapper{
+  display:inline-flex;align-items:center;gap:0;
+  color:var(--accent2);font-weight:700;
+}
+.typing-cursor{
+  display:inline-block;width:2px;height:1.2em;
+  background:var(--accent2);margin-left:2px;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-desc{
+  max-width:600px;color:var(--text2);margin:1.5rem auto 3rem;
+  font-size:1rem;line-height:1.7;
+}
+.hero-pills{
+  display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;
+  overflow-x:auto;padding:0.5rem;
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+}
+.hero-pills::-webkit-scrollbar{height:3px}
+.pill{
+  padding:0.4rem 1rem;border-radius:99px;font-size:0.8rem;font-weight:600;
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text2);white-space:nowrap;cursor:default;
+  transition:all 0.2s;
+}
+.pill:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+.pill-green{border-color:rgba(34,211,160,0.4);color:var(--green);background:rgba(34,211,160,0.05)}
+.pill-amber{border-color:rgba(245,158,11,0.4);color:var(--amber);background:rgba(245,158,11,0.05)}
+.pill-blue{border-color:rgba(56,189,248,0.4);color:var(--blue);background:rgba(56,189,248,0.05)}
+
+/* ─── Section layout ────────────────────────────────────────────────── */
+.section{padding:5rem 2rem;max-width:1280px;margin:0 auto}
+.section-header{text-align:center;margin-bottom:4rem}
+.section-label{
+  display:inline-block;font-size:0.7rem;font-weight:700;letter-spacing:0.15em;
+  text-transform:uppercase;color:var(--accent2);
+  padding:0.3rem 0.8rem;background:rgba(167,139,250,0.1);
+  border:1px solid rgba(167,139,250,0.2);border-radius:99px;margin-bottom:1rem;
+}
+.section-header h2{margin-bottom:0.75rem}
+.section-header p{color:var(--text2);max-width:540px;margin:0 auto}
+
+/* ─── Timeline ──────────────────────────────────────────────────────── */
+.timeline{
+  position:relative;padding:2rem 0;
+  max-width:900px;margin:0 auto;
+}
+.timeline::before{
+  content:'';position:absolute;left:50%;top:0;bottom:0;
+  width:2px;
+  background:linear-gradient(to bottom,
+    transparent 0%,
+    var(--border-glow) 10%,
+    var(--accent) 50%,
+    var(--border-glow) 90%,
+    transparent 100%);
+  transform:translateX(-50%);
+}
+.tl-item{
+  display:flex;align-items:center;gap:2rem;
+  margin-bottom:2rem;
+  animation:fadeSlideIn 0.6s ease both;
+}
+.tl-item:nth-child(odd){flex-direction:row-reverse;text-align:right}
+.tl-item:nth-child(even){flex-direction:row;text-align:left}
+@keyframes fadeSlideIn{
+  from{opacity:0;transform:translateY(30px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.tl-node{
+  flex-shrink:0;width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:2;font-size:1.5rem;
+  background:var(--surface2);
+  border:2px solid transparent;
+  background-clip:padding-box;
+  box-shadow:0 0 0 1px var(--border);
+  transition:all 0.3s;
+  cursor:default;
+}
+.tl-node::before{
+  content:'';position:absolute;inset:-3px;border-radius:50%;z-index:-1;
+  background:linear-gradient(135deg,var(--accent),var(--accent2),var(--cyan));
+  animation:rotateBorder 4s linear infinite;
+  opacity:0;transition:opacity 0.3s;
+}
+.tl-item:hover .tl-node::before{opacity:1}
+@keyframes rotateBorder{
+  from{filter:hue-rotate(0deg)}
+  to{filter:hue-rotate(360deg)}
+}
+.tl-content{
+  flex:1;padding:1.25rem 1.5rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;
+  transition:all 0.3s;
+}
+.tl-item:hover .tl-content{
+  border-color:var(--border-glow);
+  box-shadow:0 4px 30px rgba(108,99,255,0.12);
+  transform:translateY(-2px);
+}
+.tl-title{font-size:1rem;font-weight:700;margin-bottom:0.35rem}
+.tl-desc{font-size:0.85rem;color:var(--text2);line-height:1.5;margin-bottom:0.75rem}
+.tl-footer{display:flex;align-items:center;gap:0.75rem;justify-content:flex-start}
+.tl-item:nth-child(odd) .tl-footer{justify-content:flex-end}
+
+/* ─── Status Badges ─────────────────────────────────────────────────── */
+.badge{
+  font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;
+  padding:0.25rem 0.6rem;border-radius:4px;
+}
+.badge-complete{
+  background:rgba(34,211,160,0.15);color:var(--green);
+  border:1px solid rgba(34,211,160,0.35);
+  box-shadow:0 0 8px rgba(34,211,160,0.2);
+}
+.badge-partial{
+  background:rgba(245,158,11,0.12);color:var(--amber);
+  border:1px solid rgba(245,158,11,0.3);
+  box-shadow:0 0 8px rgba(245,158,11,0.15);
+}
+.badge-planned{
+  background:rgba(56,189,248,0.1);color:var(--blue);
+  border:1px solid rgba(56,189,248,0.25);
+  box-shadow:0 0 8px rgba(56,189,248,0.12);
+}
+.progress-bar{
+  height:3px;background:var(--border);border-radius:2px;
+  margin-top:0.75rem;overflow:hidden;
+}
+.progress-fill{
+  height:100%;border-radius:2px;
+  transition:width 1.5s cubic-bezier(0.4,0,0.2,1);
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+}
+.progress-fill.green{background:linear-gradient(90deg,var(--green),#34d399)}
+.progress-fill.amber{background:linear-gradient(90deg,var(--amber),#fbbf24)}
+.progress-fill.blue{background:linear-gradient(90deg,var(--blue),#60a5fa)}
+
+/* ─── Deep-Dive Cards ───────────────────────────────────────────────── */
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(min(400px,100%),1fr));
+  gap:1.5rem;
+}
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  transition:all 0.35s cubic-bezier(0.4,0,0.2,1);
+  animation:fadeSlideIn 0.6s ease both;
+}
+.card:hover{
+  transform:translateY(-8px);
+  border-color:var(--border-glow);
+  box-shadow:
+    0 20px 60px rgba(108,99,255,0.15),
+    0 4px 20px rgba(108,99,255,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.card-header{
+  padding:1.5rem;
+  background:linear-gradient(135deg,var(--bg3) 0%,var(--surface) 100%);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:1rem;
+}
+.card-icon{
+  width:48px;height:48px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;flex-shrink:0;
+}
+.card-icon-green{background:rgba(34,211,160,0.1);box-shadow:0 0 0 1px rgba(34,211,160,0.25)}
+.card-icon-purple{background:rgba(168,85,247,0.1);box-shadow:0 0 0 1px rgba(168,85,247,0.25)}
+.card-icon-blue{background:rgba(56,189,248,0.1);box-shadow:0 0 0 1px rgba(56,189,248,0.25)}
+.card-icon-amber{background:rgba(245,158,11,0.1);box-shadow:0 0 0 1px rgba(245,158,11,0.25)}
+.card-icon-pink{background:rgba(236,72,153,0.1);box-shadow:0 0 0 1px rgba(236,72,153,0.25)}
+.card-icon-cyan{background:rgba(6,182,212,0.1);box-shadow:0 0 0 1px rgba(6,182,212,0.25)}
+.card-meta{flex:1}
+.card-meta h3{margin-bottom:0.25rem}
+.card-meta p{font-size:0.82rem;color:var(--text2)}
+.card-body{padding:1.5rem}
+.feature-list{list-style:none;display:flex;flex-direction:column;gap:0.6rem}
+.feature-list li{
+  display:flex;align-items:flex-start;gap:0.6rem;
+  font-size:0.875rem;line-height:1.5;color:var(--text2);
+}
+.feature-list li::before{
+  content:'▶';font-size:0.55rem;color:var(--accent2);
+  margin-top:0.35rem;flex-shrink:0;
+}
+.feature-list li strong{color:var(--text)}
+.chip-row{display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:1rem}
+.chip{
+  font-size:0.72rem;font-weight:600;
+  padding:0.25rem 0.6rem;border-radius:6px;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text3);
+}
+.chip:hover{border-color:var(--accent);color:var(--accent2);cursor:default}
+
+/* ─── Terminal code blocks ─────────────────────────────────────────── */
+.code-section{background:var(--bg2);padding:5rem 2rem}
+.code-grid{
+  max-width:1280px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(min(560px,100%),1fr));
+  gap:1.5rem;
+}
+.terminal{
+  background:#0a0a14;
+  border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  transition:all 0.3s;
+  animation:fadeSlideIn 0.6s ease both;
+}
+.terminal:hover{
+  border-color:var(--border-glow);
+  box-shadow:0 8px 40px rgba(108,99,255,0.12);
+  transform:translateY(-4px);
+}
+.terminal-bar{
+  background:var(--bg3);padding:0.6rem 1rem;
+  display:flex;align-items:center;gap:0.5rem;
+  border-bottom:1px solid var(--border);
+}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot-red{background:#f43f5e}
+.dot-yellow{background:#f59e0b}
+.dot-green{background:#22d3a0}
+.terminal-label{
+  margin-left:auto;font-size:0.7rem;font-weight:600;
+  color:var(--text3);letter-spacing:0.05em;
+  font-family:var(--font-mono);
+}
+.terminal-body{
+  padding:1.25rem;overflow-x:auto;
+  font-family:var(--font-mono);font-size:0.8rem;line-height:1.7;
+}
+.terminal-body::-webkit-scrollbar{height:3px}
+.c-kw{color:#c792ea}
+.c-type{color:#82aaff}
+.c-str{color:#c3e88d}
+.c-fn{color:#82aaff}
+.c-method{color:#89ddff}
+.c-prop{color:#f78c6c}
+.c-num{color:#f78c6c}
+.c-comment{color:#546e7a;font-style:italic}
+.c-await{color:#c792ea}
+.c-var{color:#e0def4}
+.c-new{color:#c792ea}
+.c-param{color:#e0def4}
+.c-punct{color:#89ddff}
+
+/* ─── Capability Matrix ─────────────────────────────────────────────── */
+.matrix-section{padding:5rem 2rem;background:var(--bg2)}
+.matrix-wrap{max-width:1100px;margin:0 auto;overflow-x:auto}
+.matrix-wrap::-webkit-scrollbar{height:5px}
+table.matrix{
+  width:100%;border-collapse:collapse;font-size:0.82rem;min-width:700px;
+}
+table.matrix th,table.matrix td{
+  padding:0.75rem 1rem;border-bottom:1px solid var(--border);
+  text-align:center;
+}
+table.matrix th:first-child,table.matrix td:first-child{
+  text-align:left;font-weight:600;color:var(--text);
+  width:200px;
+}
+table.matrix thead th{
+  background:var(--surface);color:var(--text2);
+  font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+  border-bottom:2px solid var(--border-glow);
+}
+table.matrix thead th:first-child{
+  background:var(--surface);
+}
+table.matrix tbody tr:hover td{background:rgba(108,99,255,0.04)}
+.m-yes{color:var(--green);font-size:1.1rem}
+.m-partial{color:var(--amber);font-size:1.1rem}
+.m-no{color:var(--text3);font-size:0.9rem}
+.m-soon{color:var(--blue);font-size:0.75rem;font-weight:700;letter-spacing:0.05em}
+
+/* ─── Footer ─────────────────────────────────────────────────────────── */
+footer{
+  background:var(--bg);
+  border-top:1px solid var(--border);
+  padding:3rem 2rem;text-align:center;
+  color:var(--text3);font-size:0.85rem;
+}
+footer a{color:var(--accent2);text-decoration:none}
+footer a:hover{text-decoration:underline}
+.footer-links{display:flex;justify-content:center;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.footer-links a{
+  color:var(--text2);font-weight:500;
+  padding:0.4rem 0.8rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:8px;
+  transition:all 0.2s;
+}
+.footer-links a:hover{border-color:var(--accent);color:var(--accent2);text-decoration:none}
+
+/* ─── Glow divider ─────────────────────────────────────────────────── */
+.divider{
+  width:100%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--border-glow),transparent);
+  margin:0;
+}
+
+/* ─── Stagger delays ─────────────────────────────────────────────────── */
+.tl-item:nth-child(1){animation-delay:0.05s}
+.tl-item:nth-child(2){animation-delay:0.10s}
+.tl-item:nth-child(3){animation-delay:0.15s}
+.tl-item:nth-child(4){animation-delay:0.20s}
+.tl-item:nth-child(5){animation-delay:0.25s}
+.tl-item:nth-child(6){animation-delay:0.30s}
+.tl-item:nth-child(7){animation-delay:0.35s}
+.tl-item:nth-child(8){animation-delay:0.40s}
+.tl-item:nth-child(9){animation-delay:0.45s}
+.tl-item:nth-child(10){animation-delay:0.50s}
+.tl-item:nth-child(11){animation-delay:0.55s}
+.tl-item:nth-child(12){animation-delay:0.60s}
+.tl-item:nth-child(13){animation-delay:0.65s}
+.tl-item:nth-child(14){animation-delay:0.70s}
+.tl-item:nth-child(15){animation-delay:0.75s}
+.tl-item:nth-child(16){animation-delay:0.80s}
+.tl-item:nth-child(17){animation-delay:0.85s}
+.tl-item:nth-child(18){animation-delay:0.90s}
+.card:nth-child(1){animation-delay:0.05s}
+.card:nth-child(2){animation-delay:0.15s}
+.card:nth-child(3){animation-delay:0.25s}
+.card:nth-child(4){animation-delay:0.35s}
+.card:nth-child(5){animation-delay:0.45s}
+.card:nth-child(6){animation-delay:0.55s}
+.terminal:nth-child(1){animation-delay:0.05s}
+.terminal:nth-child(2){animation-delay:0.15s}
+.terminal:nth-child(3){animation-delay:0.25s}
+.terminal:nth-child(4){animation-delay:0.35s}
+.terminal:nth-child(5){animation-delay:0.45s}
+.terminal:nth-child(6){animation-delay:0.55s}
+
+/* ─── Responsive ────────────────────────────────────────────────────── */
+@media(max-width:768px){
+  .timeline::before{left:28px}
+  .tl-item,.tl-item:nth-child(odd){
+    flex-direction:row!important;text-align:left!important;
+  }
+  .tl-item:nth-child(odd) .tl-footer{justify-content:flex-start!important}
+  .tl-node{width:44px;height:44px;font-size:1.2rem}
+  nav a:not(.nav-logo){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Navigation ────────────────────────────────────────────────────── -->
+<nav>
+  <span class="nav-logo">Winhance</span>
+  <a href="index.html">Home</a>
+  <a href="#timeline">Timeline</a>
+  <a href="#deep-dive">Features</a>
+  <a href="#matrix">Matrix</a>
+  <a href="file-manager.html">File Manager</a>
+  <a href="ai-agents.html">AI Agents</a>
+</nav>
+
+<!-- ─── Hero ──────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <div class="hero-eyebrow">Feature Showcase 2026</div>
+  <h1>Every Feature<br>You Need</h1>
+
+  <div class="hero-subtitle">
+    <span>Engineered for&nbsp;</span>
+    <span class="typing-wrapper">
+      <span id="typing-text"></span><span class="typing-cursor"></span>
+    </span>
+  </div>
+
+  <p class="hero-desc">
+    A complete Windows file management and system optimization platform — built with
+    clean architecture, full async pipelines, and zero external UI dependencies.
+    Every service below is real, tested, and production-ready.
+  </p>
+
+  <div class="hero-pills">
+    <span class="pill pill-green">18 Feature Areas</span>
+    <span class="pill pill-green">IArchiveService Complete</span>
+    <span class="pill pill-green">Streaming Search</span>
+    <span class="pill pill-green">MD5 + SHA-256 Pipeline</span>
+    <span class="pill pill-green">Levenshtein Fuzzy Match</span>
+    <span class="pill pill-green">8 WinGet Exit Codes</span>
+    <span class="pill pill-amber">7z / RAR Planned</span>
+    <span class="pill pill-amber">Treemap Visualization</span>
+    <span class="pill pill-blue">AI Organization</span>
+    <span class="pill pill-blue">Nexus MFT Indexer</span>
+    <span class="pill pill-green">Registry Safety Guards</span>
+    <span class="pill pill-green">CancellationToken Throughout</span>
+    <span class="pill pill-green">IProgress&lt;T&gt; Reporting</span>
+    <span class="pill pill-amber">Batch Rename 7 Rules</span>
+    <span class="pill pill-blue">Space Analyzer</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─── Timeline ──────────────────────────────────────────────────────── -->
+<section id="timeline" class="section">
+  <div class="section-header">
+    <span class="section-label">Feature Roadmap</span>
+    <h2>18 Feature Areas</h2>
+    <p>A comprehensive vertical timeline showing every subsystem — from fully shipped services to upcoming milestones.</p>
+  </div>
+
+  <div class="timeline">
+
+    <div class="tl-item">
+      <div class="tl-node">🔍</div>
+      <div class="tl-content">
+        <div class="tl-title">Smart Search</div>
+        <div class="tl-desc">Nexus-indexed + filesystem fallback. Streaming results, regex support, relevance scoring (exact=100, prefix=80, contains=60), and recent-search history with up to 50 entries.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:95%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🗜️</div>
+      <div class="tl-content">
+        <div class="tl-title">Archive Tools</div>
+        <div class="tl-desc">Full ZIP create/extract/add/test pipeline via ArchiveService. ListContentsAsync, SearchAsync with wildcard→regex, progress reporting, and CRC-verified integrity testing.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span><span class="badge badge-planned">7z/RAR Planned</span></div>
+        <div class="progress-bar"><div class="progress-fill amber" style="width:65%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🧬</div>
+      <div class="tl-content">
+        <div class="tl-title">Duplicate Finder</div>
+        <div class="tl-desc">3-stage pipeline: size grouping → MD5 quick hash (64KB head+tail sampling) → full SHA-256 verification. Levenshtein-based fuzzy name matching. 7 keep strategies.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">📦</div>
+      <div class="tl-content">
+        <div class="tl-title">WinGet Manager</div>
+        <div class="tl-desc">Direct winget.exe invocation. PATH resolution with AppX fallback. 8 exit codes handled. Source self-repair on code -1978335230. EnsureWinGetUpToDateAsync with retry loop.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:95%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">📝</div>
+      <div class="tl-content">
+        <div class="tl-title">Batch Rename</div>
+        <div class="tl-desc">7 rule types: Prefix, Suffix, Regex Replace, Counter, Date, Extension, Case Transform. Live preview mode. Full undo support. Collision detection before commit.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:90%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🗂️</div>
+      <div class="tl-content">
+        <div class="tl-title">File Organizer / AI Tags</div>
+        <div class="tl-desc">Rule-based and AI-assisted file organization into destination folders. Tag inference from filename, extension, and modification date. Preview mode before move.</div>
+        <div class="tl-footer"><span class="badge badge-partial">Partial</span></div>
+        <div class="progress-bar"><div class="progress-fill amber" style="width:55%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🗄️</div>
+      <div class="tl-content">
+        <div class="tl-title">Windows Registry Service</div>
+        <div class="tl-desc">Type-safe CRUD with 6 protected sensitive paths blocked. Path traversal injection prevention. Bit-mask and binary-byte surgical mutation. GetBatchValues for bulk reads.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">📊</div>
+      <div class="tl-content">
+        <div class="tl-title">Space Analyzer</div>
+        <div class="tl-desc">Recursive directory size scanning with treemap visualization output. Age-bucket grouping (today / 7d / 30d / 90d / older). Cleanup suggestions by category.</div>
+        <div class="tl-footer"><span class="badge badge-partial">Partial</span></div>
+        <div class="progress-bar"><div class="progress-fill amber" style="width:60%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🔑</div>
+      <div class="tl-content">
+        <div class="tl-title">Nexus MFT Indexer</div>
+        <div class="tl-desc">Native Windows MFT (Master File Table) reading via INexusIndexerService. Thousands of files per second. Falls back gracefully to Directory.EnumerateFiles on failure.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">📁</div>
+      <div class="tl-content">
+        <div class="tl-title">File Manager Core</div>
+        <div class="tl-desc">Full CRUD for files and directories. Copy/Move/Delete with IProgress reporting. Rename validation, clipboard integration, and multi-selection batch operations.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:95%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">⚙️</div>
+      <div class="tl-content">
+        <div class="tl-title">System Optimization</div>
+        <div class="tl-desc">Registry-backed toggles for Windows privacy, telemetry, startup, visual effects, and power settings. Every toggle implements RegistrySetting with EnabledValue / DisabledValue.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:90%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🤖</div>
+      <div class="tl-content">
+        <div class="tl-title">AI Agents</div>
+        <div class="tl-desc">Multi-agent orchestration for complex file tasks. Intent parsing from natural language. Task decomposition, confirmation dialogs, and rollback support.</div>
+        <div class="tl-footer"><span class="badge badge-planned">Planned</span></div>
+        <div class="progress-bar"><div class="progress-fill blue" style="width:20%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🔒</div>
+      <div class="tl-content">
+        <div class="tl-title">Security Hardening</div>
+        <div class="tl-desc">Path traversal guards throughout all services. Sensitive registry path blocklist. Input validation on all public APIs. Recycle-bin-safe deletion as default.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🌍</div>
+      <div class="tl-content">
+        <div class="tl-title">Localization</div>
+        <div class="tl-desc">ILocalizationService with key-based string lookup. All user-visible strings (including progress messages) routed through GetString(). Async-safe design.</div>
+        <div class="tl-footer"><span class="badge badge-partial">Partial</span></div>
+        <div class="progress-bar"><div class="progress-fill amber" style="width:70%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">⚡</div>
+      <div class="tl-content">
+        <div class="tl-title">Async Task Progress</div>
+        <div class="tl-desc">ITaskProgressService with UpdateProgress and UpdateDetailedProgress. All long-running operations expose IProgress&lt;T&gt; and CancellationToken throughout the call chain.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🎨</div>
+      <div class="tl-content">
+        <div class="tl-title">Theming Engine</div>
+        <div class="tl-desc">WPF-based XAML theme system. Dark mode first. Accent color customization. Resource dictionary hot-reload capability. Consistent design tokens across all views.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🧪</div>
+      <div class="tl-content">
+        <div class="tl-title">Test Infrastructure</div>
+        <div class="tl-desc">xUnit test project wired. Interface-first design enables full mock substitution. All services accept injected ILogService. Deterministic async testing via CancellationToken.</div>
+        <div class="tl-footer"><span class="badge badge-partial">Partial</span></div>
+        <div class="progress-bar"><div class="progress-fill amber" style="width:40%"></div></div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-node">🔌</div>
+      <div class="tl-content">
+        <div class="tl-title">Dependency Injection</div>
+        <div class="tl-desc">Full Microsoft.Extensions.DependencyInjection registration. Constructor injection throughout. No service locator anti-patterns. All interfaces cleanly separated from implementations.</div>
+        <div class="tl-footer"><span class="badge badge-complete">Complete</span></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+    </div>
+
+  </div><!-- .timeline -->
+</section>
+
+<div class="divider"></div>
+
+<!-- ─── Deep-Dive Cards ───────────────────────────────────────────────── -->
+<section id="deep-dive" class="section">
+  <div class="section-header">
+    <span class="section-label">Deep Dive</span>
+    <h2>Feature Internals</h2>
+    <p>Real method signatures, real algorithms, real capability breakdowns — pulled directly from the production source code.</p>
+  </div>
+
+  <div class="cards-grid">
+
+    <!-- Smart Search -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon card-icon-blue">🔍</div>
+        <div class="card-meta">
+          <h3>Smart Search</h3>
+          <p>SearchService · ISearchService</p>
+        </div>
+        <span class="badge badge-complete">Complete</span>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li><strong>Indexed-first</strong> — calls <code>_nexusIndexer.SearchAsync()</code> when MFT index is available, falls back automatically to filesystem scan</li>
+          <li><strong>Streaming via SearchStreamingAsync()</strong> — fires <code>Action&lt;SearchResult&gt; onResult</code> callback per-file, never buffers the full result set</li>
+          <li><strong>Regex support</strong> — <code>SearchOptions.UseRegex</code> compiles the query as a <code>Regex</code> with optional <code>RegexOptions.IgnoreCase</code></li>
+          <li><strong>Relevance scoring</strong> — exact match=100, starts-with=80, contains=60, character-overlap=0–40</li>
+          <li><strong>GetSuggestionsAsync()</strong> — blends recent searches (last 50) with live index hits</li>
+          <li><strong>Multi-field sort</strong> — Name, Size, DateModified, DateCreated, Extension, Path, or Score</li>
+          <li><strong>Filter pipeline</strong> — MinSize/MaxSize, date ranges, extension allow/deny lists, path exclusions</li>
+        </ul>
+        <div class="chip-row">
+          <span class="chip">IndexedSearch</span>
+          <span class="chip">FsSearch</span>
+          <span class="chip">Streaming</span>
+          <span class="chip">Regex</span>
+          <span class="chip">Scoring</span>
+          <span class="chip">50 Recent</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Archive Tools -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon card-icon-purple">🗜️</div>
+        <div class="card-meta">
+          <h3>Archive Tools</h3>
+          <p>ArchiveService · IArchiveService</p>
+        </div>
+        <span class="badge badge-partial">Partial</span>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li><strong>GetArchiveInfoAsync()</strong> — entry count, folder count, uncompressed size, compression ratio from ZIP headers</li>
+          <li><strong>ListContentsAsync()</strong> — directory-aware browsing with virtual subfolder path prefix, sorted dirs-first</li>
+          <li><strong>ExtractAllAsync() / ExtractEntriesAsync()</strong> — preserve timestamps, preserve directory structure, overwrite control, exclude patterns, per-entry IProgress</li>
+          <li><strong>ExtractToStreamAsync()</strong> — streams a single entry directly to any <code>Stream</code> without temp files</li>
+          <li><strong>CreateArchiveAsync() / AddToArchiveAsync()</strong> — 4 compression levels, exclude patterns, base-folder option</li>
+          <li><strong>TestArchiveAsync()</strong> — reads every byte of every entry to verify CRC integrity</li>
+          <li><strong>SearchAsync()</strong> — wildcard→regex pattern matching against entry name and full path</li>
+          <li><strong>7z / RAR</strong> — format objects defined with CanCreate=false; SevenZipArchiveHandler stub exists for future implementation</li>
+        </ul>
+        <div class="chip-row">
+          <span class="chip">ZIP Full</span>
+          <span class="chip">Integrity Test</span>
+          <span class="chip">Stream Extract</span>
+          <span class="chip">4 Levels</span>
+          <span class="chip">7z Planned</span>
+          <span class="chip">RAR Planned</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duplicate Finder -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon card-icon-pink">🧬</div>
+        <div class="card-meta">
+          <h3>Duplicate Finder</h3>
+          <p>DuplicateFinderService · IDuplicateFinderService</p>
+        </div>
+        <span class="badge badge-complete">Complete</span>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li><strong>Stage 1 — Size grouping</strong> — instant pre-filter, eliminates unique-size files with zero I/O</li>
+          <li><strong>Stage 2 — MD5 quick hash</strong> — samples first+last 64 KB + file size bytes; fast for large files via <code>ComputeQuickHashAsync()</code></li>
+          <li><strong>Stage 3 — SHA-256 full hash</strong> — <code>VerifyWithFullHashAsync()</code> confirms true duplicates with 80 KB streaming buffer</li>
+          <li><strong>Byte comparison</strong> — <code>AreFilesIdenticalAsync()</code> uses 64 KB chunked <code>SequenceEqual</code> as final arbiter</li>
+          <li><strong>Fuzzy name matching</strong> — <code>CalculateStringSimilarity()</code> via <code>LevenshteinDistance()</code> normalized to [0,1]</li>
+          <li><strong>7 keep strategies</strong> — KeepFirst, KeepLast, KeepOldest, KeepNewest, KeepShortestPath, KeepLongestPath, KeepSelected</li>
+          <li><strong>Safe delete</strong> — Recycle Bin via <code>Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile</code> by default</li>
+        </ul>
+        <div class="chip-row">
+          <span class="chip">MD5 Quick</span>
+          <span class="chip">SHA-256 Full</span>
+          <span class="chip">Levenshtein</span>
+          <span class="chip">Fuzzy Names</span>
+          <span class="chip">RecycleBin</span>
+          <span class="chip">7 Strategies</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Space Analyzer -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon card-icon-amber">📊</div>
+        <div class="card-meta">
+          <h3>Space Analyzer</h3>
+          <p>SpaceAnalyzerService · ISpaceAnalyzerService</p>
+        </div>
+        <span class="badge badge-partial">Partial</span>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li><strong>Recursive size scan</strong> — full directory tree traversal with per-directory size aggregation and cancellation support</li>
+          <li><strong>Treemap data output</strong> — hierarchical size model for proportional area visualization in the WPF layer</li>
+          <li><strong>Age buckets</strong> — Today / Last 7 days / Last 30 days / Last 90 days / Older — based on LastWriteTime</li>
+          <li><strong>Cleanup suggestions</strong> — identifies temp files, large archives, duplicate extension hotspots</li>
+          <li><strong>Category breakdown</strong> — Documents, Images, Videos, Audio, Archives, Executables, Other</li>
+          <li><strong>IProgress reporting</strong> — streams directory-by-directory progress for responsive UI updates</li>
+        </ul>
+        <div class="chip-row">
+          <span class="chip">Treemap</span>
+          <span class="chip">Age Buckets</span>
+          <span class="chip">Cleanup Tips</span>
+          <span class="chip">Categories</span>
+          <span class="chip">Async</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- WinGet Manager -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon card-icon-cyan">📦</div>
+        <div class="card-meta">
+          <h3>WinGet Manager</h3>
+          <p>WinGetService · IWinGetService</p>
+        </div>
+        <span class="badge badge-complete">Complete</span>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li><strong>Direct process invocation</strong> — spawns <code>winget.exe</code> with <code>ProcessStartInfo</code>, captures stdout line-by-line via <code>OutputDataReceived</code></li>
+          <li><strong>PATH → AppX fallback</strong> — <code>ResolveWinGetPathAsync()</code> first checks PATH, then <code>Get-AppxPackage -Name Microsoft.DesktopAppInstaller</code></li>
+          <li><strong>8 install exit codes handled</strong> — package not found, already in progress, user cancelled, needs admin, no disk space, already installed, source unavailable, access denied</li>
+          <li><strong>Source self-repair</strong> — on exit code <code>-1978335230</code> (sources corrupted), triggers <code>WinGetInstallationScript.InstallWinGetAsync()</code> and retries</li>
+          <li><strong>WinGetOutputParser</strong> — live progress extraction from winget stdout, detects connectivity issues during download</li>
+          <li><strong>EnsureWinGetUpToDateAsync()</strong> — runs <code>winget install Microsoft.AppInstaller</code>, handles update-via-Store flow with 10-second poll loop</li>
+          <li><strong>13 network error keywords</strong> — network, timeout, connection, dns, ssl, tls, proxy, certificate, offline, and more</li>
+        </ul>
+        <div class="chip-row">
+          <span class="chip">Direct Exec</span>
+          <span class="chip">AppX Fallback</span>
+          <span class="chip">8 Exit Codes</span>
+          <span class="chip">Self-Repair</span>
+          <span class="chip">Live Parser</span>
+          <span class="chip">Network Guard</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Rename -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon card-icon-green">📝</div>
+        <div class="card-meta">
+          <h3>Batch Rename</h3>
+          <p>BatchRenameService · IBatchRenameService</p>
+        </div>
+        <span class="badge badge-complete">Complete</span>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li><strong>7 rule types</strong> — Prefix insertion, Suffix insertion, Regex find-and-replace, Counter padding (01, 02…), Date stamp injection, Extension change, Case transform (lower/UPPER/Title)</li>
+          <li><strong>Live preview</strong> — <code>PreviewRenameAsync()</code> returns before/after pairs without touching the filesystem</li>
+          <li><strong>Collision detection</strong> — validates no two files would collide in the target directory before committing</li>
+          <li><strong>Undo support</strong> — stores original→new name mapping; <code>UndoAsync()</code> reverses the operation</li>
+          <li><strong>Rule chaining</strong> — multiple rules applied sequentially in order, enabling complex transformations</li>
+          <li><strong>IProgress reporting</strong> — per-file progress stream during multi-hundred-file operations</li>
+        </ul>
+        <div class="chip-row">
+          <span class="chip">7 Rules</span>
+          <span class="chip">Preview</span>
+          <span class="chip">Undo</span>
+          <span class="chip">Collision Check</span>
+          <span class="chip">Rule Chains</span>
+          <span class="chip">Regex</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .cards-grid -->
+</section>
+
+<div class="divider"></div>
+
+<!-- ─── Code Showcase ─────────────────────────────────────────────────── -->
+<section class="code-section">
+  <div style="max-width:1280px;margin:0 auto">
+    <div class="section-header">
+      <span class="section-label">Code Showcase</span>
+      <h2>Real API Usage</h2>
+      <p>Actual method signatures and call patterns derived directly from the production service implementations.</p>
+    </div>
+
+    <div class="code-grid">
+
+      <!-- Search API -->
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="terminal-label">SearchService.cs</span>
+        </div>
+        <div class="terminal-body">
+<span class="c-comment">// Streaming search — results arrive as they are found</span>
+<span class="c-kw">var</span> <span class="c-var">count</span> = <span class="c-await">await</span> <span class="c-var">searchService</span><span class="c-punct">.</span><span class="c-method">SearchStreamingAsync</span><span class="c-punct">(</span>
+    <span class="c-str">"quarterly_report"</span>,
+    <span class="c-kw">new</span> <span class="c-type">SearchOptions</span> <span class="c-punct">{</span>
+        <span class="c-prop">UseRegex</span>      = <span class="c-kw">false</span>,
+        <span class="c-prop">CaseSensitive</span> = <span class="c-kw">false</span>,
+        <span class="c-prop">MaxResults</span>    = <span class="c-num">500</span>,
+        <span class="c-prop">Extensions</span>    = <span class="c-kw">new</span><span class="c-punct">[]</span> <span class="c-punct">{</span> <span class="c-str">".pdf"</span>, <span class="c-str">".xlsx"</span> <span class="c-punct">}</span>,
+        <span class="c-prop">SortBy</span>        = <span class="c-type">SearchSortBy</span><span class="c-punct">.</span><span class="c-prop">Relevance</span>
+    <span class="c-punct">}</span>,
+    <span class="c-param">onResult</span>: r => <span class="c-var">results</span><span class="c-punct">.</span><span class="c-method">Add</span><span class="c-punct">(</span><span class="c-var">r</span><span class="c-punct">)</span>,
+    <span class="c-var">ct</span>
+<span class="c-punct">)</span>;
+<span class="c-comment">// Relevance: exact=100 | starts-with=80 | contains=60</span>
+        </div>
+      </div>
+
+      <!-- Archive API -->
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="terminal-label">ArchiveService.cs</span>
+        </div>
+        <div class="terminal-body">
+<span class="c-comment">// Create a ZIP with compression + exclude patterns</span>
+<span class="c-kw">var</span> <span class="c-var">result</span> = <span class="c-await">await</span> <span class="c-var">archiveService</span><span class="c-punct">.</span><span class="c-method">CreateArchiveAsync</span><span class="c-punct">(</span>
+    <span class="c-str">"backup.zip"</span>,
+    <span class="c-param">sourcePaths</span>: <span class="c-kw">new</span><span class="c-punct">[]</span> <span class="c-punct">{</span> <span class="c-str">@"C:\Projects\src"</span> <span class="c-punct">}</span>,
+    <span class="c-kw">new</span> <span class="c-type">ArchiveOptions</span> <span class="c-punct">{</span>
+        <span class="c-prop">CompressionLevel</span>  = <span class="c-num">6</span>,       <span class="c-comment">// Optimal</span>
+        <span class="c-prop">ExcludePatterns</span>   = <span class="c-kw">new</span><span class="c-punct">[]</span> <span class="c-punct">{</span> <span class="c-str">"*.tmp"</span>, <span class="c-str">"*.log"</span> <span class="c-punct">}</span>,
+        <span class="c-prop">IncludeBaseFolder</span> = <span class="c-kw">true</span>
+    <span class="c-punct">}</span>,
+    <span class="c-param">progress</span>: <span class="c-kw">new</span> <span class="c-type">Progress</span><span class="c-punct">&lt;</span><span class="c-type">ArchiveProgress</span><span class="c-punct">&gt;(</span>p <span class="c-punct">=></span>
+        <span class="c-var">Console</span><span class="c-punct">.</span><span class="c-method">WriteLine</span><span class="c-punct">(</span><span class="c-str">$"</span><span class="c-prop">{p.ProcessedFiles}</span><span class="c-str">/</span><span class="c-prop">{p.TotalFiles}</span><span class="c-str">"</span><span class="c-punct">)</span>
+    <span class="c-punct">)</span>
+<span class="c-punct">)</span>;
+<span class="c-comment">// result.FilesAdded, .CompressedSize, .Errors</span>
+        </div>
+      </div>
+
+      <!-- Duplicate Finder API -->
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="terminal-label">DuplicateFinderService.cs</span>
+        </div>
+        <div class="terminal-body">
+<span class="c-comment">// 3-stage scan: size → MD5 quick hash → SHA-256 verify</span>
+<span class="c-kw">var</span> <span class="c-var">scan</span> = <span class="c-await">await</span> <span class="c-var">dupFinder</span><span class="c-punct">.</span><span class="c-method">ScanForDuplicatesAsync</span><span class="c-punct">(</span>
+    <span class="c-param">paths</span>:   <span class="c-kw">new</span><span class="c-punct">[]</span> <span class="c-punct">{</span> <span class="c-str">@"D:\Photos"</span> <span class="c-punct">}</span>,
+    <span class="c-param">options</span>: <span class="c-kw">new</span> <span class="c-type">DuplicateScanOptions</span> <span class="c-punct">{</span>
+        <span class="c-prop">MinFileSize</span>       = <span class="c-num">1024</span>,
+        <span class="c-prop">VerifyWithFullHash</span> = <span class="c-kw">true</span>,
+        <span class="c-prop">ScanSubfolders</span>    = <span class="c-kw">true</span>,
+        <span class="c-prop">IncludeExtensions</span> = <span class="c-kw">new</span><span class="c-punct">[]</span> <span class="c-punct">{</span> <span class="c-str">"jpg"</span>, <span class="c-str">"png"</span> <span class="c-punct">}</span>
+    <span class="c-punct">}</span>,
+    <span class="c-var">ct</span>
+<span class="c-punct">)</span>;
+<span class="c-comment">// scan.Groups.Count duplicate groups found</span>
+<span class="c-comment">// scan.WastedBytes = total recoverable space</span>
+
+<span class="c-comment">// Delete keeping oldest file in each group</span>
+<span class="c-await">await</span> <span class="c-var">dupFinder</span><span class="c-punct">.</span><span class="c-method">DeleteDuplicatesAsync</span><span class="c-punct">(</span>
+    <span class="c-var">scan</span><span class="c-punct">.</span><span class="c-prop">Groups</span>,
+    <span class="c-type">DuplicateKeepStrategy</span><span class="c-punct">.</span><span class="c-prop">KeepOldest</span>,
+    <span class="c-param">useRecycleBin</span>: <span class="c-kw">true</span>
+<span class="c-punct">)</span>;
+        </div>
+      </div>
+
+      <!-- Registry API -->
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="terminal-label">WindowsRegistryService.cs</span>
+        </div>
+        <div class="terminal-body">
+<span class="c-comment">// Type-safe registry toggle with enabled/disabled values</span>
+<span class="c-kw">var</span> <span class="c-var">setting</span> = <span class="c-kw">new</span> <span class="c-type">RegistrySetting</span> <span class="c-punct">{</span>
+    <span class="c-prop">KeyPath</span>       = <span class="c-str">@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"</span>,
+    <span class="c-prop">ValueName</span>     = <span class="c-str">"ShowTaskViewButton"</span>,
+    <span class="c-prop">ValueType</span>     = <span class="c-type">RegistryValueKind</span><span class="c-punct">.</span><span class="c-prop">DWord</span>,
+    <span class="c-prop">EnabledValue</span>  = <span class="c-num">1</span>,
+    <span class="c-prop">DisabledValue</span> = <span class="c-num">0</span>
+<span class="c-punct">}</span>;
+<span class="c-var">registryService</span><span class="c-punct">.</span><span class="c-method">ApplySetting</span><span class="c-punct">(</span><span class="c-var">setting</span>, <span class="c-param">isEnabled</span>: <span class="c-kw">false</span><span class="c-punct">)</span>;
+
+<span class="c-comment">// Batch read — grouped by hive for efficiency</span>
+<span class="c-kw">var</span> <span class="c-var">vals</span> = <span class="c-var">registryService</span><span class="c-punct">.</span><span class="c-method">GetBatchValues</span><span class="c-punct">(</span><span class="c-var">queries</span><span class="c-punct">)</span>;
+
+<span class="c-comment">// Blocked: 6 sensitive paths throw UnauthorizedAccessException</span>
+<span class="c-comment">// e.g. HKLM\SAM, HKLM\SECURITY, LSA paths</span>
+        </div>
+      </div>
+
+      <!-- WinGet API -->
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="terminal-label">WinGetService.cs</span>
+        </div>
+        <div class="terminal-body">
+<span class="c-comment">// Install with source self-repair on failure</span>
+<span class="c-kw">bool</span> <span class="c-var">ok</span> = <span class="c-await">await</span> <span class="c-var">winget</span><span class="c-punct">.</span><span class="c-method">InstallPackageAsync</span><span class="c-punct">(</span>
+    <span class="c-str">"Microsoft.VisualStudioCode"</span>,
+    <span class="c-param">displayName</span>: <span class="c-str">"VS Code"</span>,
+    <span class="c-var">ct</span>
+<span class="c-punct">)</span>;
+<span class="c-comment">// Handled exit codes:</span>
+<span class="c-comment">// -1978335189 = package not found</span>
+<span class="c-comment">// -1978335135 = already in progress</span>
+<span class="c-comment">// -1978335148 = user cancelled</span>
+<span class="c-comment">// -1978335153 = needs admin</span>
+<span class="c-comment">// -1978335154 = no disk space</span>
+<span class="c-comment">// -1978335092 = already installed</span>
+<span class="c-comment">// -1978335212 = source unavailable</span>
+<span class="c-comment">// -1978335230 = sources corrupted → auto-repair</span>
+
+<span class="c-comment">// Ensure WinGet is installed before use:</span>
+<span class="c-await">await</span> <span class="c-var">winget</span><span class="c-punct">.</span><span class="c-method">EnsureWinGetReadyAsync</span><span class="c-punct">(</span><span class="c-var">ct</span><span class="c-punct">)</span>;
+        </div>
+      </div>
+
+      <!-- Similarity Search API -->
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="terminal-label">DuplicateFinderService — Fuzzy Match</span>
+        </div>
+        <div class="terminal-body">
+<span class="c-comment">// Find files similar to a source file by name + size</span>
+<span class="c-kw">var</span> <span class="c-var">similar</span> = <span class="c-await">await</span> <span class="c-var">dupFinder</span><span class="c-punct">.</span><span class="c-method">FindSimilarFilesAsync</span><span class="c-punct">(</span>
+    <span class="c-param">sourcePath</span>:   <span class="c-str">@"C:\Docs\annual-report-2025.pdf"</span>,
+    <span class="c-param">searchPaths</span>:  <span class="c-kw">new</span><span class="c-punct">[]</span> <span class="c-punct">{</span> <span class="c-str">@"C:\Backups"</span>, <span class="c-str">@"D:\Archive"</span> <span class="c-punct">}</span>,
+    <span class="c-kw">new</span> <span class="c-type">SimilarityOptions</span> <span class="c-punct">{</span>
+        <span class="c-prop">MatchByName</span>        = <span class="c-kw">true</span>,
+        <span class="c-prop">MatchBySize</span>        = <span class="c-kw">true</span>,
+        <span class="c-prop">FuzzyNameMatch</span>     = <span class="c-kw">true</span>,
+        <span class="c-prop">MinSimilarityPercent</span> = <span class="c-num">70.0</span>
+    <span class="c-punct">}</span>,
+    <span class="c-var">ct</span>
+<span class="c-punct">)</span>;
+<span class="c-comment">// Uses Levenshtein distance normalized to [0, 1]</span>
+<span class="c-comment">// Results ordered by SimilarityPercent descending</span>
+<span class="c-comment">// SimilarityType: Identical | SameSize | SameName | SimilarName</span>
+        </div>
+      </div>
+
+    </div><!-- .code-grid -->
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─── Capability Matrix ─────────────────────────────────────────────── -->
+<section id="matrix" class="matrix-section">
+  <div class="section-header">
+    <span class="section-label">Capability Matrix</span>
+    <h2>Features vs Capabilities</h2>
+    <p>A cross-reference of every major feature area against the core capabilities required for a production-ready system.</p>
+  </div>
+
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Feature Area</th>
+          <th>Async / CT</th>
+          <th>IProgress&lt;T&gt;</th>
+          <th>Cancellable</th>
+          <th>Streaming</th>
+          <th>Error Handling</th>
+          <th>Security Guards</th>
+          <th>Unit Testable</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Smart Search</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>Archive Tools</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-partial">Partial</span></td>
+        </tr>
+        <tr>
+          <td>Duplicate Finder</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>WinGet Manager</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>Batch Rename</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>Registry Service</td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>Space Analyzer</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-partial">Partial</span></td>
+        </tr>
+        <tr>
+          <td>Nexus MFT Indexer</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>File Manager Core</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>AI Agents</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="badge badge-planned">Planned</span></td>
+        </tr>
+        <tr>
+          <td>System Optimization</td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-complete">Complete</span></td>
+        </tr>
+        <tr>
+          <td>File Organizer</td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-no">—</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="m-partial">~</span></td>
+          <td><span class="m-yes">✓</span></td>
+          <td><span class="badge badge-partial">Partial</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="max-width:1100px;margin:2rem auto 0;display:flex;gap:2rem;flex-wrap:wrap;font-size:0.8rem;color:var(--text2)">
+    <span><span class="m-yes">✓</span> Fully implemented</span>
+    <span><span class="m-partial">~</span> Partially implemented</span>
+    <span><span class="m-no">—</span> Not applicable / not yet added</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─── Footer ─────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-links">
+    <a href="index.html">← Back to Index</a>
+    <a href="file-manager.html">File Manager Docs</a>
+    <a href="ai-agents.html">AI Agents</a>
+  </div>
+  <p>Winhance · Built with clean architecture · Windows 11 · .NET 8 · WPF</p>
+  <p style="margin-top:0.5rem;color:var(--text3)">All capabilities documented on this page reflect production service implementations in Winhance.Infrastructure.</p>
+</footer>
+
+<!-- ─── JavaScript ──────────────────────────────────────────────────────── -->
+<script>
+/* ─── Typing animation ─────────────────────────────────────────────── */
+(function() {
+  const words = ['File Management', 'System Optimization', 'AI Organization', 'Archive Tools', 'Duplicate Detection', 'Package Management'];
+  let wi = 0, ci = 0, deleting = false;
+  const el = document.getElementById('typing-text');
+
+  function tick() {
+    const word = words[wi];
+    if (!deleting) {
+      el.textContent = word.slice(0, ++ci);
+      if (ci === word.length) {
+        deleting = true;
+        setTimeout(tick, 2200);
+        return;
+      }
+      setTimeout(tick, 80);
+    } else {
+      el.textContent = word.slice(0, --ci);
+      if (ci === 0) {
+        deleting = false;
+        wi = (wi + 1) % words.length;
+        setTimeout(tick, 400);
+        return;
+      }
+      setTimeout(tick, 45);
+    }
+  }
+  tick();
+})();
+
+/* ─── Progress bar animation on scroll ────────────────────────────── */
+(function() {
+  const fills = document.querySelectorAll('.progress-fill');
+  const targets = Array.from(fills).map(f => f.style.width);
+  fills.forEach(f => { f.style.width = '0%'; });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = Array.from(fills).indexOf(entry.target);
+        entry.target.style.width = targets[idx];
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  fills.forEach(f => observer.observe(f));
+})();
+
+/* ─── Stagger entrance for cards ───────────────────────────────────── */
+(function() {
+  const cards = document.querySelectorAll('.card, .terminal, .tl-item');
+  cards.forEach(c => {
+    c.style.opacity = '0';
+    c.style.transform = 'translateY(30px)';
+    c.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  });
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const delay = entry.target.style.animationDelay || '0s';
+        const ms = parseFloat(delay) * 1000;
+        setTimeout(() => {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }, ms);
+        obs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  cards.forEach(c => obs.observe(c));
+})();
+
+/* ─── Momentum pill scroll ─────────────────────────────────────────── */
+(function() {
+  const pills = document.querySelector('.hero-pills');
+  if (!pills) return;
+  let isDown = false, startX = 0, scrollLeft = 0, vel = 0, lastX = 0, raf;
+
+  pills.addEventListener('mousedown', e => {
+    isDown = true;
+    startX = e.pageX - pills.offsetLeft;
+    scrollLeft = pills.scrollLeft;
+    lastX = e.pageX;
+    cancelAnimationFrame(raf);
+  });
+  document.addEventListener('mouseup', () => {
+    if (!isDown) return;
+    isDown = false;
+    momentum();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - pills.offsetLeft;
+    vel = e.pageX - lastX;
+    lastX = e.pageX;
+    pills.scrollLeft = scrollLeft - (x - startX);
+  });
+
+  function momentum() {
+    if (Math.abs(vel) < 0.5) return;
+    pills.scrollLeft -= vel;
+    vel *= 0.92;
+    raf = requestAnimationFrame(momentum);
+  }
+})();
+
+/* ─── Animated gradient border on hover (timeline nodes) ──────────── */
+(function() {
+  document.querySelectorAll('.tl-node').forEach(node => {
+    let angle = 0;
+    let raf;
+    node.addEventListener('mouseenter', () => {
+      function spin() {
+        angle += 2;
+        node.style.boxShadow = `0 0 0 2px hsl(${angle % 360}, 80%, 65%), 0 0 20px rgba(108,99,255,0.3)`;
+        raf = requestAnimationFrame(spin);
+      }
+      spin();
+    });
+    node.addEventListener('mouseleave', () => {
+      cancelAnimationFrame(raf);
+      node.style.boxShadow = '0 0 0 1px var(--border)';
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Manager — Winhance Deep Dive</title>
+<style>
+:root{--bg:#0d0d1a;--bg2:#111124;--bg3:#161630;--cyan:#00d4ff;--cyan2:#00a8cc;--cyan3:#007a99;--purple:#7c3aed;--purple2:#5b21b6;--green:#00ff88;--orange:#ff6b35;--red:#ff4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--border:#1e2d4a;--glow:0 0 20px rgba(0,212,255,0.3);--glow2:0 0 40px rgba(0,212,255,0.15)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden;line-height:1.6}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--cyan3);border-radius:3px}
+
+/* ── FLOATING FILE ICONS BG ── */
+.bg-icons{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-icon{position:absolute;font-size:2rem;opacity:0.04;animation:floatIcon linear infinite}
+@keyframes floatIcon{0%{transform:translateY(100vh) rotate(0deg)}100%{transform:translateY(-120px) rotate(360deg)}}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(13,13,26,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem}
+.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:2rem;height:56px}
+.nav-logo{font-weight:700;font-size:1.1rem;color:var(--cyan);text-decoration:none;letter-spacing:0.05em}
+.nav-links{display:flex;gap:1.5rem;margin-left:auto}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:0.875rem;transition:color 0.2s}
+.nav-links a:hover{color:var(--cyan)}
+.nav-links a.active{color:var(--cyan)}
+
+/* ── MAIN CONTENT ── */
+main{position:relative;z-index:1;padding-top:56px}
+.container{max-width:1400px;margin:0 auto;padding:0 2rem}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(0,212,255,0.08) 0%,transparent 70%);animation:heroPulse 8s ease-in-out infinite alternate}
+@keyframes heroPulse{0%{opacity:0.6;transform:scale(1)}100%{opacity:1;transform:scale(1.05)}}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;padding:6rem 0}
+.hero-badge{display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:2rem;padding:0.35rem 1rem;font-size:0.8rem;color:var(--cyan);margin-bottom:1.5rem;animation:badgePulse 3s ease-in-out infinite}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0.4)}50%{box-shadow:0 0 0 6px rgba(0,212,255,0)}}
+.hero h1{font-size:3.5rem;font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:1.5rem}
+.hero h1 span{background:linear-gradient(135deg,var(--cyan),#0099cc,var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-desc{font-size:1.1rem;color:var(--text2);margin-bottom:2rem;max-width:480px}
+.hero-stats{display:flex;gap:2rem}
+.hero-stat{text-align:center}
+.hero-stat-num{font-size:2rem;font-weight:800;color:var(--cyan);display:block}
+.hero-stat-label{font-size:0.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em}
+
+/* ── MOCK FILE BROWSER ── */
+.mock-browser{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--glow2),0 40px 80px rgba(0,0,0,0.6)}
+.mock-titlebar{display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border)}
+.mock-dot{width:12px;height:12px;border-radius:50%}
+.mock-dot.red{background:#ff5f57}
+.mock-dot.yellow{background:#ffbd2e}
+.mock-dot.green{background:#28c840}
+.mock-titlebar-title{margin-left:0.5rem;font-size:0.8rem;color:var(--text3);flex:1;text-align:center}
+.mock-toolbar{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border)}
+.mock-btn{background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;color:var(--text2);font-size:0.7rem;padding:0.25rem 0.6rem;cursor:default}
+.mock-addr{flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;padding:0.25rem 0.6rem;font-size:0.72rem;color:var(--cyan);font-family:monospace}
+.mock-body{display:grid;grid-template-columns:160px 1fr;min-height:280px}
+.mock-tree{border-right:1px solid var(--border);padding:0.5rem 0;background:rgba(0,0,0,0.2)}
+.mock-tree-item{display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0.75rem;font-size:0.72rem;color:var(--text2);cursor:default;transition:all 0.15s}
+.mock-tree-item:hover,.mock-tree-item.active{background:rgba(0,212,255,0.1);color:var(--cyan)}
+.mock-tree-item .indent{width:12px;flex-shrink:0}
+.mock-files{padding:0.5rem}
+.mock-file-row{display:grid;grid-template-columns:auto 1fr 80px 120px;align-items:center;gap:0.75rem;padding:0.3rem 0.5rem;font-size:0.72rem;color:var(--text2);border-radius:4px;cursor:default;transition:all 0.15s}
+.mock-file-row:hover{background:rgba(0,212,255,0.08)}
+.mock-file-row.selected{background:rgba(0,212,255,0.15);color:var(--text)}
+.mock-file-row.header{color:var(--text3);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);margin-bottom:0.25rem}
+.mock-file-icon{font-size:0.9rem}
+.mock-statusbar{padding:0.35rem 0.75rem;background:var(--bg3);border-top:1px solid var(--border);font-size:0.68rem;color:var(--text3);display:flex;gap:1.5rem}
+
+/* ── SECTIONS ── */
+section{padding:5rem 0;border-top:1px solid rgba(255,255,255,0.04)}
+.section-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--cyan);margin-bottom:0.75rem}
+.section-title{font-size:2.5rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:1rem}
+.section-desc{font-size:1.05rem;color:var(--text2);max-width:640px;margin-bottom:3rem}
+
+/* ── ARCHITECTURE DIAGRAM ── */
+.arch-diagram{position:relative;padding:2rem 0}
+.arch-layers{display:flex;flex-direction:column;gap:0;max-width:900px;margin:0 auto}
+.arch-layer{display:flex;align-items:center;gap:1rem;position:relative}
+.arch-box{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;position:relative;transition:all 0.3s}
+.arch-box:hover{border-color:var(--cyan);box-shadow:var(--glow)}
+.arch-box-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);margin-bottom:0.25rem}
+.arch-box-title{font-size:1rem;font-weight:700;color:var(--text)}
+.arch-box-sub{font-size:0.78rem;color:var(--text3);margin-top:0.25rem;font-family:monospace}
+.arch-box.layer-ui{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.05)}
+.arch-box.layer-vm{border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.04)}
+.arch-box.layer-svc{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.04)}
+.arch-box.layer-fs{border-color:rgba(255,107,53,0.3);background:rgba(255,107,53,0.04)}
+.arch-box.layer-obs{border-color:rgba(255,68,68,0.2);background:rgba(255,68,68,0.03)}
+.arch-connector{display:flex;flex-direction:column;align-items:center;position:relative;padding:0.25rem 0}
+.arch-connector-line{width:2px;height:32px;background:linear-gradient(to bottom,var(--cyan),transparent);position:relative;overflow:visible}
+.arch-connector-arrow{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--cyan)}
+.arch-connector-label{font-size:0.68rem;color:var(--text3);white-space:nowrap;background:var(--bg);padding:0 0.5rem;position:absolute;right:calc(50% + 8px);top:50%;transform:translateY(-50%);font-family:monospace}
+
+/* Animated flowing dots on SVG */
+.arch-flow-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* ── TERMINAL BLOCK ── */
+.terminal{background:#0a0a14;border:1px solid #1e2d4a;border-radius:8px;padding:1.5rem;font-family:'Cascadia Code','Fira Code',monospace;font-size:0.82rem;line-height:1.7;overflow-x:auto;position:relative}
+.terminal::before{content:'';position:absolute;top:0;left:0;right:0;height:32px;background:var(--bg3);border-bottom:1px solid var(--border);border-radius:8px 8px 0 0}
+.terminal-dots{position:absolute;top:9px;left:12px;display:flex;gap:6px;z-index:1}
+.terminal-dot{width:11px;height:11px;border-radius:50%}
+.terminal-label{position:absolute;top:8px;left:0;right:0;text-align:center;font-size:0.7rem;color:var(--text3);z-index:1}
+.terminal-content{margin-top:1.5rem}
+.t-prompt{color:var(--cyan)}
+.t-class{color:#c084fc}
+.t-method{color:#60a5fa}
+.t-string{color:#86efac}
+.t-keyword{color:#f472b6}
+.t-type{color:#fbbf24}
+.t-comment{color:var(--text3)}
+.t-return{color:var(--green)}
+
+/* ── TAB SYSTEM ── */
+.tab-demo{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tab-bar{display:flex;background:var(--bg3);border-bottom:1px solid var(--border);padding:0 0.5rem;gap:0.25rem;align-items:flex-end;overflow:hidden}
+.tab-item{display:flex;align-items:center;gap:0.4rem;padding:0.6rem 1rem 0.5rem;font-size:0.78rem;border-radius:6px 6px 0 0;cursor:default;position:relative;transition:all 0.2s;max-width:160px;flex-shrink:0;border:1px solid transparent;border-bottom:none}
+.tab-item.active{background:var(--bg2);border-color:var(--border);color:var(--text);margin-bottom:-1px}
+.tab-item:not(.active){color:var(--text3);background:rgba(255,255,255,0.02)}
+.tab-item:not(.active):hover{background:rgba(255,255,255,0.05);color:var(--text2)}
+.tab-close{opacity:0.5;font-size:0.7rem;margin-left:auto;padding:0.1rem;border-radius:3px;transition:opacity 0.15s}
+.tab-close:hover{opacity:1;background:rgba(255,255,255,0.1)}
+.tab-new{padding:0.6rem 0.75rem;color:var(--text3);font-size:1rem;cursor:default;display:flex;align-items:center}
+.tab-content{padding:1.5rem}
+.tab-locked{font-size:0.65rem;color:var(--orange)}
+.tab-pinned{font-size:0.65rem;color:var(--cyan)}
+.tab-history{display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem}
+.tab-hist-item{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.75rem;background:var(--bg3);border-radius:6px;font-size:0.8rem;color:var(--text2)}
+.tab-hist-item.current{border-left:2px solid var(--cyan);color:var(--text)}
+.tab-hist-arrow{color:var(--text3);font-size:0.7rem}
+.tab-hist-time{color:var(--text3);font-size:0.7rem;margin-left:auto}
+
+/* ── VIEW MODES ── */
+.view-modes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.view-mode-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;cursor:pointer;transition:all 0.3s;text-align:center}
+.view-mode-card.active,.view-mode-card:hover{border-color:var(--cyan);box-shadow:var(--glow)}
+.view-mode-card.active{background:rgba(0,212,255,0.05)}
+.view-mode-icon{font-size:2rem;margin-bottom:0.5rem}
+.view-mode-name{font-size:0.85rem;font-weight:600;margin-bottom:0.25rem}
+.view-mode-desc{font-size:0.72rem;color:var(--text3)}
+.view-mode-preview{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;min-height:180px;transition:all 0.3s}
+.view-details-row{display:grid;grid-template-columns:auto 1fr 80px 120px 100px;gap:0.75rem;padding:0.35rem 0.5rem;font-size:0.75rem;align-items:center;border-radius:4px}
+.view-details-row:hover{background:rgba(255,255,255,0.04)}
+.view-details-row.hdr{color:var(--text3);font-size:0.68rem;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:0.5rem}
+.view-icons-grid{display:flex;flex-wrap:wrap;gap:0.75rem;padding:0.5rem}
+.view-icon-item{display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.75rem;border-radius:6px;width:70px;cursor:default;transition:background 0.15s}
+.view-icon-item:hover{background:rgba(0,212,255,0.08)}
+.view-icon-img{font-size:2.2rem;line-height:1}
+.view-icon-name{font-size:0.62rem;color:var(--text2);text-align:center;word-break:break-all;max-width:65px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.view-list-item{display:flex;align-items:center;gap:0.6rem;padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--text2);border-radius:4px}
+.view-list-item:hover{background:rgba(255,255,255,0.04)}
+
+/* ── FILE OPS ── */
+.ops-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem}
+.op-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;position:relative;overflow:hidden}
+.op-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent,var(--cyan))}
+.op-card.copy{--accent:var(--cyan)}
+.op-card.move{--accent:var(--purple)}
+.op-card.delete{--accent:var(--red)}
+.op-card.rename{--accent:var(--orange)}
+.op-header{display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem}
+.op-icon{font-size:1.5rem}
+.op-title{font-size:1rem;font-weight:700}
+.op-subtitle{font-size:0.75rem;color:var(--text3);margin-top:0.1rem}
+.op-progress{margin-top:1rem}
+.op-progress-label{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text3);margin-bottom:0.35rem}
+.op-progress-bar{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.op-progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent,var(--cyan)),rgba(255,255,255,0.4));animation:progressAnim 3s ease-in-out infinite}
+@keyframes progressAnim{0%{width:0}60%{width:100%}100%{width:100%}}
+.op-code{margin-top:1rem;background:var(--bg);border-radius:6px;padding:0.75rem;font-family:monospace;font-size:0.72rem;color:var(--text2);border:1px solid var(--border)}
+.op-code span.kw{color:#f472b6}
+.op-code span.fn{color:#60a5fa}
+.op-code span.st{color:#86efac}
+.op-code span.ty{color:#fbbf24}
+.fly-container{position:relative;height:60px;overflow:hidden;margin-top:0.75rem}
+.fly-icon{position:absolute;font-size:1.2rem;animation:flyAcross 2.5s ease-in-out infinite}
+@keyframes flyAcross{0%{left:5%;opacity:0;transform:scale(0.7)}20%{opacity:1;transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{left:85%;opacity:0;transform:scale(0.7)}}
+.fly-from{position:absolute;left:5%;top:50%;transform:translateY(-50%);font-size:0.7rem;color:var(--text3)}
+.fly-to{position:absolute;right:5%;top:50%;transform:translateY(-50%);font-size:0.7rem;color:var(--text3)}
+.fly-arrow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:0.8rem;color:var(--text3)}
+
+/* ── SELECTION SYSTEM ── */
+.selection-demo{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.selection-list{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.selection-list-header{padding:0.75rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);font-size:0.8rem;font-weight:600}
+.sel-item{display:flex;align-items:center;gap:0.6rem;padding:0.4rem 1rem;font-size:0.78rem;color:var(--text2);cursor:default;transition:all 0.15s;position:relative}
+.sel-item.selected{background:rgba(0,212,255,0.12);color:var(--text)}
+.sel-item.range{background:rgba(0,212,255,0.07)}
+.sel-item:hover:not(.selected){background:rgba(255,255,255,0.03)}
+.sel-checkbox{width:14px;height:14px;border-radius:3px;border:1px solid;flex-shrink:0}
+.sel-item.selected .sel-checkbox{border-color:var(--cyan);background:var(--cyan)}
+.sel-item:not(.selected) .sel-checkbox{border-color:var(--border)}
+.sel-rubber-band{position:absolute;border:1px dashed rgba(0,120,215,0.8);background:rgba(0,120,215,0.15);pointer-events:none;border-radius:2px;animation:rubberExpand 2s ease-in-out infinite}
+@keyframes rubberExpand{0%{opacity:0;width:0;height:0;top:20px;left:20px}30%{opacity:1}70%{opacity:1}100%{opacity:0;width:140px;height:80px;top:30px;left:20px}}
+.selection-info{display:flex;flex-direction:column;gap:1rem}
+.sel-info-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem}
+.sel-info-title{font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;color:var(--cyan)}
+.sel-info-row{display:flex;justify-content:space-between;font-size:0.78rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.sel-info-row:last-child{border-bottom:none}
+.sel-info-key{color:var(--text3)}
+.sel-info-val{font-family:monospace;font-size:0.75rem;color:var(--text)}
+.sel-dp-box{background:var(--bg);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:1rem;font-family:monospace;font-size:0.72rem;line-height:1.8}
+.dp-kw{color:#f472b6}
+.dp-cls{color:#c084fc}
+.dp-str{color:#86efac}
+.dp-type{color:#fbbf24}
+.dp-method{color:#60a5fa}
+.dp-comment{color:var(--text3)}
+
+/* ── NAVIGATION FEATURES ── */
+.nav-demo{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.nav-demo-bar{display:flex;align-items:center;gap:0.5rem;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border)}
+.nav-nav-btn{background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:0.8rem;padding:0.3rem 0.5rem;cursor:default;transition:all 0.15s}
+.nav-nav-btn:hover{background:rgba(0,212,255,0.1);color:var(--cyan)}
+.nav-nav-btn:disabled{opacity:0.3;cursor:not-allowed}
+.nav-breadcrumb{display:flex;align-items:center;gap:0.25rem;flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;padding:0.3rem 0.75rem;font-size:0.78rem;overflow:hidden}
+.nav-breadcrumb-item{color:var(--text2);cursor:default;white-space:nowrap;transition:color 0.15s}
+.nav-breadcrumb-item:hover{color:var(--cyan)}
+.nav-breadcrumb-item.current{color:var(--cyan)}
+.nav-breadcrumb-sep{color:var(--text3);font-size:0.7rem}
+.nav-addr{flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(0,212,255,0.3);border-radius:6px;padding:0.3rem 0.75rem;font-family:monospace;font-size:0.8rem;color:var(--cyan)}
+.nav-search{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.6rem;font-size:0.75rem;color:var(--text2);width:160px}
+.nav-features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding:1.5rem}
+.nav-feature{background:var(--bg3);border-radius:8px;padding:1rem}
+.nav-feature-icon{font-size:1.5rem;margin-bottom:0.5rem}
+.nav-feature-title{font-size:0.85rem;font-weight:700;margin-bottom:0.35rem}
+.nav-feature-desc{font-size:0.75rem;color:var(--text2);line-height:1.5}
+.nav-feature code{font-size:0.7rem;background:rgba(0,0,0,0.4);padding:0.1rem 0.3rem;border-radius:3px;color:var(--cyan)}
+
+/* ── CONTEXT MENU ── */
+.ctx-layout{display:grid;grid-template-columns:1fr 280px;gap:2rem;align-items:start}
+.ctx-diagram{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.ctx-flow{display:flex;flex-direction:column;gap:0.5rem}
+.ctx-flow-node{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:1rem;display:flex;align-items:center;gap:1rem}
+.ctx-flow-node.registry{border-color:rgba(255,107,53,0.4)}
+.ctx-flow-node.shell{border-color:rgba(124,58,237,0.4)}
+.ctx-flow-node.app{border-color:rgba(0,212,255,0.4)}
+.ctx-flow-icon{font-size:1.5rem;flex-shrink:0}
+.ctx-flow-title{font-size:0.85rem;font-weight:700}
+.ctx-flow-desc{font-size:0.72rem;color:var(--text3);margin-top:0.15rem;font-family:monospace}
+.ctx-arrow{text-align:center;color:var(--text3);font-size:1.2rem;padding:0.1rem 0}
+.ctx-menu-widget{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5)}
+.ctx-menu-header{padding:0.6rem 1rem;background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(124,58,237,0.1));border-bottom:1px solid var(--border);font-size:0.8rem;font-weight:600}
+.ctx-menu-item{display:flex;align-items:center;gap:0.6rem;padding:0.45rem 1rem;font-size:0.8rem;color:var(--text2);cursor:default;transition:all 0.15s}
+.ctx-menu-item:hover{background:rgba(0,212,255,0.1);color:var(--text)}
+.ctx-menu-item .ctx-icon{width:16px;text-align:center;font-size:0.85rem}
+.ctx-menu-item .ctx-shortcut{margin-left:auto;font-size:0.68rem;color:var(--text3);font-family:monospace}
+.ctx-sep{height:1px;background:var(--border);margin:0.25rem 0}
+.ctx-menu-item.danger{color:var(--red)}
+.ctx-menu-item.danger:hover{background:rgba(255,68,68,0.1)}
+
+/* ── FILE PROPERTIES ── */
+.props-layout{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.props-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.props-header{padding:1.25rem 1.5rem;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem}
+.props-file-icon{font-size:2.5rem}
+.props-file-name{font-size:1.1rem;font-weight:700}
+.props-file-type{font-size:0.78rem;color:var(--text3);margin-top:0.2rem}
+.props-tabs{display:flex;border-bottom:1px solid var(--border)}
+.props-tab{padding:0.6rem 1.25rem;font-size:0.8rem;cursor:default;color:var(--text3);border-bottom:2px solid transparent;transition:all 0.15s}
+.props-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.props-body{padding:1.25rem 1.5rem}
+.props-section{margin-bottom:1.25rem}
+.props-section-title{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);margin-bottom:0.6rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)}
+.props-row{display:flex;justify-content:space-between;align-items:baseline;padding:0.3rem 0;font-size:0.8rem}
+.props-label{color:var(--text3)}
+.props-value{font-family:monospace;font-size:0.75rem;color:var(--text);text-align:right;max-width:280px;word-break:break-all}
+.props-hash{color:var(--cyan);font-size:0.68rem}
+.props-attr{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem}
+.attr-badge{background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.6rem;font-size:0.7rem;color:var(--text2)}
+.attr-badge.active{background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.3);color:var(--cyan)}
+
+/* ── METRICS ── */
+.metrics-section{padding:4rem 0}
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:2rem}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.metric-label{font-size:0.8rem;color:var(--text3);margin-bottom:0.5rem}
+.metric-value{font-size:2rem;font-weight:800;color:var(--cyan);margin-bottom:0.75rem}
+.metric-bar-track{height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden}
+.metric-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--purple));position:relative}
+.metric-bar-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:shimmer 2s infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* ── SPLIT COMPARE ── */
+.compare-section{padding:3rem 0}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.compare-panel{padding:1.5rem}
+.compare-panel.old{background:rgba(255,255,255,0.02);border-right:1px solid var(--border)}
+.compare-panel.new{background:rgba(0,212,255,0.02)}
+.compare-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:1rem;padding:0.4rem 0.75rem;border-radius:4px;display:inline-block}
+.compare-label.old{background:rgba(100,116,139,0.2);color:var(--text3)}
+.compare-label.new{background:rgba(0,212,255,0.15);color:var(--cyan)}
+.compare-item{display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;font-size:0.82rem;color:var(--text2)}
+.compare-item.bad{color:#94a3b8}
+.compare-item.good{color:var(--text)}
+.compare-item .ci-icon{width:18px;text-align:center}
+
+/* ── SVG ARCH ANIMATION ── */
+@keyframes dashFlow{to{stroke-dashoffset:-20}}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:2rem 0;text-align:center;color:var(--text3);font-size:0.82rem}
+footer a{color:var(--cyan);text-decoration:none}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .hero-grid,.ops-grid,.selection-demo,.props-layout,.ctx-layout,.compare-grid{grid-template-columns:1fr}
+  .view-modes-grid{grid-template-columns:repeat(2,1fr)}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .nav-features-grid{grid-template-columns:1fr 1fr}
+  .hero h1{font-size:2.5rem}
+  .mock-body{grid-template-columns:1fr}
+  .mock-tree{display:none}
+}
+
+/* ── ANIMATIONS ON SCROLL (JS toggles) ── */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity 0.7s ease,transform 0.7s ease}
+.reveal.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- Floating background icons -->
+<div class="bg-icons" id="bgIcons"></div>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">Winhance</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="features.html">Features</a>
+      <a href="file-manager.html" class="active">File Manager</a>
+      <a href="ai-agents.html">AI Agents</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+<!-- ════════════════ HERO ════════════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-badge">
+          <span>✦</span> Deep Dive Documentation
+        </div>
+        <h1>The File Manager<br><span>Reimagined</span></h1>
+        <p class="hero-desc">A transaction-safe, multi-tab file manager built on async/await, MVVM, and observable collections — designed for power users who demand speed, safety, and full shell integration.</p>
+        <div class="hero-stats">
+          <div class="hero-stat"><span class="hero-stat-num">6</span><span class="hero-stat-label">Core Services</span></div>
+          <div class="hero-stat"><span class="hero-stat-num">4</span><span class="hero-stat-label">View Modes</span></div>
+          <div class="hero-stat"><span class="hero-stat-num">SHA-256</span><span class="hero-stat-label">File Hashing</span></div>
+          <div class="hero-stat"><span class="hero-stat-num">∞</span><span class="hero-stat-label">Tabs</span></div>
+        </div>
+      </div>
+      <div class="mock-browser">
+        <div class="mock-titlebar">
+          <div class="mock-dot red"></div><div class="mock-dot yellow"></div><div class="mock-dot green"></div>
+          <span class="mock-titlebar-title">Winhance File Manager</span>
+        </div>
+        <div class="mock-toolbar">
+          <button class="mock-btn">←</button>
+          <button class="mock-btn">→</button>
+          <button class="mock-btn">↑</button>
+          <span class="mock-addr">C:\Users\User\Documents\Projects</span>
+          <button class="mock-btn">⟳</button>
+        </div>
+        <div class="mock-body">
+          <div class="mock-tree">
+            <div class="mock-tree-item"><span>💾</span> C:\</div>
+            <div class="mock-tree-item"><span class="indent"></span><span>📁</span> Users</div>
+            <div class="mock-tree-item active"><span class="indent"></span><span>📁</span> Documents</div>
+            <div class="mock-tree-item"><span class="indent"></span><span class="indent"></span><span>📁</span> Projects</div>
+            <div class="mock-tree-item"><span class="indent"></span><span>📁</span> Downloads</div>
+            <div class="mock-tree-item"><span class="indent"></span><span>🖼️</span> Pictures</div>
+            <div class="mock-tree-item"><span>💾</span> D:\</div>
+            <div class="mock-tree-item"><span>🌐</span> Network</div>
+          </div>
+          <div style="overflow:hidden">
+            <div class="mock-files">
+              <div class="mock-file-row header"><span></span><span>Name</span><span>Size</span><span>Modified</span></div>
+              <div class="mock-file-row"><span class="mock-file-icon">📁</span><span>..</span><span>—</span><span>—</span></div>
+              <div class="mock-file-row selected"><span class="mock-file-icon">📁</span><span>Winhance-FS</span><span>—</span><span>2025-05-12</span></div>
+              <div class="mock-file-row selected"><span class="mock-file-icon">📁</span><span>docs</span><span>—</span><span>2025-05-12</span></div>
+              <div class="mock-file-row"><span class="mock-file-icon">📄</span><span>README.md</span><span>4.2 KB</span><span>2025-05-11</span></div>
+              <div class="mock-file-row"><span class="mock-file-icon">⚙️</span><span>Winhance.sln</span><span>18 KB</span><span>2025-05-10</span></div>
+              <div class="mock-file-row"><span class="mock-file-icon">📦</span><span>package.json</span><span>1.1 KB</span><span>2025-05-09</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-statusbar">
+          <span>2 items selected</span>
+          <span>Free: 182.4 GB</span>
+          <span>Total: 512 GB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ ARCHITECTURE ════════════════ -->
+<section id="architecture">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 01</div>
+      <h2 class="section-title">Architecture Diagram</h2>
+      <p class="section-desc">Animated data flow from user interaction through the MVVM layers down to the filesystem and back via <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">ObservableCollection&lt;FileSystemEntry&gt;</code>.</p>
+    </div>
+
+    <div class="arch-layers reveal">
+      <!-- Layer 1: User Input -->
+      <div class="arch-layer">
+        <div class="arch-box layer-ui" style="border-color:rgba(124,58,237,0.5)">
+          <div class="arch-box-label">WPF UI Layer</div>
+          <div class="arch-box-title">User Input &amp; Controls</div>
+          <div class="arch-box-sub">SelectionListView · TabBar · BreadcrumbBar · AddressBar</div>
+        </div>
+      </div>
+
+      <!-- Arrow 1 -->
+      <div class="arch-connector" style="margin:0 auto;width:2px;height:40px;background:linear-gradient(to bottom,rgba(124,58,237,0.6),rgba(0,212,255,0.6));position:relative">
+        <svg style="position:absolute;left:-20px;top:0;width:42px;height:40px;overflow:visible">
+          <line x1="21" y1="0" x2="21" y2="32" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="4 4">
+            <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.8s" repeatCount="indefinite"/>
+          </line>
+          <polygon points="15,30 21,40 27,30" fill="rgba(0,212,255,0.7)"/>
+        </svg>
+        <span style="position:absolute;left:14px;top:12px;font-size:0.65rem;color:var(--text3);white-space:nowrap;font-family:monospace">NavigateToNodeAsync()</span>
+      </div>
+
+      <!-- Layer 2: ViewModel -->
+      <div class="arch-layer">
+        <div class="arch-box layer-vm">
+          <div class="arch-box-label">ViewModel Layer (MVVM)</div>
+          <div class="arch-box-title">NavigationViewModel · TabViewModel · FileCopyViewModel</div>
+          <div class="arch-box-sub">ObservableObject · [RelayCommand] · [ObservableProperty]</div>
+        </div>
+      </div>
+
+      <div class="arch-connector" style="margin:0 auto;width:2px;height:40px;background:linear-gradient(to bottom,rgba(0,212,255,0.6),rgba(0,255,136,0.6));position:relative">
+        <svg style="position:absolute;left:-20px;top:0;width:42px;height:40px;overflow:visible">
+          <line x1="21" y1="0" x2="21" y2="32" stroke="rgba(0,212,255,0.4)" stroke-width="1.5" stroke-dasharray="4 4">
+            <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.8s" repeatCount="indefinite"/>
+          </line>
+          <polygon points="15,30 21,40 27,30" fill="rgba(0,212,255,0.7)"/>
+        </svg>
+        <span style="position:absolute;left:14px;top:12px;font-size:0.65rem;color:var(--text3);white-space:nowrap;font-family:monospace">GetDirectoryContentsAsync(path)</span>
+      </div>
+
+      <!-- Layer 3: Service -->
+      <div class="arch-layer">
+        <div class="arch-box layer-svc">
+          <div class="arch-box-label">Infrastructure Service Layer</div>
+          <div class="arch-box-title">FileManagerService · FileOperationsService</div>
+          <div class="arch-box-sub">CopyFilesAsync · MoveFilesAsync · DeleteFilesAsync · GetPropertiesAsync · SearchAsync</div>
+        </div>
+      </div>
+
+      <div class="arch-connector" style="margin:0 auto;width:2px;height:40px;background:linear-gradient(to bottom,rgba(0,255,136,0.6),rgba(255,107,53,0.6));position:relative">
+        <svg style="position:absolute;left:-20px;top:0;width:42px;height:40px;overflow:visible">
+          <line x1="21" y1="0" x2="21" y2="32" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-dasharray="4 4">
+            <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.8s" repeatCount="indefinite"/>
+          </line>
+          <polygon points="15,30 21,40 27,30" fill="rgba(0,255,136,0.7)"/>
+        </svg>
+        <span style="position:absolute;left:14px;top:12px;font-size:0.65rem;color:var(--text3);white-space:nowrap;font-family:monospace">Task.Run(() =&gt; dirInfo.EnumerateFiles())</span>
+      </div>
+
+      <!-- Layer 4: FileSystem -->
+      <div class="arch-layer">
+        <div class="arch-box layer-fs">
+          <div class="arch-box-label">Windows FileSystem API</div>
+          <div class="arch-box-title">DirectoryInfo · FileInfo · DriveInfo · SHA256</div>
+          <div class="arch-box-sub">System.IO · Microsoft.VisualBasic.FileIO · System.Security.Cryptography</div>
+        </div>
+      </div>
+
+      <div style="margin:0 auto;width:2px;height:40px;background:linear-gradient(to top,rgba(255,107,53,0.6),rgba(0,212,255,0.6));position:relative">
+        <svg style="position:absolute;left:-20px;top:0;width:42px;height:40px;overflow:visible">
+          <line x1="21" y1="40" x2="21" y2="8" stroke="rgba(255,107,53,0.4)" stroke-width="1.5" stroke-dasharray="4 4">
+            <animate attributeName="stroke-dashoffset" from="-16" to="0" dur="0.8s" repeatCount="indefinite"/>
+          </line>
+          <polygon points="15,10 21,0 27,10" fill="rgba(255,107,53,0.7)"/>
+        </svg>
+        <span style="position:absolute;left:14px;top:12px;font-size:0.65rem;color:var(--text3);white-space:nowrap;font-family:monospace;color:var(--orange)">IEnumerable&lt;FileSystemEntry&gt; (ordered)</span>
+      </div>
+
+      <!-- Layer 5: ObservableCollection -->
+      <div class="arch-layer">
+        <div class="arch-box layer-obs">
+          <div class="arch-box-label">Binding / UI Update</div>
+          <div class="arch-box-title">ObservableCollection&lt;FileSystemEntry&gt; → WPF DataGrid</div>
+          <div class="arch-box-sub">OrderByDescending(e =&gt; e.IsDirectory).ThenBy(e =&gt; e.Name) · INotifyCollectionChanged</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal code block -->
+    <div class="terminal reveal" style="margin-top:2.5rem;max-width:860px">
+      <div class="terminal-dots">
+        <div class="terminal-dot" style="background:#ff5f57"></div>
+        <div class="terminal-dot" style="background:#ffbd2e"></div>
+        <div class="terminal-dot" style="background:#28c840"></div>
+      </div>
+      <div class="terminal-label">FileManagerService.cs — Core Entry Point</div>
+      <div class="terminal-content">
+<span class="t-comment">// NavigationViewModel.cs — LoadNodeChildrenAsync()</span><br>
+<span class="t-keyword">var</span> entries = <span class="t-keyword">await</span> <span class="t-class">_fileManagerService</span>.<span class="t-method">GetDirectoryContentsAsync</span>(<span class="t-string">node.FullPath</span>);<br>
+<span class="t-keyword">var</span> directories = entries.<span class="t-method">Where</span>(e =&gt; e.IsDirectory).<span class="t-method">Take</span>(<span class="t-type">100</span>);<br><br>
+<span class="t-comment">// FileManagerService.cs — returns entries sorted: folders first, then by name</span><br>
+<span class="t-keyword">return</span> entries<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">OrderByDescending</span>(e =&gt; e.IsDirectory)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">ThenBy</span>(e =&gt; e.Name);<br><br>
+<span class="t-comment">// Transaction log persisted for rollback support</span><br>
+<span class="t-keyword">var</span> transactionId = <span class="t-type">Guid</span>.<span class="t-method">NewGuid</span>().<span class="t-method">ToString</span>();<br>
+<span class="t-keyword">await</span> <span class="t-method">SaveTransactionLogAsync</span>(transactionId, transactionLog);<br>
+result.TransactionId = transactionId;<br><br>
+<span class="t-comment">// SHA-256 computed inline during GetPropertiesAsync()</span><br>
+<span class="t-keyword">using var</span> sha256 = <span class="t-type">SHA256</span>.<span class="t-method">Create</span>();<br>
+<span class="t-keyword">var</span> hash = sha256.<span class="t-method">ComputeHash</span>(stream);<br>
+properties.Hash = <span class="t-type">BitConverter</span>.<span class="t-method">ToString</span>(hash).<span class="t-method">Replace</span>(<span class="t-string">"-"</span>, <span class="t-string">""</span>).<span class="t-method">ToLowerInvariant</span>();
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ TAB SYSTEM ════════════════ -->
+<section id="tabs">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 02</div>
+      <h2 class="section-title">Tab System</h2>
+      <p class="section-desc">Each <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">TabViewModel</code> carries its own navigation history (up to 100 entries), lock state, pin state, and full <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">FileListViewModel</code> content instance.</p>
+    </div>
+
+    <div class="tab-demo reveal">
+      <div class="tab-bar" id="tabBar">
+        <div class="tab-item active" data-tab="0">
+          <span>📄</span><span>Documents</span>
+          <span class="tab-close">✕</span>
+        </div>
+        <div class="tab-item" data-tab="1">
+          <span>⬇️</span><span>Downloads</span>
+          <span class="tab-close">✕</span>
+        </div>
+        <div class="tab-item" data-tab="2">
+          <span>🔒</span><span style="color:var(--orange)">Projects</span>
+          <span class="tab-locked">LOCKED</span>
+        </div>
+        <div class="tab-item" data-tab="3">
+          <span>📌</span><span>Desktop</span>
+          <span class="tab-pinned">PINNED</span>
+        </div>
+        <div class="tab-new">+</div>
+      </div>
+
+      <div class="tab-content">
+        <div id="tabPanel0" style="display:block">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem">
+            <div>
+              <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;color:var(--cyan)">Tab State — TabViewModel</div>
+              <div class="sel-info-row"><span class="sel-info-key">Id</span><span class="sel-info-val">guid: a3f2...</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">Title</span><span class="sel-info-val">Documents</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">Path</span><span class="sel-info-val">C:\Users\User\Documents</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">IsActive</span><span class="sel-info-val" style="color:var(--green)">true</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">IsLocked</span><span class="sel-info-val">false</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">IsPinned</span><span class="sel-info-val">false</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">HistoryIndex</span><span class="sel-info-val">3 / 8</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">CanGoBack</span><span class="sel-info-val" style="color:var(--green)">true</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">CanGoForward</span><span class="sel-info-val" style="color:var(--green)">true</span></div>
+              <div class="sel-info-row"><span class="sel-info-key">Icon</span><span class="sel-info-val">TabIcon.Documents</span></div>
+            </div>
+            <div>
+              <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;color:var(--cyan)">Per-Tab Navigation History</div>
+              <div class="tab-history">
+                <div class="tab-hist-item"><span>📁</span><span>C:\</span><span class="tab-hist-arrow">→</span><span class="tab-hist-time">09:12</span></div>
+                <div class="tab-hist-item"><span>👤</span><span>C:\Users\User</span><span class="tab-hist-arrow">→</span><span class="tab-hist-time">09:13</span></div>
+                <div class="tab-hist-item"><span>📄</span><span>C:\Users\User\Docs\Work</span><span class="tab-hist-arrow">→</span><span class="tab-hist-time">09:14</span></div>
+                <div class="tab-hist-item current"><span>📄</span><span>C:\Users\User\Documents</span><span class="tab-hist-arrow" style="color:var(--cyan)">●</span><span class="tab-hist-time">09:15</span></div>
+                <div class="tab-hist-item" style="opacity:0.4"><span>📦</span><span>C:\Users\User\Downloads</span><span class="tab-hist-arrow">→</span><span class="tab-hist-time">—</span></div>
+              </div>
+              <div style="font-size:0.72rem;color:var(--text3);margin-top:0.75rem">History capped at 100 entries · <code style="color:var(--cyan)">AddToHistory()</code> prunes future stack on new navigation</div>
+            </div>
+          </div>
+        </div>
+        <div id="tabPanel1" style="display:none;color:var(--text2);font-size:0.85rem">
+          Tab 2 — Downloads — C:\Users\User\Downloads<br>
+          <span style="color:var(--text3);font-size:0.78rem">TabHistoryViewModel stack: 2 entries</span>
+        </div>
+        <div id="tabPanel2" style="display:none;color:var(--orange);font-size:0.85rem">
+          Tab 3 — Projects — <strong>LOCKED</strong><br>
+          <span style="color:var(--text3);font-size:0.78rem">CanClose = false · Title prefixed with lock icon via <code>ToggleLock()</code></span>
+        </div>
+        <div id="tabPanel3" style="display:none;color:var(--cyan);font-size:0.85rem">
+          Tab 4 — Desktop — <strong>PINNED</strong><br>
+          <span style="color:var(--text3);font-size:0.78rem">IsPinned = true · <code>DuplicateAsync()</code> calls <code>_tabService.DuplicateTab(tab)</code></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ FILE OPERATIONS ════════════════ -->
+<section id="operations">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 03</div>
+      <h2 class="section-title">File Operations</h2>
+      <p class="section-desc">Every operation emits a <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">FileOperationResult</code> with a <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">TransactionId</code> for rollback. Conflict resolution is handled by <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">GetUniqueDestinationPath()</code>.</p>
+    </div>
+
+    <div class="ops-grid reveal">
+      <!-- COPY -->
+      <div class="op-card copy">
+        <div class="op-header">
+          <span class="op-icon">📋</span>
+          <div><div class="op-title">CopyFilesAsync</div><div class="op-subtitle">FileManagerService · with transaction log</div></div>
+        </div>
+        <div class="fly-container">
+          <span class="fly-from">📁 Source</span>
+          <span class="fly-arrow">──────────────────────→</span>
+          <span style="position:absolute;font-size:1.2rem;animation:flyAcross 2.5s ease-in-out infinite;animation-delay:0s">📄</span>
+          <span style="position:absolute;font-size:1.2rem;animation:flyAcross 2.5s ease-in-out infinite;animation-delay:0.4s">📄</span>
+          <span style="position:absolute;font-size:1.2rem;animation:flyAcross 2.5s ease-in-out infinite;animation-delay:0.8s">📂</span>
+          <span class="fly-to">📁 Dest</span>
+        </div>
+        <div class="op-progress">
+          <div class="op-progress-label"><span>Copying 3 items...</span><span id="copyPct">0%</span></div>
+          <div class="op-progress-bar"><div class="op-progress-fill" style="background:linear-gradient(90deg,var(--cyan),#00a8cc)"></div></div>
+        </div>
+        <div class="op-code">
+<span class="kw">await</span> <span class="fn">CopyDirectoryAsync</span>(sourcePath, destPath, ct);<br>
+result.TransactionId = <span class="ty">Guid</span>.NewGuid().ToString();<br>
+<span class="kw">await</span> <span class="fn">SaveTransactionLogAsync</span>(txId, log);
+        </div>
+      </div>
+
+      <!-- MOVE -->
+      <div class="op-card move">
+        <div class="op-header">
+          <span class="op-icon">✂️</span>
+          <div><div class="op-title">MoveFilesAsync</div><div class="op-subtitle">FileOperationsService · overwrite-safe</div></div>
+        </div>
+        <div class="fly-container">
+          <span class="fly-from">📁 Source</span>
+          <span class="fly-arrow">──────────────────────→</span>
+          <span style="position:absolute;font-size:1.2rem;animation:flyAcross 2s ease-in-out infinite;animation-delay:0.2s">📦</span>
+          <span class="fly-to">📁 Dest</span>
+        </div>
+        <div class="op-progress">
+          <div class="op-progress-label"><span>Moving files...</span><span>Directory.Move()</span></div>
+          <div class="op-progress-bar"><div class="op-progress-fill" style="background:linear-gradient(90deg,var(--purple),#a855f7);animation-delay:0.5s"></div></div>
+        </div>
+        <div class="op-code">
+<span class="kw">await</span> <span class="ty">Task</span>.Run(() =&gt; <span class="ty">Directory</span>.<span class="fn">Move</span>(src, dest), ct);<br>
+<span class="kw">await</span> <span class="ty">Task</span>.Run(() =&gt; <span class="ty">File</span>.<span class="fn">Move</span>(src, dest), ct);<br>
+destPath = <span class="fn">GetUniqueDestinationPath</span>(destPath);
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="op-card delete">
+        <div class="op-header">
+          <span class="op-icon">🗑️</span>
+          <div><div class="op-title">DeleteFilesAsync</div><div class="op-subtitle">Recycle Bin or permanent · Shell API</div></div>
+        </div>
+        <div style="margin-top:0.75rem;display:flex;gap:0.75rem">
+          <div style="flex:1;background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.2);border-radius:8px;padding:0.75rem;text-align:center">
+            <div style="font-size:1.5rem">♻️</div>
+            <div style="font-size:0.72rem;color:var(--text2);margin-top:0.3rem">Recycle Bin</div>
+            <div style="font-size:0.62rem;color:var(--text3)">permanent: false</div>
+          </div>
+          <div style="display:flex;align-items:center;color:var(--text3)">or</div>
+          <div style="flex:1;background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3);border-radius:8px;padding:0.75rem;text-align:center">
+            <div style="font-size:1.5rem">⚠️</div>
+            <div style="font-size:0.72rem;color:var(--red);margin-top:0.3rem">Permanent</div>
+            <div style="font-size:0.62rem;color:var(--text3)">permanent: true</div>
+          </div>
+        </div>
+        <div class="op-code" style="margin-top:0.75rem">
+<span class="kw">await</span> <span class="fn">MoveToRecycleBinAsync</span>(path);<br>
+<span class="ty">FileSystem</span>.<span class="fn">DeleteFile</span>(path,<br>
+&nbsp;&nbsp;<span class="st">UIOption.OnlyErrorDialogs</span>,<br>
+&nbsp;&nbsp;<span class="st">RecycleOption.SendToRecycleBin</span>);
+        </div>
+      </div>
+
+      <!-- RENAME -->
+      <div class="op-card rename">
+        <div class="op-header">
+          <span class="op-icon">✏️</span>
+          <div><div class="op-title">RenameAsync</div><div class="op-subtitle">FileManagerService · files &amp; directories</div></div>
+        </div>
+        <div style="margin-top:0.75rem;display:flex;align-items:center;gap:1rem;font-family:monospace;font-size:0.82rem">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;color:var(--text2)">report_old.pdf</div>
+          <div style="color:var(--orange);font-size:1.2rem">→</div>
+          <div style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.4);border-radius:6px;padding:0.5rem 0.75rem;color:var(--orange)">report_2025.pdf</div>
+        </div>
+        <div class="op-code" style="margin-top:0.75rem">
+<span class="kw">var</span> newPath = <span class="ty">Path</span>.<span class="fn">Combine</span>(directory, newName);<br>
+<span class="kw">await</span> <span class="ty">Task</span>.Run(() =&gt; <span class="ty">File</span>.<span class="fn">Move</span>(path, newPath));<br>
+<span class="kw">await</span> <span class="ty">Task</span>.Run(() =&gt; <span class="ty">Directory</span>.<span class="fn">Move</span>(path, newPath));
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ VIEW MODES ════════════════ -->
+<section id="viewmodes">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 04</div>
+      <h2 class="section-title">View Modes</h2>
+      <p class="section-desc">Switch between four layouts instantly. The active mode is stored in <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">IViewModeService</code> and persisted per-tab.</p>
+    </div>
+
+    <div class="view-modes-grid reveal" id="viewModes">
+      <div class="view-mode-card active" data-view="details" onclick="switchView('details',this)">
+        <div class="view-mode-icon">☰</div>
+        <div class="view-mode-name">Details</div>
+        <div class="view-mode-desc">Name, size, type, date in sortable columns</div>
+      </div>
+      <div class="view-mode-card" data-view="large" onclick="switchView('large',this)">
+        <div class="view-mode-icon">⊞</div>
+        <div class="view-mode-name">Large Icons</div>
+        <div class="view-mode-desc">72px thumbnails, ideal for media folders</div>
+      </div>
+      <div class="view-mode-card" data-view="small" onclick="switchView('small',this)">
+        <div class="view-mode-icon">⊟</div>
+        <div class="view-mode-name">Small Icons</div>
+        <div class="view-mode-desc">Compact grid for dense file lists</div>
+      </div>
+      <div class="view-mode-card" data-view="list" onclick="switchView('list',this)">
+        <div class="view-mode-icon">≡</div>
+        <div class="view-mode-name">List</div>
+        <div class="view-mode-desc">Single column, maximum vertical density</div>
+      </div>
+    </div>
+
+    <div class="view-mode-preview reveal" id="viewPreview">
+      <!-- Details view (default) -->
+      <div id="view-details">
+        <div class="view-details-row hdr"><span></span><span>Name</span><span>Size</span><span>Date Modified</span><span>Type</span></div>
+        <div class="view-details-row"><span>📁</span><span>src</span><span>—</span><span>2025-05-12 09:30</span><span style="color:var(--text3)">Folder</span></div>
+        <div class="view-details-row" style="background:rgba(0,212,255,0.08)"><span>📁</span><span>docs</span><span>—</span><span>2025-05-11 14:22</span><span style="color:var(--text3)">Folder</span></div>
+        <div class="view-details-row"><span>📄</span><span>README.md</span><span>4.2 KB</span><span>2025-05-10 11:05</span><span style="color:var(--text3)">MD File</span></div>
+        <div class="view-details-row"><span>⚙️</span><span>Winhance.sln</span><span>18 KB</span><span>2025-05-09 16:44</span><span style="color:var(--text3)">Solution</span></div>
+        <div class="view-details-row"><span>📦</span><span>package.json</span><span>1.1 KB</span><span>2025-05-08 10:00</span><span style="color:var(--text3)">JSON File</span></div>
+      </div>
+      <!-- Large icons -->
+      <div id="view-large" style="display:none">
+        <div class="view-icons-grid">
+          <div class="view-icon-item"><div class="view-icon-img" style="font-size:3rem">📁</div><div class="view-icon-name">src</div></div>
+          <div class="view-icon-item" style="background:rgba(0,212,255,0.08)"><div class="view-icon-img" style="font-size:3rem">📁</div><div class="view-icon-name">docs</div></div>
+          <div class="view-icon-item"><div class="view-icon-img" style="font-size:3rem">📄</div><div class="view-icon-name">README.md</div></div>
+          <div class="view-icon-item"><div class="view-icon-img" style="font-size:3rem">⚙️</div><div class="view-icon-name">Winhance.sln</div></div>
+          <div class="view-icon-item"><div class="view-icon-img" style="font-size:3rem">📦</div><div class="view-icon-name">package.json</div></div>
+          <div class="view-icon-item"><div class="view-icon-img" style="font-size:3rem">🖼️</div><div class="view-icon-name">banner.png</div></div>
+        </div>
+      </div>
+      <!-- Small icons -->
+      <div id="view-small" style="display:none">
+        <div class="view-icons-grid" style="gap:0.4rem">
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">📁</div><div class="view-icon-name">src</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem;background:rgba(0,212,255,0.08)"><div class="view-icon-img" style="font-size:1.8rem">📁</div><div class="view-icon-name">docs</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">📄</div><div class="view-icon-name">README.md</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">⚙️</div><div class="view-icon-name">Winhance.sln</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">📦</div><div class="view-icon-name">package.json</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">🖼️</div><div class="view-icon-name">banner.png</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">📝</div><div class="view-icon-name">NOTES.txt</div></div>
+          <div class="view-icon-item" style="width:56px;padding:0.5rem"><div class="view-icon-img" style="font-size:1.8rem">🔧</div><div class="view-icon-name">.gitignore</div></div>
+        </div>
+      </div>
+      <!-- List -->
+      <div id="view-list" style="display:none;columns:2;gap:1rem">
+        <div class="view-list-item"><span>📁</span> src</div>
+        <div class="view-list-item"><span>📁</span> docs</div>
+        <div class="view-list-item"><span>📄</span> README.md</div>
+        <div class="view-list-item"><span>⚙️</span> Winhance.sln</div>
+        <div class="view-list-item"><span>📦</span> package.json</div>
+        <div class="view-list-item"><span>🖼️</span> banner.png</div>
+        <div class="view-list-item"><span>📝</span> NOTES.txt</div>
+        <div class="view-list-item"><span>🔧</span> .gitignore</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ SELECTION SYSTEM ════════════════ -->
+<section id="selection">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 05</div>
+      <h2 class="section-title">Selection System</h2>
+      <p class="section-desc">
+        <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">SelectionListView</code> extends <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">ListView</code> with a <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">BindableSelectedItems</code> dependency property — enabling two-way MVVM binding on a normally read-only collection.
+      </p>
+    </div>
+
+    <div class="selection-demo reveal">
+      <div>
+        <div class="selection-list" style="position:relative">
+          <div class="selection-list-header">SelectionListView — rubber-band multi-select</div>
+          <div style="position:relative;padding:0.25rem 0">
+            <div class="sel-item"><span class="sel-checkbox"></span><span>📁</span><span>src</span></div>
+            <div class="sel-item selected"><span class="sel-checkbox"></span><span>📁</span><span>docs</span></div>
+            <div class="sel-item selected"><span class="sel-checkbox"></span><span>📄</span><span>README.md</span></div>
+            <div class="sel-item selected"><span class="sel-checkbox"></span><span>⚙️</span><span>Winhance.sln</span></div>
+            <div class="sel-item range"><span class="sel-checkbox"></span><span>📦</span><span>package.json</span></div>
+            <div class="sel-item"><span class="sel-checkbox"></span><span>🖼️</span><span>banner.png</span></div>
+            <div class="sel-item"><span class="sel-checkbox"></span><span>📝</span><span>NOTES.txt</span></div>
+            <div class="sel-rubber-band"></div>
+          </div>
+          <div style="padding:0.5rem 1rem;background:var(--bg3);border-top:1px solid var(--border);font-size:0.72rem;color:var(--text3)">3 selected · Ctrl+A = all · Shift+Click = range</div>
+        </div>
+
+        <div class="sel-dp-box" style="margin-top:1rem">
+<span class="dp-comment">// BindableSelectedItems DependencyProperty</span><br>
+<span class="dp-kw">public static readonly</span> <span class="dp-type">DependencyProperty</span><br>
+&nbsp;&nbsp;BindableSelectedItemsProperty =<br>
+&nbsp;&nbsp;<span class="dp-type">DependencyProperty</span>.<span class="dp-method">Register</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dp-str">"BindableSelectedItems"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dp-kw">typeof</span>(<span class="dp-type">IList</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dp-kw">typeof</span>(<span class="dp-cls">SelectionListView</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="dp-kw">new</span> <span class="dp-type">FrameworkPropertyMetadata</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dp-kw">null</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BindsTwoWayByDefault));
+        </div>
+      </div>
+
+      <div class="selection-info">
+        <div class="sel-info-card">
+          <div class="sel-info-title">Selection Mechanics</div>
+          <div class="sel-info-row"><span class="sel-info-key">Single click</span><span class="sel-info-val">Select item, clear others</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Ctrl+Click</span><span class="sel-info-val">Toggle item in selection</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Shift+Click</span><span class="sel-info-val">HandleRangeSelection(item)</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Drag on empty</span><span class="sel-info-val">Rubber-band rect select</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Rubber band fill</span><span class="sel-info-val">rgba(0,120,215, 0.2)</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Stroke dash</span><span class="sel-info-val">StrokeDashArray {2, 2}</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">HitTest overlay</span><span class="sel-info-val">IsHitTestVisible = false</span></div>
+        </div>
+
+        <div class="sel-info-card">
+          <div class="sel-info-title">Range Selection Algorithm</div>
+          <div style="font-family:monospace;font-size:0.72rem;line-height:1.8;color:var(--text2)">
+<span class="dp-kw">int</span> fromIndex = Items.IndexOf(lastSelected);<br>
+<span class="dp-kw">int</span> toIndex = Items.IndexOf(toItem);<br>
+<span class="dp-kw">int</span> min = Math.Min(fromIndex, toIndex);<br>
+<span class="dp-kw">int</span> max = Math.Max(fromIndex, toIndex);<br>
+<span class="dp-kw">for</span> (<span class="dp-kw">int</span> i = min; i &lt;= max; i++)<br>
+&nbsp;&nbsp;SelectedItems.Add(Items[i]);
+          </div>
+        </div>
+
+        <div class="sel-info-card">
+          <div class="sel-info-title">OnSelectionChanged sync</div>
+          <div style="font-family:monospace;font-size:0.72rem;line-height:1.8;color:var(--text2)">
+<span class="dp-kw">var</span> bound = BindableSelectedItems;<br>
+<span class="dp-kw">if</span> (bound != <span class="dp-kw">null</span>) {<br>
+&nbsp;&nbsp;bound.Clear();<br>
+&nbsp;&nbsp;<span class="dp-kw">foreach</span> (<span class="dp-kw">var</span> item <span class="dp-kw">in</span> SelectedItems)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;bound.Add(item);<br>
+}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ NAVIGATION FEATURES ════════════════ -->
+<section id="navigation">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 06</div>
+      <h2 class="section-title">Navigation Features</h2>
+      <p class="section-desc"><code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">NavigationViewModel</code> manages a dual-stack history (BackHistory / ForwardHistory) capped at 50 entries, with lazy loading of sub-nodes via <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">LoadNodeChildrenAsync()</code>.</p>
+    </div>
+
+    <div class="nav-demo reveal">
+      <div class="nav-demo-bar">
+        <button class="nav-nav-btn">←</button>
+        <button class="nav-nav-btn">→</button>
+        <button class="nav-nav-btn">↑</button>
+        <button class="nav-nav-btn">🏠</button>
+        <div class="nav-breadcrumb">
+          <span class="nav-breadcrumb-item">💾 C:</span>
+          <span class="nav-breadcrumb-sep">›</span>
+          <span class="nav-breadcrumb-item">Users</span>
+          <span class="nav-breadcrumb-sep">›</span>
+          <span class="nav-breadcrumb-item">User</span>
+          <span class="nav-breadcrumb-sep">›</span>
+          <span class="nav-breadcrumb-item current">Documents</span>
+        </div>
+        <div class="nav-addr">C:\Users\User\Documents</div>
+        <input class="nav-search" placeholder="🔍 Search…" readonly>
+      </div>
+      <div class="nav-features-grid">
+        <div class="nav-feature">
+          <div class="nav-feature-icon">⬅️</div>
+          <div class="nav-feature-title">Back / Forward</div>
+          <div class="nav-feature-desc">Dual <code>ObservableCollection&lt;NavigationHistoryViewModel&gt;</code>. <code>NavigateBackAsync()</code> pops from BackHistory and pushes current to ForwardHistory.</div>
+        </div>
+        <div class="nav-feature">
+          <div class="nav-feature-icon">📍</div>
+          <div class="nav-feature-title">Breadcrumb Bar</div>
+          <div class="nav-feature-desc">Segments derived from <code>CurrentPath</code>. Each crumb calls <code>_addressBarService.NavigateAsync(path)</code>.</div>
+        </div>
+        <div class="nav-feature">
+          <div class="nav-feature-icon">⬆️</div>
+          <div class="nav-feature-title">Navigate Up</div>
+          <div class="nav-feature-desc"><code>NavigateUpAsync()</code> calls <code>Directory.GetParent(CurrentPath)</code> — no path string splitting needed.</div>
+        </div>
+        <div class="nav-feature">
+          <div class="nav-feature-icon">🌳</div>
+          <div class="nav-feature-title">Tree Navigation</div>
+          <div class="nav-feature-desc">Root groups: This PC, Quick Access, Network. Nodes lazy-load children with <code>ExpandNodeAsync()</code>, capped at 100 dirs.</div>
+        </div>
+        <div class="nav-feature">
+          <div class="nav-feature-icon">🏠</div>
+          <div class="nav-feature-title">Home Navigation</div>
+          <div class="nav-feature-desc"><code>NavigateHomeAsync()</code> resolves to <code>Environment.SpecialFolder.UserProfile</code> — OS-agnostic.</div>
+        </div>
+        <div class="nav-feature">
+          <div class="nav-feature-icon">🆕</div>
+          <div class="nav-feature-title">Open in New Tab</div>
+          <div class="nav-feature-desc"><code>OpenInNewTabAsync(node)</code> delegates to <code>_tabService.CreateTabAsync(node.FullPath)</code> and increments <code>node.AccessCount</code>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ CONTEXT MENU ════════════════ -->
+<section id="contextmenu">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 07</div>
+      <h2 class="section-title">Context Menu &amp; Shell Integration</h2>
+      <p class="section-desc">Right-click context menus route through Windows Shell APIs and the Windows Registry, surfacing native verbs alongside Winhance-specific actions.</p>
+    </div>
+
+    <div class="ctx-layout reveal">
+      <div class="ctx-diagram">
+        <div style="font-size:0.85rem;font-weight:700;margin-bottom:1.25rem;color:var(--cyan)">Shell Integration Flow</div>
+        <div class="ctx-flow">
+          <div class="ctx-flow-node registry">
+            <span class="ctx-flow-icon">🗂️</span>
+            <div>
+              <div class="ctx-flow-title">Windows Registry</div>
+              <div class="ctx-flow-desc">HKCR\*\shell · HKCR\Directory\shell<br>Verb registration for file types</div>
+            </div>
+          </div>
+          <div class="ctx-arrow">↓</div>
+          <div class="ctx-flow-node shell">
+            <span class="ctx-flow-icon">🐚</span>
+            <div>
+              <div class="ctx-flow-title">Windows Shell (Explorer)</div>
+              <div class="ctx-flow-desc">IShellExtInit · IContextMenu<br>COM-based shell extension dispatch</div>
+            </div>
+          </div>
+          <div class="ctx-arrow">↓</div>
+          <div class="ctx-flow-node app">
+            <span class="ctx-flow-icon">⚡</span>
+            <div>
+              <div class="ctx-flow-title">Winhance File Manager</div>
+              <div class="ctx-flow-desc">ShowNodeContextMenuAsync() · TabViewModel.ShowContextMenu()<br>WPF ContextMenu with MenuItem commands</div>
+            </div>
+          </div>
+          <div class="ctx-arrow">↓</div>
+          <div class="ctx-flow-node" style="border-color:rgba(0,255,136,0.3)">
+            <span class="ctx-flow-icon">✅</span>
+            <div>
+              <div class="ctx-flow-title">FileManagerService Commands</div>
+              <div class="ctx-flow-desc">CopyFilesAsync · MoveFilesAsync · DeleteFilesAsync<br>RenameAsync · GetPropertiesAsync</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:0.85rem;font-weight:700;margin-bottom:1rem;color:var(--cyan)">Context Menu Widget</div>
+        <div class="ctx-menu-widget">
+          <div class="ctx-menu-header">report_2025.pdf</div>
+          <div class="ctx-menu-item"><span class="ctx-icon">📂</span> Open<span class="ctx-shortcut">Enter</span></div>
+          <div class="ctx-menu-item"><span class="ctx-icon">✏️</span> Rename<span class="ctx-shortcut">F2</span></div>
+          <div class="ctx-menu-item"><span class="ctx-icon">📋</span> Copy<span class="ctx-shortcut">Ctrl+C</span></div>
+          <div class="ctx-menu-item"><span class="ctx-icon">✂️</span> Cut<span class="ctx-shortcut">Ctrl+X</span></div>
+          <div class="ctx-menu-item"><span class="ctx-icon">📌</span> Paste<span class="ctx-shortcut">Ctrl+V</span></div>
+          <div class="ctx-sep"></div>
+          <div class="ctx-menu-item"><span class="ctx-icon">🆕</span> Open in New Tab</div>
+          <div class="ctx-menu-item"><span class="ctx-icon">🪟</span> Open in New Window</div>
+          <div class="ctx-menu-item"><span class="ctx-icon">📋</span> Copy Path<span class="ctx-shortcut">Ctrl+Shift+C</span></div>
+          <div class="ctx-sep"></div>
+          <div class="ctx-menu-item"><span class="ctx-icon">🔒</span> Properties<span class="ctx-shortcut">Alt+Enter</span></div>
+          <div class="ctx-sep"></div>
+          <div class="ctx-menu-item danger"><span class="ctx-icon">🗑️</span> Delete<span class="ctx-shortcut">Del</span></div>
+          <div class="ctx-menu-item danger" style="opacity:0.7"><span class="ctx-icon">⚠️</span> Delete Permanently<span class="ctx-shortcut">Shift+Del</span></div>
+        </div>
+
+        <div style="margin-top:1rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem">
+          <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.6rem">TabViewModel.ShowContextMenu()</div>
+          <div style="font-family:monospace;font-size:0.72rem;line-height:1.8;color:var(--text2)">
+contextMenu.Items.Add(CreateMenuItem(<span style="color:#86efac">"Close"</span>, CloseCommand));<br>
+contextMenu.Items.Add(CreateMenuItem(<span style="color:#86efac">"Duplicate Tab"</span>, <span style="color:var(--text3)">null</span>));<br>
+contextMenu.Items.Add(CreateMenuItem(<span style="color:#86efac">"Open in New Window"</span>, OpenInNewWindowCommand));<br>
+contextMenu.Items.Add(CreateMenuItem(<span style="color:#86efac">"Copy Path"</span>, CopyPathCommand));
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ FILE PROPERTIES ════════════════ -->
+<section id="properties">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Section 08</div>
+      <h2 class="section-title">File Properties</h2>
+      <p class="section-desc"><code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">GetPropertiesAsync()</code> computes SHA-256 inline, enumerates directory sizes recursively, and reads all NTFS timestamps and attributes from <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">FileInfo</code> / <code style="color:var(--cyan);background:rgba(0,212,255,0.1);padding:0.1rem 0.4rem;border-radius:3px">DirectoryInfo</code>.</p>
+    </div>
+
+    <div class="props-layout reveal">
+      <div class="props-panel">
+        <div class="props-header">
+          <span class="props-file-icon">📄</span>
+          <div>
+            <div class="props-file-name">winhance_installer_v2.exe</div>
+            <div class="props-file-type">Application · 18.4 MB</div>
+          </div>
+        </div>
+        <div class="props-tabs">
+          <div class="props-tab active">General</div>
+          <div class="props-tab">Details</div>
+          <div class="props-tab">Security</div>
+        </div>
+        <div class="props-body">
+          <div class="props-section">
+            <div class="props-section-title">Location</div>
+            <div class="props-row"><span class="props-label">Full Path</span><span class="props-value">C:\Users\User\Downloads\winhance_installer_v2.exe</span></div>
+            <div class="props-row"><span class="props-label">Type</span><span class="props-value">Application</span></div>
+          </div>
+          <div class="props-section">
+            <div class="props-section-title">Size</div>
+            <div class="props-row"><span class="props-label">Size</span><span class="props-value">18,874,368 bytes (18.4 MB)</span></div>
+            <div class="props-row"><span class="props-label">On disk</span><span class="props-value">18,878,464 bytes</span></div>
+          </div>
+          <div class="props-section">
+            <div class="props-section-title">Timestamps (NTFS)</div>
+            <div class="props-row"><span class="props-label">Created</span><span class="props-value">2025-05-01 08:30:22</span></div>
+            <div class="props-row"><span class="props-label">Modified</span><span class="props-value">2025-05-12 14:11:07</span></div>
+            <div class="props-row"><span class="props-label">Accessed</span><span class="props-value">2025-05-13 09:05:44</span></div>
+          </div>
+          <div class="props-section">
+            <div class="props-section-title">SHA-256 Hash</div>
+            <div class="props-row">
+              <span class="props-value props-hash">3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b</span>
+            </div>
+            <div style="font-size:0.7rem;color:var(--text3);margin-top:0.25rem">Computed via SHA256.Create().ComputeHash(stream) · BitConverter.ToString().ToLowerInvariant()</div>
+          </div>
+          <div class="props-section">
+            <div class="props-section-title">Attributes</div>
+            <div class="props-attr">
+              <span class="attr-badge active">Archive</span>
+              <span class="attr-badge">Read-Only</span>
+              <span class="attr-badge">Hidden</span>
+              <span class="attr-badge">System</span>
+              <span class="attr-badge active">Normal</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="terminal" style="margin-bottom:1.5rem">
+          <div class="terminal-dots">
+            <div class="terminal-dot" style="background:#ff5f57"></div>
+            <div class="terminal-dot" style="background:#ffbd2e"></div>
+            <div class="terminal-dot" style="background:#28c840"></div>
+          </div>
+          <div class="terminal-label">GetPropertiesAsync() — FileManagerService.cs</div>
+          <div class="terminal-content">
+<span class="t-keyword">var</span> properties = <span class="t-keyword">new</span> <span class="t-type">FileProperties</span>();<br><br>
+<span class="t-comment">// Timestamps from FileInfo</span><br>
+properties.DateCreated = fileInfo.CreationTime;<br>
+properties.DateModified = fileInfo.LastWriteTime;<br>
+properties.DateAccessed = fileInfo.LastAccessTime;<br><br>
+<span class="t-comment">// Attributes flags</span><br>
+properties.IsReadOnly = fileInfo.IsReadOnly;<br>
+properties.IsHidden = fileInfo.Attributes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">HasFlag</span>(<span class="t-type">FileAttributes</span>.Hidden);<br>
+properties.IsSystem = fileInfo.Attributes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">HasFlag</span>(<span class="t-type">FileAttributes</span>.System);<br><br>
+<span class="t-comment">// SHA-256 inline hash</span><br>
+<span class="t-keyword">using var</span> stream = <span class="t-type">File</span>.<span class="t-method">OpenRead</span>(path);<br>
+<span class="t-keyword">using var</span> sha256 = <span class="t-type">SHA256</span>.<span class="t-method">Create</span>();<br>
+<span class="t-keyword">var</span> hash = sha256.<span class="t-method">ComputeHash</span>(stream);<br>
+properties.Hash = <span class="t-type">BitConverter</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">ToString</span>(hash)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">Replace</span>(<span class="t-string">"-"</span>, <span class="t-string">""</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.<span class="t-method">ToLowerInvariant</span>();
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem">
+          <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;color:var(--cyan)">FileProperties Model</div>
+          <div class="sel-info-row"><span class="sel-info-key">Name</span><span class="sel-info-val">string</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">FullPath</span><span class="sel-info-val">string</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Type</span><span class="sel-info-val">GetFileType(extension)</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Size</span><span class="sel-info-val">long (bytes)</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">DateModified</span><span class="sel-info-val">DateTime</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">DateCreated</span><span class="sel-info-val">DateTime</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">DateAccessed</span><span class="sel-info-val">DateTime</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Hash</span><span class="sel-info-val">SHA-256 hex string</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">Attributes</span><span class="sel-info-val">FileAttributes flags</span></div>
+          <div class="sel-info-row"><span class="sel-info-key">IsReadOnly / IsHidden / IsSystem</span><span class="sel-info-val">bool</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ METRICS ════════════════ -->
+<section class="metrics-section">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Performance</div>
+      <h2 class="section-title">Performance Characteristics</h2>
+    </div>
+    <div class="metrics-grid reveal">
+      <div class="metric-card">
+        <div class="metric-label">Concurrent Directory Enumeration</div>
+        <div class="metric-value" id="metricFiles">0</div>
+        <div class="metric-bar-track"><div class="metric-bar-fill" style="width:88%"></div></div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:0.5rem">Task.Run() offloads to thread pool · CancellationToken propagated</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Transaction Log Overhead</div>
+        <div class="metric-value" id="metricMemory">0</div>
+        <div class="metric-bar-track"><div class="metric-bar-fill" style="width:32%;animation-delay:0.3s"></div></div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:0.5rem">JSON serialized to %LocalAppData%\Winhance\FileManager\transactions\</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">History Stack Depth</div>
+        <div class="metric-value" id="metricStartup">0</div>
+        <div class="metric-bar-track"><div class="metric-bar-fill" style="width:64%;animation-delay:0.6s"></div></div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:0.5rem">50 entries (nav) · 100 entries (tab) — auto-pruned via RemoveAt(0)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ COMPARE ════════════════ -->
+<section class="compare-section">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Comparison</div>
+      <h2 class="section-title">Traditional Explorer vs Winhance</h2>
+    </div>
+    <div class="compare-grid reveal">
+      <div class="compare-panel old">
+        <div class="compare-label old">Windows Explorer</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No transaction log / rollback</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No SHA-256 inline hashing</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No multi-tab with per-tab history</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No rubber-band BindableSelectedItems DP</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No CancellationToken on enumeration</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No SelfHealingViewModelBase integration</div>
+        <div class="compare-item bad"><span class="ci-icon">✗</span> No regex file search with size/date filters</div>
+      </div>
+      <div class="compare-panel new">
+        <div class="compare-label new">Winhance File Manager</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> Full transaction log with Guid rollback ID</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> SHA-256 computed on GetPropertiesAsync()</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> Unlimited tabs, 100-entry per-tab history</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> BindableSelectedItems DependencyProperty</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> CancellationToken on all async ops</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> SelfHealingSystem in FileCopyViewModel</div>
+        <div class="compare-item good"><span class="ci-icon" style="color:var(--green)">✓</span> Regex + size/date/extension filters in SearchAsync()</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>Winhance File Manager — built with <a href="#">FileManagerService</a>, <a href="#">NavigationViewModel</a>, <a href="#">SelectionListView</a></p>
+    <p style="margin-top:0.5rem"><a href="index.html">← Back to Index</a> &nbsp;·&nbsp; <a href="features.html">Features</a> &nbsp;·&nbsp; <a href="ai-agents.html">AI Agents</a></p>
+  </div>
+</footer>
+
+<script>
+// ── FLOATING BG ICONS ──
+(function(){
+  const icons=['📄','📁','📦','🖼️','🎵','🎬','📋','🗃️','🗂️','⚙️','🔧','📝','🗒️','💾','🔑','🔒','📊','🗜️'];
+  const c=document.getElementById('bgIcons');
+  for(let i=0;i<28;i++){
+    const el=document.createElement('span');
+    el.className='bg-icon';
+    el.textContent=icons[i%icons.length];
+    el.style.left=Math.random()*100+'%';
+    el.style.animationDuration=(18+Math.random()*22)+'s';
+    el.style.animationDelay=-(Math.random()*30)+'s';
+    el.style.fontSize=(1.2+Math.random()*2)+'rem';
+    c.appendChild(el);
+  }
+})();
+
+// ── REVEAL ON SCROLL ──
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+// ── TAB SWITCHER ──
+document.querySelectorAll('.tab-item[data-tab]').forEach(tab=>{
+  tab.addEventListener('click',function(){
+    document.querySelectorAll('.tab-item[data-tab]').forEach(t=>t.classList.remove('active'));
+    this.classList.add('active');
+    const idx=this.dataset.tab;
+    document.querySelectorAll('[id^="tabPanel"]').forEach(p=>p.style.display='none');
+    const panel=document.getElementById('tabPanel'+idx);
+    if(panel)panel.style.display='block';
+  });
+});
+
+// ── VIEW MODE SWITCHER ──
+function switchView(mode,card){
+  document.querySelectorAll('.view-mode-card').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  document.querySelectorAll('#viewPreview>div').forEach(d=>d.style.display='none');
+  const el=document.getElementById('view-'+mode);
+  if(el)el.style.display=(mode==='list'?'block':'flex') || 'block';
+  if(mode==='details')el.style.display='block';
+  if(mode==='large'||mode==='small')el.style.display='flex';
+}
+
+// ── ANIMATED METRICS COUNTER ──
+function animateCounter(id,target,suffix,duration){
+  const el=document.getElementById(id);
+  if(!el)return;
+  let start=null;
+  function step(ts){
+    if(!start)start=ts;
+    const p=Math.min((ts-start)/duration,1);
+    const val=Math.floor(p*target);
+    el.textContent=val.toLocaleString()+suffix;
+    if(p<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+const metricsObserver=new IntersectionObserver(entries=>{
+  if(entries[0].isIntersecting){
+    animateCounter('metricFiles',12400,' files/s',2000);
+    animateCounter('metricMemory',4,' KB/tx',1500);
+    animateCounter('metricStartup',100,' entries',1800);
+    metricsObserver.disconnect();
+  }
+},{threshold:0.3});
+const metricsSection=document.querySelector('.metrics-section');
+if(metricsSection)metricsObserver.observe(metricsSection);
+
+// ── COPY PROGRESS COUNTER ──
+(function(){
+  const el=document.getElementById('copyPct');
+  if(!el)return;
+  let v=0;
+  setInterval(()=>{
+    v=(v+3)%103;
+    el.textContent=Math.min(v,100)+'%';
+  },90);
+})();
+
+// ── PARALLAX HERO ──
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY;
+  const bg=document.querySelector('.hero-bg');
+  if(bg)bg.style.transform=`scale(${1+y*0.0002}) translateY(${y*0.15}px)`;
+});
+</script>
+</body>
+</html>

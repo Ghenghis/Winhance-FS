@@ -56,9 +56,9 @@ def init(
     data_dir: str | None = typer.Option(None, "--data-dir", help="Custom data directory"),
 ):
     """Initialize NexusFS configuration and data directories."""
-    from nexus_ai.config import NexusConfig, set_config
+    from nexus_ai.config import DEFAULT_DATA_DIR, NexusConfig, set_config
 
-    data_path = Path(data_dir) if data_dir else Path("D:/NexusFS/data")
+    data_path = Path(data_dir) if data_dir else DEFAULT_DATA_DIR
 
     # Create directories
     dirs_to_create = [

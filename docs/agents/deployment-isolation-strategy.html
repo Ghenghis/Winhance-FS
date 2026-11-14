@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Winhance-FS — Agent Deployment &amp; Isolation Strategy</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1a1a2e; --bg-card: #16213e; --bg-deeper: #0f0e17;
+    --border: #2a2a4a; --text: #e0e0e0; --text-muted: #8888aa;
+    --accent: #00d4ff; --accent-dim: #007a99;
+    --accent-2: #e94560; --accent-3: #533483;
+    --green: #2ecc71; --red: #e74c3c; --yellow: #f39c12; --blue: #3498db;
+    --code-bg: #0d0d1a; --sidebar-w: 270px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); display: flex; min-height: 100vh;
+    font-size: 15px; line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: #66e7ff; text-decoration: underline; }
+
+  nav.sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+    background: var(--bg-deeper); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; padding-bottom: 2rem;
+  }
+  .sidebar-header { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+  .sidebar-header .logo { color: var(--accent); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.04em; }
+  .sidebar-header .subtitle { color: var(--text-muted); font-size: 0.74rem; margin-top: 0.2rem; }
+  nav.sidebar ul { list-style: none; padding: 0.5rem 0; }
+  nav.sidebar ul li a { display: block; padding: 0.4rem 1.1rem; color: var(--text-muted);
+    text-decoration: none; font-size: 0.83rem; border-left: 2px solid transparent;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+  }
+  nav.sidebar ul li a:hover { color: var(--accent); background: rgba(0,212,255,0.05); border-left-color: var(--accent); }
+  nav.sidebar .nav-section { padding: 0.85rem 1rem 0.25rem; color: var(--accent);
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  }
+  nav.sidebar .related-docs { padding: 0.75rem 1rem; border-top: 1px solid var(--border); margin-top: 0.5rem; }
+  nav.sidebar .related-docs p { color: var(--text-muted); font-size: 0.7rem;
+    margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  nav.sidebar .related-docs a { display: block; color: var(--accent-dim); font-size: 0.8rem;
+    text-decoration: none; padding: 0.2rem 0;
+  }
+  nav.sidebar .related-docs a:hover { color: var(--accent); }
+
+  main { margin-left: var(--sidebar-w); flex: 1; padding: 2.2rem 2.5rem 4rem; max-width: 1180px; }
+
+  .page-header { border-bottom: 2px solid var(--border); padding-bottom: 1.3rem; margin-bottom: 2rem; }
+  .page-header .doc-id { color: var(--accent); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .page-header h1 { font-size: 2.05rem; font-weight: 800; color: #fff; margin: 0.35rem 0 0.6rem; }
+  .page-header .meta { color: var(--text-muted); font-size: 0.85rem; }
+  .page-header .meta span { margin-right: 1.4rem; }
+
+  .section { margin-bottom: 2.6rem; }
+  .section h2 { font-size: 1.3rem; font-weight: 600; color: var(--accent);
+    border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; margin-bottom: 1.1rem;
+  }
+  .section h3 { font-size: 1.02rem; font-weight: 600; color: #c8d8f0; margin: 1.3rem 0 0.6rem; }
+  .section h4 { font-size: 0.92rem; font-weight: 600; color: var(--accent); margin: 1rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .callout { padding: 0.85rem 1.1rem; border-radius: 6px; border-left: 3px solid; margin: 1rem 0; font-size: 0.9rem; }
+  .callout-info  { background: rgba(52,152,219,0.08);  border-color: var(--blue);   }
+  .callout-warn  { background: rgba(243,156,18,0.08);  border-color: var(--yellow); }
+  .callout-error { background: rgba(231,76,60,0.08);   border-color: var(--red);    }
+  .callout-ok    { background: rgba(46,204,113,0.08);  border-color: var(--green);  }
+  .callout strong { color: #fff; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.95rem 1.15rem; overflow-x: auto; margin: 0.7rem 0; font-size: 0.8rem;
+    font-family: 'Cascadia Code', Consolas, monospace; line-height: 1.55;
+  }
+  pre[data-lang]::before { content: attr(data-lang); display: block;
+    background: rgba(0,212,255,0.06); color: var(--accent);
+    margin: -0.95rem -1.15rem 0.7rem;
+    padding: 0.3rem 1.15rem; font-size: 0.7rem; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); text-transform: uppercase;
+  }
+  pre[data-lang="dockerfile"]::before { background: rgba(52,152,219,0.06); color: var(--blue); }
+  pre[data-lang="yaml"]::before { background: rgba(243,156,18,0.06); color: var(--yellow); }
+  pre[data-lang="shell"]::before, pre[data-lang="powershell"]::before { background: rgba(46,204,113,0.06); color: var(--green); }
+  pre[data-lang="diagram"]::before { background: rgba(233,69,96,0.06); color: var(--accent-2); }
+
+  code { font-family: 'Cascadia Code', Consolas, monospace; font-size: 0.85em;
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 3px;
+    padding: 0.1em 0.4em; color: #a8d8ea;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+  .kw { color: #569cd6; } .str { color: #ce9178; } .var { color: #9cdcfe; } .cmt { color: #6a9955; } .num { color: #b5cea8; } .type { color: #4ec9b0; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 0.7rem 0; }
+  table.data-table thead th { background: var(--bg-deeper); color: var(--accent);
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 0.6rem 0.85rem; text-align: left;
+    border-bottom: 2px solid var(--border);
+  }
+  table.data-table tbody tr:nth-child(odd) { background: rgba(255,255,255,0.015); }
+  table.data-table tbody td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.data-table td.num { font-family: 'Cascadia Code', Consolas, monospace; text-align: center; font-weight: 600; }
+
+  .badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .badge-pass { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .badge-fail { background: rgba(231,76,60,0.15);  color: var(--red);   border: 1px solid rgba(231,76,60,0.3);  }
+  .badge-warn { background: rgba(243,156,18,0.15); color: var(--yellow); border: 1px solid rgba(243,156,18,0.3); }
+  .badge-info { background: rgba(52,152,219,0.15); color: var(--blue);  border: 1px solid rgba(52,152,219,0.3); }
+
+  /* ============ ASCII / box-drawing diagram styling ============ */
+  .diagram {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1.3rem 1.5rem; font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 0.8rem; color: var(--text-muted); line-height: 1.65;
+    overflow-x: auto; white-space: pre;
+  }
+  .diagram .host    { color: var(--accent); }
+  .diagram .vm      { color: var(--accent-2); }
+  .diagram .agent   { color: var(--green); }
+  .diagram .arrow   { color: var(--text-muted); }
+  .diagram .net     { color: var(--yellow); }
+
+  footer { margin-left: var(--sidebar-w); padding: 1.5rem 2.5rem; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-muted); font-size: 0.8rem;
+  }
+  footer a { color: var(--accent-dim); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+  p { margin: 0.5rem 0 0.9rem; }
+  ul.disc { padding-left: 1.4rem; }
+  ul.disc li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">Winhance Research</div>
+    <div class="subtitle">Deployment · Doc 03 of 03</div>
+  </div>
+  <ul>
+    <li class="nav-section">Strategy</li>
+    <li><a href="#why-isolate">Why Isolate</a></li>
+    <li><a href="#tradeoffs">Isolation Tradeoffs</a></li>
+    <li><a href="#architecture">Reference Architecture</a></li>
+
+    <li class="nav-section">Implementation</li>
+    <li><a href="#base-image">Base Image</a></li>
+    <li><a href="#per-agent">Per-Agent Layers</a></li>
+    <li><a href="#sandbox-launcher">Docker Sandbox Launcher</a></li>
+    <li><a href="#bind-mounts">Bind Mounts &amp; State</a></li>
+    <li><a href="#mcp-bridge">MCP Bridge</a></li>
+
+    <li class="nav-section">Switching</li>
+    <li><a href="#seamless">Seamless Switching</a></li>
+    <li><a href="#parallel">Parallel Fan-Out</a></li>
+    <li><a href="#cost">Cost &amp; Quota</a></li>
+
+    <li class="nav-section">Operations</li>
+    <li><a href="#observability">Observability</a></li>
+    <li><a href="#security">Security Posture</a></li>
+    <li><a href="#rollout">Rollout Plan</a></li>
+    <li><a href="#summary">Summary</a></li>
+  </ul>
+  <div class="related-docs">
+    <p>Series</p>
+    <a href="agent-systems-comparison.html">01 — Comparison</a>
+    <a href="cli-integration-guide.html">02 — CLI Integration</a>
+    <a href="deployment-isolation-strategy.html">03 — Deployment (this doc)</a>
+    <a href="../index.html">← Master Hub</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="page-header">
+  <div class="doc-id">Research Document 03 of 03</div>
+  <h1>Deployment &amp; Isolation Strategy</h1>
+  <div class="meta">
+    <span><strong>Goal:</strong> Seamless backend switching with microVM isolation</span>
+    <span><strong>Tools:</strong> Docker Sandboxes (Firecracker) / Hyper-V / WSL2</span>
+    <span><strong>Host:</strong> Windows 11 + Docker Desktop 4.40+</span>
+  </div>
+</header>
+
+<!-- ============ WHY ISOLATE ============ -->
+<section class="section" id="why-isolate">
+  <h2>Why Isolate Agents at All</h2>
+  <p>
+    A coding agent running with your shell privileges can read every file you can read, write
+    anywhere you can write, exfil any token in your environment, and shell out to anything on
+    <code>PATH</code>. For Winhance-FS specifically, the project has <strong>registry-write paths</strong>,
+    <strong>WIM mount tooling</strong>, and <strong>privileged PowerShell scripts</strong>. An agent
+    misfire on the host is more painful than an agent misfire in a microVM.
+  </p>
+  <ul class="disc">
+    <li><strong>Blast radius cap.</strong> Sandbox = a wrong <code>rm -rf</code> deletes the sandbox, not <code>%USERPROFILE%</code>.</li>
+    <li><strong>Token containment.</strong> API keys live in the VM, not exported globally. One leaked key has one revocable scope.</li>
+    <li><strong>Reproducible env.</strong> Every agent gets the same .NET SDK, same PowerShell, same MCP servers. No "works on my machine".</li>
+    <li><strong>Parallel safety.</strong> Five agents fighting over the same git index is a merge nightmare; five microVMs each on their own worktree is just five PRs.</li>
+    <li><strong>Backend swap with no host pollution.</strong> Removing Goose is <code>docker rm</code>, not "uninstall npm package and pray".</li>
+  </ul>
+</section>
+
+<!-- ============ TRADEOFFS ============ -->
+<section class="section" id="tradeoffs">
+  <h2>Isolation Levels — Pick Your Strength</h2>
+  <table class="data-table">
+    <thead>
+      <tr><th>Level</th><th>Boundary</th><th>Overhead</th><th>Boot</th><th>Recommended For</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Bare host</strong></td>
+        <td>None — agent runs as you</td>
+        <td>0%</td>
+        <td>instant</td>
+        <td>Quick interactive Claude Code sessions on trusted code only</td>
+      </tr>
+      <tr>
+        <td><strong>Docker container</strong></td>
+        <td>Shared kernel; namespaces + cgroups</td>
+        <td>~2-5%</td>
+        <td>&lt; 1s</td>
+        <td>OpenHands default runtime; Goose; Codex on trusted prompts</td>
+      </tr>
+      <tr>
+        <td><strong>gVisor</strong></td>
+        <td>User-space syscall filter</td>
+        <td>10-30% I/O</td>
+        <td>~1s</td>
+        <td>Mid-trust autonomous loops</td>
+      </tr>
+      <tr>
+        <td><strong>Firecracker microVM</strong></td>
+        <td>Dedicated kernel + virtio</td>
+        <td>~5 MiB + small CPU</td>
+        <td>~125 ms</td>
+        <td><span class="badge badge-pass">Default for Winhance</span> — Docker Sandboxes</td>
+      </tr>
+      <tr>
+        <td><strong>Hyper-V VM</strong></td>
+        <td>Full hypervisor</td>
+        <td>Higher</td>
+        <td>seconds</td>
+        <td>When you need Windows guest inside (rare for agents)</td>
+      </tr>
+      <tr>
+        <td><strong>WSL2 distro</strong></td>
+        <td>Lightweight hypervisor</td>
+        <td>Low</td>
+        <td>~1-2s</td>
+        <td>Hermes Agent (if you keep it on the bench)</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout callout-info">
+    <strong>Pick:</strong> Docker Sandboxes (Firecracker microVM) for all five CLI backends.
+    It is the only option that (a) supports Claude Code / Codex / Gemini / OpenHands / Goose
+    out of the box, (b) boots in ~125 ms, and (c) gives each agent its own kernel without
+    Hyper-V overhead.
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section class="section" id="architecture">
+  <h2>Reference Architecture</h2>
+  <pre class="diagram"><span class="host">┌─────────────────────────────  Windows 11 Host  ──────────────────────────────┐</span>
+<span class="host">│</span>                                                                              <span class="host">│</span>
+<span class="host">│</span>  <span class="net">PowerShell terminal</span>                                                         <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">│</span>                                                                       <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">▼</span>                                                                       <span class="host">│</span>
+<span class="host">│</span>  <span class="agent">winhance-agent.ps1  -Backend <kbd>X</kbd>  -Task "..."  -Sandbox</span>                       <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">│</span>                                                                       <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">▼</span>                                                                       <span class="host">│</span>
+<span class="host">│</span>  <span class="net">Docker Desktop  →  docker sandbox  → Firecracker microVM</span>                    <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">│</span>                                                                       <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">├──── bind-mount:</span>  C:\Winhance-FS-Repo  → /repo  (read-write)             <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">├──── bind-mount:</span>  .agents\&lt;X&gt;\         → /agent (read-write)             <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">├──── env:</span>           ANTHROPIC_API_KEY, OPENAI_API_KEY, ...                <span class="host">│</span>
+<span class="host">│</span>       <span class="arrow">└──── net:</span>           bridge → host.docker.internal for MCP                 <span class="host">│</span>
+<span class="host">│</span>                                                                              <span class="host">│</span>
+<span class="host">│</span>  ┌────────────────────────────  Microvm  ──────────────────────────────────┐ <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>  Linux kernel (5 MiB)                                                  <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>      <span class="arrow">│</span>                                                                 <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>      <span class="arrow">▼</span>                                                                 <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>  <span class="agent">winhance-agent-base:1.0</span>                                              <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>      ├── .NET 8 SDK, PowerShell 7, Node 22, Python 3.12, uv, gh, git    <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>      ├── &lt;backend-X CLI&gt;       (claude / codex / goose / openhands / kilo) <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  <span class="vm">│</span>      └── /repo, /agent, MCP bridge                                       <span class="vm">│</span> <span class="host">│</span>
+<span class="host">│</span>  └─────────────────────────────────────────────────────────────────────────┘ <span class="host">│</span>
+<span class="host">│</span>                                                                              <span class="host">│</span>
+<span class="host">│</span>  <span class="net">MCP Servers (on host):</span>  filesystem · sequential-thinking · project-mcp     <span class="host">│</span>
+<span class="host">│</span>                                                                              <span class="host">│</span>
+<span class="host">└──────────────────────────────────────────────────────────────────────────────┘</span></pre>
+
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    The MCP servers live on the host and the microVM dials them via <code>host.docker.internal</code>.
+    That keeps one canonical project index, even though five different VMs may be querying it.
+  </p>
+</section>
+
+<!-- ============ BASE IMAGE ============ -->
+<section class="section" id="base-image">
+  <h2>Base Image — One Build, Five Personalities</h2>
+  <pre data-lang="dockerfile"><code><span class="cmt"># .agents/sandbox/Dockerfile.base</span>
+<span class="kw">FROM</span> mcr.microsoft.com/dotnet/sdk:8.0-jammy <span class="kw">AS</span> base
+
+<span class="cmt"># System tools the agents expect to find on PATH</span>
+<span class="kw">RUN</span> apt-get update &amp;&amp; apt-get install -y --no-install-recommends \
+      curl wget git gh unzip ca-certificates \
+      python3 python3-pip python3-venv \
+      powershell \
+    &amp;&amp; rm -rf /var/lib/apt/lists/*
+
+<span class="cmt"># Node 22 (for npm-distributed CLIs: Claude Code, Codex, Kilo)</span>
+<span class="kw">RUN</span> curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    &amp;&amp; apt-get install -y nodejs
+
+<span class="cmt"># uv (for OpenHands Python install)</span>
+<span class="kw">RUN</span> curl -LsSf https://astral.sh/uv/install.sh | sh \
+    &amp;&amp; ln -s /root/.local/bin/uv /usr/local/bin/uv
+
+<span class="cmt"># Working directory + standard mounts</span>
+<span class="kw">WORKDIR</span> /repo
+<span class="kw">VOLUME</span> [<span class="str">"/repo"</span>, <span class="str">"/agent"</span>]
+
+<span class="kw">ENTRYPOINT</span> [<span class="str">"/agent/entrypoint.sh"</span>]</code></pre>
+  <div class="callout callout-ok">
+    <strong>Build once:</strong> <code>docker build -t winhance-agent-base:1.0 -f Dockerfile.base .</code><br>
+    Every agent flavor extends this in a one-line per-agent Dockerfile (next section).
+  </div>
+</section>
+
+<!-- ============ PER-AGENT LAYERS ============ -->
+<section class="section" id="per-agent">
+  <h2>Per-Agent Layers — Five Thin Dockerfiles</h2>
+
+  <pre data-lang="dockerfile"><code><span class="cmt"># .agents/sandbox/Dockerfile.claude</span>
+<span class="kw">FROM</span> winhance-agent-base:1.0
+<span class="kw">RUN</span> npm install -g @anthropic-ai/claude-code
+<span class="kw">ENV</span> AGENT_BACKEND=claude</code></pre>
+
+  <pre data-lang="dockerfile"><code><span class="cmt"># .agents/sandbox/Dockerfile.codex</span>
+<span class="kw">FROM</span> winhance-agent-base:1.0
+<span class="kw">RUN</span> npm install -g @openai/codex
+<span class="kw">ENV</span> AGENT_BACKEND=codex</code></pre>
+
+  <pre data-lang="dockerfile"><code><span class="cmt"># .agents/sandbox/Dockerfile.goose</span>
+<span class="kw">FROM</span> winhance-agent-base:1.0
+<span class="kw">RUN</span> curl -fsSL https://github.com/block/goose/releases/latest/download/goose-linux.tar.gz \
+      | tar -xz -C /usr/local/bin
+<span class="kw">ENV</span> AGENT_BACKEND=goose</code></pre>
+
+  <pre data-lang="dockerfile"><code><span class="cmt"># .agents/sandbox/Dockerfile.openhands</span>
+<span class="kw">FROM</span> winhance-agent-base:1.0
+<span class="kw">RUN</span> uv tool install openhands-ai
+<span class="kw">ENV</span> AGENT_BACKEND=openhands</code></pre>
+
+  <pre data-lang="dockerfile"><code><span class="cmt"># .agents/sandbox/Dockerfile.kilo</span>
+<span class="kw">FROM</span> winhance-agent-base:1.0
+<span class="kw">RUN</span> npm install -g kilocode
+<span class="kw">ENV</span> AGENT_BACKEND=kilo</code></pre>
+
+  <p>Build all five at once:</p>
+  <pre data-lang="powershell"><code>cd C:\Winhance-FS-Repo\.agents\sandbox
+docker build -t winhance-agent-base:1.0   -f Dockerfile.base .
+foreach (<span class="var">$flavor</span> in <span class="str">"claude"</span>,<span class="str">"codex"</span>,<span class="str">"goose"</span>,<span class="str">"openhands"</span>,<span class="str">"kilo"</span>) {
+  docker build -t <span class="str">"winhance-agent:</span><span class="var">$flavor</span><span class="str">"</span> -f <span class="str">"Dockerfile.</span><span class="var">$flavor</span><span class="str">"</span> .
+}</code></pre>
+</section>
+
+<!-- ============ SANDBOX LAUNCHER ============ -->
+<section class="section" id="sandbox-launcher">
+  <h2>Docker Sandbox Launcher</h2>
+  <pre data-lang="powershell"><code><span class="cmt"># .agents/launcher/docker-sandbox.ps1</span>
+<span class="kw">param</span>(
+  [ValidateSet(<span class="str">"Claude"</span>,<span class="str">"Codex"</span>,<span class="str">"Goose"</span>,<span class="str">"OpenHands"</span>,<span class="str">"Kilo"</span>)]
+  [<span class="kw">string</span>]<span class="var">$Backend</span> = <span class="str">"Claude"</span>,
+  [<span class="kw">string</span>]<span class="var">$Task</span>,
+  [<span class="kw">switch</span>]<span class="var">$ReadOnly</span>,
+  [<span class="kw">switch</span>]<span class="var">$Worktree</span>,
+  [<span class="kw">string</span>]<span class="var">$WorktreeName</span> = <span class="str">"agent-</span><span class="var">$($Backend.ToLower())</span><span class="str">-</span><span class="var">$(Get-Random -Maximum 9999)</span><span class="str">"</span>
+)
+
+<span class="var">$repo</span>   = <span class="str">"C:\Winhance-FS-Repo"</span>
+<span class="var">$image</span>  = <span class="str">"winhance-agent:</span><span class="var">$($Backend.ToLower())</span><span class="str">"</span>
+<span class="var">$mount</span>  = <span class="kw">if</span> (<span class="var">$ReadOnly</span>) { <span class="str">"</span><span class="var">$repo</span><span class="str">:/repo:ro"</span> } <span class="kw">else</span> { <span class="str">"</span><span class="var">$repo</span><span class="str">:/repo"</span> }
+
+<span class="kw">if</span> (<span class="var">$Worktree</span>) {
+  git -C <span class="var">$repo</span> worktree add <span class="str">"</span><span class="var">$repo</span><span class="str">\.claude\worktrees\</span><span class="var">$WorktreeName</span><span class="str">"</span> -b <span class="str">"agent/</span><span class="var">$WorktreeName</span><span class="str">"</span>
+  <span class="var">$mount</span> = <span class="str">"</span><span class="var">$repo</span><span class="str">\.claude\worktrees\</span><span class="var">$WorktreeName</span><span class="str">:/repo"</span>
+}
+
+docker run --rm -it `
+  --runtime=sandbox `<span class="cmt">  # Docker Sandboxes microVM runtime</span>
+  --network=bridge `
+  --memory=4g --cpus=2 `
+  -e ANTHROPIC_API_KEY=<span class="var">$env:ANTHROPIC_API_KEY</span> `
+  -e OPENAI_API_KEY=<span class="var">$env:OPENAI_API_KEY</span> `
+  -e GOOGLE_API_KEY=<span class="var">$env:GOOGLE_API_KEY</span> `
+  -e MCP_HOST=host.docker.internal `
+  -v <span class="var">$mount</span> `
+  -v <span class="str">"</span><span class="var">$repo</span><span class="str">\.agents\</span><span class="var">$($Backend.ToLower())</span><span class="str">:/agent:ro"</span> `
+  -v <span class="str">"</span><span class="var">$repo</span><span class="str">\.agents\shared:/agent/shared:ro"</span> `
+  <span class="var">$image</span> <span class="var">$Task</span></code></pre>
+
+  <h4>Usage</h4>
+  <pre data-lang="powershell"><code><span class="cmt"># One-shot in a microVM:</span>
+.\.agents\launcher\docker-sandbox.ps1 -Backend Goose -Task <span class="str">"./recipes/warning-sweep.yaml"</span>
+
+<span class="cmt"># Read-only audit run:</span>
+.\.agents\launcher\docker-sandbox.ps1 -Backend Claude -Task <span class="str">"audit src/Winhance.WPF"</span> -ReadOnly
+
+<span class="cmt"># Parallel fan-out, each agent gets its own worktree:</span>
+1..4 | <span class="kw">ForEach-Object</span> -Parallel {
+  .\.agents\launcher\docker-sandbox.ps1 -Backend Kilo -Worktree `
+    -Task <span class="str">"close audit finding P</span><span class="var">$_</span><span class="str">"</span>
+} -ThrottleLimit 4</code></pre>
+</section>
+
+<!-- ============ BIND MOUNTS ============ -->
+<section class="section" id="bind-mounts">
+  <h2>Bind Mounts &amp; State Surface</h2>
+  <table class="data-table">
+    <thead><tr><th>Mount</th><th>Mode</th><th>Purpose</th><th>Per-agent?</th></tr></thead>
+    <tbody>
+      <tr><td><code>/repo</code></td><td>rw (or ro)</td><td>The codebase. Bind from main worktree or per-agent worktree.</td><td>Configurable</td></tr>
+      <tr><td><code>/agent</code></td><td>ro</td><td><code>.agents/&lt;backend&gt;/</code> — config &amp; recipes for the chosen CLI.</td><td>Yes</td></tr>
+      <tr><td><code>/agent/shared</code></td><td>ro</td><td><code>.agents/shared/</code> — MCP config, AGENTS.md import, routing.</td><td>No (shared)</td></tr>
+      <tr><td><code>/cache</code></td><td>rw</td><td>Named volume for npm/uv/dotnet caches; survives container lifecycle.</td><td>Shared</td></tr>
+      <tr><td><code>/state</code></td><td>rw</td><td>Optional: agent's own conversation/skills DB (for Hermes-style memory).</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  <div class="callout callout-warn">
+    <strong>Do NOT mount</strong>: <code>%USERPROFILE%</code>, <code>%APPDATA%</code>, SSH keys, the
+    docker socket, the host registry hive. The agent gets exactly what it needs and nothing else.
+  </div>
+</section>
+
+<!-- ============ MCP BRIDGE ============ -->
+<section class="section" id="mcp-bridge">
+  <h2>MCP Bridge — One Server Pool, N Clients</h2>
+  <p>
+    Each CLI's config (Claude's <code>settings.json</code>, Goose's <code>config.yaml</code>, etc.)
+    points at <code>http://host.docker.internal:&lt;port&gt;</code> for MCP servers. On the host you
+    run them once as a Windows service or a long-lived terminal:
+  </p>
+  <pre data-lang="powershell"><code><span class="cmt"># .agents/shared/start-mcp-pool.ps1</span>
+Start-Process npx -ArgumentList <span class="str">"-y","@modelcontextprotocol/server-filesystem","C:\Winhance-FS-Repo"</span>
+Start-Process npx -ArgumentList <span class="str">"-y","@modelcontextprotocol/server-sequential-thinking"</span>
+Start-Process node -ArgumentList <span class="str">".agents/shared/project-mcp/index.js"</span></code></pre>
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    Tip: run the MCP pool inside its own microVM if you want full isolation — then the agents dial
+    that VM's hostname instead of the host. Five agents, one MCP brain.
+  </p>
+</section>
+
+<!-- ============ SEAMLESS SWITCHING ============ -->
+<section class="section" id="seamless">
+  <h2>Seamless Switching — How a User Actually Swaps Backends</h2>
+  <ol style="padding-left: 1.4rem;">
+    <li>The user runs <code>winhance-agent -Backend Goose -Task "..."</code> from the same terminal session.</li>
+    <li>The launcher resolves <code>Goose</code> → image <code>winhance-agent:goose</code>.</li>
+    <li>Docker spins up a fresh microVM in ~125 ms (Firecracker boot).</li>
+    <li>The repo bind-mount means the agent immediately sees current files, current branch, current uncommitted changes.</li>
+    <li>The shared <code>AGENTS.md</code> and MCP pool mean it inherits the project context — no re-briefing.</li>
+    <li>On exit, the VM is destroyed. Side effects landed on disk via the bind-mount; nothing else persists.</li>
+  </ol>
+  <div class="callout callout-info">
+    <strong>What "seamless" buys you:</strong> A 3-step flow (<code>switch flag → boot → mount</code>) takes
+    well under one second per swap. There is no install dance, no PATH reshuffle, no API-key juggling.
+    The user's mental model is "I'm picking a different brain for the same project."
+  </div>
+</section>
+
+<!-- ============ PARALLEL FAN-OUT ============ -->
+<section class="section" id="parallel">
+  <h2>Parallel Fan-Out — N Agents at Once</h2>
+  <p>The "20 agents" pattern works because each VM gets its own worktree and its own merge target.</p>
+  <pre data-lang="diagram">     ┌─────────────────────────────────────┐
+     <span class="agent">│   Kilo Orchestrator (host VM)       │</span>
+     <span class="agent">│   Splits task → 4 subtasks          │</span>
+     └────────────┬────────────────────────┘
+                  │ fan-out
+   ┌──────────────┼──────────────┬──────────────┐
+   ▼              ▼              ▼              ▼
+<span class="vm">┌────────┐</span>   <span class="vm">┌────────┐</span>   <span class="vm">┌────────┐</span>   <span class="vm">┌────────┐</span>
+<span class="vm">│Worktree│</span>   <span class="vm">│Worktree│</span>   <span class="vm">│Worktree│</span>   <span class="vm">│Worktree│</span>
+<span class="vm">│  + VM  │</span>   <span class="vm">│  + VM  │</span>   <span class="vm">│  + VM  │</span>   <span class="vm">│  + VM  │</span>
+<span class="vm">│ Claude │</span>   <span class="vm">│ Codex  │</span>   <span class="vm">│ Goose  │</span>   <span class="vm">│OpenHnds│</span>
+<span class="vm">└────┬───┘</span>   <span class="vm">└────┬───┘</span>   <span class="vm">└────┬───┘</span>   <span class="vm">└────┬───┘</span>
+     │             │              │              │
+     └─────────────┴───────┬──────┴──────────────┘
+                           ▼
+                  4 branches → 4 PRs → human review
+                           ▼
+                   merge winners; close losers</pre>
+  <ul class="disc">
+    <li><strong>Worktree per agent:</strong> <code>git worktree add</code> creates an independent checkout. No fights over index lock.</li>
+    <li><strong>Branch per agent:</strong> Each VM commits to <code>agent/&lt;name&gt;</code>. PRs target main, reviewed independently.</li>
+    <li><strong>Throttle limit:</strong> PowerShell's <code>-ThrottleLimit</code> caps concurrency. 4-8 simultaneous VMs is comfortable on 32 GB / 8 cores.</li>
+    <li><strong>Mixed backends OK:</strong> the four agents above are different CLIs — useful for getting independent opinions on the same problem.</li>
+  </ul>
+</section>
+
+<!-- ============ COST ============ -->
+<section class="section" id="cost">
+  <h2>Cost &amp; Quota Strategy</h2>
+  <table class="data-table">
+    <thead><tr><th>Backend</th><th>Variable Cost</th><th>Best Pairing</th></tr></thead>
+    <tbody>
+      <tr><td>Claude Code</td><td>$0.015 / 1K input · $0.075 / 1K output (Opus 4.7 indicative)</td><td>Hard reasoning &amp; multi-file refactors only</td></tr>
+      <tr><td>Codex CLI</td><td>Included with ChatGPT Plus/Pro subscription tier</td><td>Test fix loops; autonomous batch runs</td></tr>
+      <tr><td>Goose + Ollama (local)</td><td>$0 marginal · GPU electricity only</td><td>Bulk doc edits, format passes, low-stakes scanning</td></tr>
+      <tr><td>OpenHands</td><td>Whatever your BYOK model costs</td><td>Overnight autonomous loops on cheaper models</td></tr>
+      <tr><td>Kilo Code</td><td>BYO providers; tool itself free</td><td>Multi-mode work; mode picks the cheapest model for the role</td></tr>
+    </tbody>
+  </table>
+  <div class="callout callout-ok">
+    <strong>Routing rule of thumb:</strong> when in doubt, send the task to Goose+Ollama first. If
+    the local model produces something reasonable, accept it. If it doesn't, escalate the same
+    prompt to Claude. You'll cut spend by 60-80% on routine work without hurting hard-task quality.
+  </div>
+</section>
+
+<!-- ============ OBSERVABILITY ============ -->
+<section class="section" id="observability">
+  <h2>Observability — Know What the Agents Did</h2>
+  <ul class="disc">
+    <li><strong>Per-VM transcript:</strong> redirect each session's stdout into <code>.agents\logs\&lt;backend&gt;-&lt;timestamp&gt;.log</code>.</li>
+    <li><strong>Git diff is the audit log:</strong> every action a sandboxed agent takes appears as a commit. Use <code>git log --author="agent/*"</code> to filter.</li>
+    <li><strong>Token spend dashboard:</strong> each CLI emits cost telemetry — pipe to a shared <code>.agents\state\spend.jsonl</code> via a hook.</li>
+    <li><strong>Sandbox metrics:</strong> <code>docker stats</code> shows live CPU/memory per agent VM.</li>
+    <li><strong>Tail multiple agents at once:</strong> <code>Get-Content -Wait .agents\logs\*.log</code> in a side terminal.</li>
+  </ul>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section class="section" id="security">
+  <h2>Security Posture</h2>
+  <table class="data-table">
+    <thead><tr><th>Concern</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>API key leak</td><td>Keys are env-injected into the microVM only; never written to disk inside it.</td></tr>
+      <tr><td>Prompt injection from project files</td><td><code>AGENTS.md</code> sets explicit allow/deny; bind mounts are scoped to the repo only.</td></tr>
+      <tr><td>Agent runs <code>rm -rf /</code></td><td>It removes the VM's rootfs, not your host. <code>docker rm</code> recreates.</td></tr>
+      <tr><td>Agent commits secrets</td><td>Pre-commit hook scans for secrets; lives in the bind-mounted repo so all agents are subject to it.</td></tr>
+      <tr><td>Agent escalates inside VM</td><td>VM kernel is fresh per launch; no persistent state to escalate against.</td></tr>
+      <tr><td>Network exfil</td><td>If paranoid: run microVMs on a separate Docker network with only <code>host.docker.internal</code> + LLM endpoints reachable.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ ROLLOUT ============ -->
+<section class="section" id="rollout">
+  <h2>Rollout Plan — Weekly Cadence</h2>
+  <table class="data-table">
+    <thead><tr><th>Week</th><th>Deliverable</th></tr></thead>
+    <tbody>
+      <tr><td><strong>W1</strong></td><td>Build <code>winhance-agent-base:1.0</code>. Add per-agent Dockerfiles for Claude + Goose only. Land <code>.agents/launcher/winhance-agent.ps1</code> with two backends.</td></tr>
+      <tr><td><strong>W2</strong></td><td>Add Codex + OpenHands flavors. Stand up shared MCP pool on the host. Move <code>CLAUDE.md</code> → <code>@AGENTS.md</code> import.</td></tr>
+      <tr><td><strong>W3</strong></td><td>Add Kilo flavor &amp; orchestrator mode. Wire <code>-Sandbox</code> path through Docker Sandboxes runtime. Document worktree fan-out.</td></tr>
+      <tr><td><strong>W4</strong></td><td>Migrate the audit-P0 backlog to the launcher: each P0 fix runs through whichever backend the routing yaml picks. Capture cost &amp; quality data.</td></tr>
+      <tr><td><strong>W5</strong></td><td>Decide whether to keep all five backends or trim. The bottom two by 4-week usage get removed (or kept as opt-in).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ SUMMARY ============ -->
+<section class="section" id="summary">
+  <h2>Summary</h2>
+  <div class="callout callout-ok">
+    <strong>What this gives Winhance-FS:</strong>
+    <ul class="disc" style="margin-top:0.5rem;">
+      <li>Five high-quality CLI agents, each behind a microVM boundary.</li>
+      <li>One launcher flag (<code>-Backend X</code>) switches between them with no install / uninstall churn.</li>
+      <li>Shared MCP &amp; <code>AGENTS.md</code> mean every agent starts from the same project understanding.</li>
+      <li>Per-agent worktrees enable safe parallel fan-out without merge chaos.</li>
+      <li>Hermes Agent stays on the bench — pick it up only if a Linux-side ops surface materializes.</li>
+    </ul>
+  </div>
+  <p>
+    Next step is a 1-day spike: build the base image and the launcher with two backends
+    (Claude + Goose), run one P0 fix through each, measure walltime and token cost. If both
+    pass, expand to the full five.
+  </p>
+</section>
+
+</main>
+
+<footer>
+  <div>Winhance-FS Research · Doc 03 — Deployment &amp; Isolation Strategy · 2026-05-13</div>
+  <div><a href="cli-integration-guide.html">← 02 CLI Integration</a> &nbsp;|&nbsp; <a href="agent-systems-comparison.html">01 Comparison</a> &nbsp;|&nbsp; <a href="../index.html">Master Hub</a></div>
+</footer>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Winhance.Core.Features.Common.Enums;
 using Winhance.Core.Features.Common.Models;
 
@@ -62,5 +63,13 @@ namespace Winhance.Core.Features.Common.Interfaces
         /// Event raised when a log message is generated.
         /// </summary>
         event EventHandler<LogMessageEventArgs>? LogMessageGenerated;
+
+        /// <summary>
+        /// Logs a performance measurement.
+        /// </summary>
+        /// <param name="operation">The operation name.</param>
+        /// <param name="duration">The duration of the operation.</param>
+        /// <param name="source">Optional source identifier.</param>
+        Task LogPerformanceAsync(string operation, TimeSpan duration, string? source = null);
     }
 }

@@ -1,5 +1,24 @@
 # Notifications for Windsurf Team
 
+## 2026-11-14 — Claude Code edited WPF FileManager files (user-authorized)
+
+The user asked for a finished, working product and explicitly authorized Claude Code to fix the WPF build.
+Files under `src/Winhance.WPF/Features/FileManager/{ViewModels,Controls,Views,Panels}` were edited. Please pull
+these changes before further UI work; do not re-add the deleted duplicate classes.
+
+Known runtime gaps still open (compile, but not functional yet):
+- `FavoritesPanelViewModel` (the live panel) uses its own JSON store, not `IFavoritesService`.
+- `FileListViewModel` drops the `ContextMenuViewModel` instance; `UpdateContextMenu` is never called, so the
+  live context menu is empty.
+- `TabViewModel.Id` is a fresh GUID, not the Core `FileTab.Id`, so tab ops in TabManagementViewModels miss.
+- ~50 VM-facing interfaces in `Services/FileManagerViewModelContracts.cs` have no implementation
+  (e.g. ITaggingService, IFtpService, IHexEditorService, IRealTimeSyncService); their ViewModels are not in DI
+  and no view uses them.
+- 500 `FeatureNNNView` stubs are not reachable from the UI.
+
+---
+
+
 ## Backend Status Update - 2026-01-26
 
 ### FileManager Services Status

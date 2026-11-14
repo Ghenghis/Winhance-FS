@@ -10,10 +10,11 @@ from pathlib import Path
 import toml
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
+from nexus_ai.paths import nexus_home
 
 # Default paths
-DEFAULT_DATA_DIR = Path("D:/NexusFS/data")
-DEFAULT_CONFIG_DIR = Path("D:/NexusFS/configs")
+DEFAULT_DATA_DIR = nexus_home() / "data"
+DEFAULT_CONFIG_DIR = nexus_home() / "configs"
 
 
 class DriveConfig(BaseModel):

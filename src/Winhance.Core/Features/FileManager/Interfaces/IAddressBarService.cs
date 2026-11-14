@@ -74,6 +74,32 @@ namespace Winhance.Core.Features.FileManager.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Gets the most recently visited locations, newest first.
+        /// </summary>
+        /// <param name="maxResults">Maximum number of locations to return.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Recent locations that still exist on disk.</returns>
+        Task<IEnumerable<FolderItem>> GetRecentLocationsAsync(
+            int maxResults = 20,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the most frequently visited locations, most visited first.
+        /// </summary>
+        /// <param name="maxResults">Maximum number of locations to return.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Frequent locations that still exist on disk.</returns>
+        Task<IEnumerable<FolderItem>> GetFrequentLocationsAsync(
+            int maxResults = 20,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Clears recent and frequent location history.
+        /// </summary>
+        /// <returns>A task representing the operation.</returns>
+        Task ClearRecentLocationsAsync();
+
+        /// <summary>
         /// Parses a path string into breadcrumb segments.
         /// </summary>
         /// <param name="path">The path to parse.</param>

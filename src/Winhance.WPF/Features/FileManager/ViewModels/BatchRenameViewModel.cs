@@ -1,6 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -66,7 +69,134 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         public BatchRenameViewModel(IBatchRenameService? batchRenameService)
         {
             _batchRenameService = batchRenameService;
+            Rules.CollectionChanged += OnRulesCollectionChanged;
             _ = LoadPresetsAsync();
+        }
+
+        private CancellationTokenSource? _previewDebounce;
+
+        // Typing a path (or changing the filter / subfolder option) reloads the file list and preview.
+        partial void OnSourcePathChanged(string value) => ReloadFilesAndPreview();
+
+        partial void OnFilterPatternChanged(string value) => ReloadFilesAndPreview();
+
+        partial void OnIncludeSubfoldersChanged(bool value) => ReloadFilesAndPreview();
+
+        private System.Collections.Generic.Dictionary<string, string>? _lastRenameMap;
+
+        /// <summary>
+        /// After a rename or undo the old paths no longer exist. Re-read the source folder when there is one;
+        /// otherwise map the individually added files to their new paths.
+        /// </summary>
+        private void ReloadFileList(System.Collections.Generic.IReadOnlyDictionary<string, string>? pathMap)
+        {
+            if (!string.IsNullOrWhiteSpace(SourcePath) && System.IO.Directory.Exists(SourcePath))
+            {
+                LoadFilesFromSource();
+            }
+            else
+            {
+                var updated = SelectedFiles
+                    .Select(p => pathMap != null && pathMap.TryGetValue(p, out var mapped) ? mapped : p)
+                    .Where(System.IO.File.Exists)
+                    .ToList();
+                SelectedFiles.Clear();
+                foreach (var p in updated)
+                {
+                    SelectedFiles.Add(p);
+                }
+
+                TotalFiles = SelectedFiles.Count;
+            }
+
+            SchedulePreviewRefresh();
+        }
+
+        private void ReloadFilesAndPreview()
+        {
+            if (string.IsNullOrWhiteSpace(SourcePath))
+            {
+                return;
+            }
+
+            if (!System.IO.Directory.Exists(SourcePath))
+            {
+                SelectedFiles.Clear();
+                PreviewItems.Clear();
+                TotalFiles = 0;
+                StatusMessage = $"Folder not found: {SourcePath}";
+                return;
+            }
+
+            LoadFilesFromSource();
+            SchedulePreviewRefresh();
+        }
+
+        private void OnRulesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (RenameRuleViewModel rule in e.OldItems)
+                {
+                    rule.PropertyChanged -= OnRulePropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (RenameRuleViewModel rule in e.NewItems)
+                {
+                    rule.PropertyChanged += OnRulePropertyChanged;
+                }
+            }
+
+            if (e.Action == NotifyCollectionChangedAction.Reset)
+            {
+                // Clear() does not report old items; nothing to unsubscribe from cleared rules that are gone.
+                SchedulePreviewRefresh();
+            }
+        }
+
+        // Editing a rule (find/replace text, enabled, etc.) updates the live preview.
+        private void OnRulePropertyChanged(object? sender, PropertyChangedEventArgs e) => SchedulePreviewRefresh();
+
+        /// <summary>Debounced preview refresh so typing in a rule doesn't rescan on every keystroke.</summary>
+        private void SchedulePreviewRefresh()
+        {
+            _previewDebounce?.Cancel();
+            var cts = new CancellationTokenSource();
+            _previewDebounce = cts;
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(300, cts.Token);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+
+                if (cts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (dispatcher == null)
+                {
+                    await RefreshPreviewAsync();
+                    return;
+                }
+
+                await dispatcher.InvokeAsync(async () =>
+                {
+                    if (!cts.IsCancellationRequested)
+                    {
+                        await RefreshPreviewAsync();
+                    }
+                });
+            });
         }
 
         private void LoadDesignTimeData()
@@ -143,7 +273,8 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
             try
             {
-                var files = System.IO.Directory.GetFiles(SourcePath, FilterPattern, searchOption);
+                var pattern = string.IsNullOrWhiteSpace(FilterPattern) ? "*.*" : FilterPattern.Trim();
+                var files = System.IO.Directory.GetFiles(SourcePath, pattern, searchOption);
                 foreach (var file in files)
                 {
                     SelectedFiles.Add(file);
@@ -198,12 +329,29 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 return;
             }
 
-            Rules.Add(new RenameRuleViewModel
+            var rule = new RenameRuleViewModel
             {
                 RuleType = ruleType,
                 Order = Rules.Count + 1,
                 Enabled = true,
-            });
+            };
+
+            // Defaults that produce a sensible result as soon as the rule is added.
+            switch (ruleType)
+            {
+                case RenameRuleType.Counter:
+                    rule.Position = TextPosition.Suffix;
+                    rule.CounterPrefix = "_";
+                    break;
+                case RenameRuleType.DateTime:
+                    rule.Position = TextPosition.Prefix;
+                    break;
+                case RenameRuleType.ChangeCase:
+                    rule.CaseType = CaseType.TitleCase;
+                    break;
+            }
+
+            Rules.Add(rule);
             _ = RefreshPreviewAsync();
         }
 
@@ -286,6 +434,8 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         {
             if (SelectedFiles.Count == 0 || Rules.Count == 0)
             {
+                PreviewItems.Clear();
+                ConflictCount = 0;
                 return;
             }
 
@@ -296,21 +446,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             {
                 if (_batchRenameService != null)
                 {
-                    var rules = Rules.Where(r => r.Enabled).Select(r => new RenameRule
-                    {
-                        Type = r.RuleType,
-                        Order = r.Order,
-                        Enabled = r.Enabled,
-                        FindText = r.FindText,
-                        ReplaceText = r.ReplaceText,
-                        UseRegex = r.UseRegex,
-                        TextToAdd = r.TextToAdd,
-                        Position = r.Position,
-                        CaseType = r.CaseType,
-                        CounterStart = r.CounterStart,
-                        CounterStep = r.CounterStep,
-                        CounterPadding = r.CounterPadding,
-                    }).ToList();
+                    var rules = Rules.Where(r => r.Enabled).OrderBy(r => r.Order).Select(r => r.ToRule()).ToList();
 
                     var previews = await _batchRenameService.PreviewRenameAsync(SelectedFiles, rules);
 
@@ -321,6 +457,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                     {
                         var item = new RenamePreviewItemViewModel
                         {
+                            Index = PreviewItems.Count + 1,
                             OriginalName = preview.OriginalName,
                             OriginalPath = preview.OriginalPath,
                             NewName = preview.NewName,
@@ -397,7 +534,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                                             newName = System.Text.RegularExpressions.Regex.Replace(
                                                 newName, rule.FindText, rule.ReplaceText ?? string.Empty);
                                         }
-                                        catch { }
+                                        catch (ArgumentException)
+                                        {
+                                            // Invalid regular expression typed by the user: leave the name unchanged.
+                                        }
                                     }
                                     else
                                     {
@@ -517,24 +657,14 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
             IsLoading = true;
             StatusMessage = "Renaming files...";
+            _lastRenameMap = PreviewItems
+                .Where(p => !string.IsNullOrEmpty(p.OriginalPath) && !string.IsNullOrEmpty(p.NewPath))
+                .GroupBy(p => p.OriginalPath, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().NewPath, StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                var rules = Rules.Where(r => r.Enabled).Select(r => new RenameRule
-                {
-                    Type = r.RuleType,
-                    Order = r.Order,
-                    Enabled = r.Enabled,
-                    FindText = r.FindText,
-                    ReplaceText = r.ReplaceText,
-                    UseRegex = r.UseRegex,
-                    TextToAdd = r.TextToAdd,
-                    Position = r.Position,
-                    CaseType = r.CaseType,
-                    CounterStart = r.CounterStart,
-                    CounterStep = r.CounterStep,
-                    CounterPadding = r.CounterPadding,
-                }).ToList();
+                var rules = Rules.Where(r => r.Enabled).OrderBy(r => r.Order).Select(r => r.ToRule()).ToList();
 
                 var result = await _batchRenameService.ExecuteRenameAsync(SelectedFiles, rules);
 
@@ -543,8 +673,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                     LastTransactionId = result.TransactionId;
                     CanUndo = true;
                     StatusMessage = $"Successfully renamed {result.FilesRenamed} files";
-                    SelectedFiles.Clear();
-                    PreviewItems.Clear();
+                    ReloadFileList(_lastRenameMap);
                 }
                 else
                 {
@@ -600,8 +729,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                     ? $"Successfully renamed {renamed} files"
                     : $"Renamed {renamed}, failed {failed}";
 
-                SelectedFiles.Clear();
-                PreviewItems.Clear();
+                ReloadFileList(_lastRenameMap);
             }
             catch (Exception ex)
             {
@@ -642,6 +770,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                     StatusMessage = $"Successfully restored {result.FilesRenamed} files";
                     LastTransactionId = null;
                     CanUndo = false;
+                    ReloadFileList(_lastRenameMap?.ToDictionary(kv => kv.Value, kv => kv.Key, StringComparer.OrdinalIgnoreCase));
                 }
                 else
                 {
@@ -693,6 +822,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 _undoLog = null;
                 LastTransactionId = null;
                 CanUndo = false;
+                ReloadFileList(_lastRenameMap?.ToDictionary(kv => kv.Value, kv => kv.Key, StringComparer.OrdinalIgnoreCase));
             }
             catch (Exception ex)
             {
@@ -790,6 +920,43 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [ObservableProperty]
         private string _dateFormat = "yyyy-MM-dd";
 
+        [ObservableProperty]
+        private DateSource _dateSource = DateSource.FileModified;
+
+        [ObservableProperty]
+        private string _removePattern = string.Empty;
+
+        public static TextPosition[] PositionOptions { get; } = { TextPosition.Prefix, TextPosition.Suffix, TextPosition.AtIndex };
+
+        public static CaseType[] CaseOptions { get; } = (CaseType[])Enum.GetValues(typeof(CaseType));
+
+        public static DateSource[] DateSourceOptions { get; } = { DateSource.FileModified, DateSource.FileCreated, DateSource.CurrentDate };
+
+        /// <summary>Builds the backend rule with every setting the user can edit.</summary>
+        public RenameRule ToRule() => new()
+        {
+            Type = RuleType,
+            Order = Order,
+            Enabled = Enabled,
+            FindText = FindText,
+            ReplaceText = ReplaceText,
+            UseRegex = UseRegex || RuleType == RenameRuleType.RegularExpression,
+            CaseSensitive = CaseSensitive,
+            TextToAdd = TextToAdd,
+            Position = Position,
+            PositionIndex = PositionIndex,
+            RemovePattern = RemovePattern,
+            CaseType = CaseType,
+            CounterStart = CounterStart,
+            CounterStep = CounterStep,
+            CounterPadding = CounterPadding,
+            CounterPrefix = CounterPrefix,
+            CounterSuffix = CounterSuffix,
+            NewExtension = NewExtension,
+            DateFormat = DateFormat,
+            DateSource = DateSource,
+        };
+
         public string RuleTypeDisplay => RuleType switch
         {
             RenameRuleType.FindReplace => "Find & Replace",
@@ -810,6 +977,9 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
     /// </summary>
     public partial class RenamePreviewItemViewModel : ObservableObject
     {
+        [ObservableProperty]
+        private int _index;
+
         [ObservableProperty]
         private string _originalName = string.Empty;
 

@@ -1021,7 +1021,7 @@ namespace Winhance.WPF.Features.Common.ViewModels
             }
 
             var customOptionIndex = displayNames.Length - 1;
-            bool isCustomState = selectedIndex == customOptionIndex || selectedIndex == ComboBoxResolver.CUSTOM_STATE_INDEX;
+            bool isCustomState = selectedIndex == customOptionIndex || selectedIndex == ComboBoxResolver.CUSTOMSTATEINDEX;
 
             if (!isCustomState)
             {

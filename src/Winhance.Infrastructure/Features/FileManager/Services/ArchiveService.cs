@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Winhance.Core.Features.FileManager.Interfaces;
+using Winhance.Core.Features.FileManager.Models;
+using CompressionLevel = System.IO.Compression.CompressionLevel;
 
 namespace Winhance.Infrastructure.Features.FileManager.Services
 {

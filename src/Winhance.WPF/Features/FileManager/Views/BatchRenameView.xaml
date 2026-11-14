@@ -75,12 +75,50 @@
                     <!-- Rule Type -->
                     <TextBlock Grid.Column="1" Text="{Binding RuleTypeDisplay}" FontWeight="SemiBold" Width="120" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
 
-                    <!-- Rule Parameters -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                      <TextBox Text="{Binding FindText}" Width="150" Height="28" Margin="0,0,5,0" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=FindReplace}" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                  <!-- Rule Parameters (one editor per rule type) -->
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=FindReplace|RegularExpression}">
+                      <TextBox Text="{Binding FindText, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="0,0,5,0" ToolTip="Text (or pattern) to find" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
                       <TextBlock Text="→" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
-                      <TextBox Text="{Binding ReplaceText}" Width="150" Height="28" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <TextBox Text="{Binding ReplaceText, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="0,0,8,0" ToolTip="Replace with" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <CheckBox Content="Regex" IsChecked="{Binding UseRegex}" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=FindReplace}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <CheckBox Content="Match case" IsChecked="{Binding CaseSensitive}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource PrimaryTextColor}" />
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=AddText}">
+                      <TextBox Text="{Binding TextToAdd, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="0,0,8,0" ToolTip="Text to add" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <ComboBox ItemsSource="{x:Static viewModels:RenameRuleViewModel.PositionOptions}" SelectedItem="{Binding Position}" Width="100" Height="28" Margin="0,0,8,0" />
+                      <TextBlock Text="index" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding PositionIndex, UpdateSourceTrigger=PropertyChanged}" Width="45" ToolTip="Character index (for AtIndex)" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=RemoveText}">
+                      <TextBlock Text="Remove matching" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding RemovePattern, UpdateSourceTrigger=PropertyChanged}" Width="200" ToolTip="Regular expression; every match is removed from the name" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=Counter}">
+                      <TextBlock Text="start" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding CounterStart, UpdateSourceTrigger=PropertyChanged}" Width="45" Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <TextBlock Text="step" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding CounterStep, UpdateSourceTrigger=PropertyChanged}" Width="40" Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <TextBlock Text="digits" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding CounterPadding, UpdateSourceTrigger=PropertyChanged}" Width="35" Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <TextBlock Text="separator" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding CounterPrefix, UpdateSourceTrigger=PropertyChanged}" Width="35" Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <ComboBox ItemsSource="{x:Static viewModels:RenameRuleViewModel.PositionOptions}" SelectedItem="{Binding Position}" Width="90" Height="28" Margin="0,0,8,0" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=ChangeCase}">
+                      <ComboBox ItemsSource="{x:Static viewModels:RenameRuleViewModel.CaseOptions}" SelectedItem="{Binding CaseType}" Width="140" Height="28" Margin="0,0,8,0" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=ChangeExtension}">
+                      <TextBlock Text="new extension" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding NewExtension, UpdateSourceTrigger=PropertyChanged}" Width="80" ToolTip="For example .jpg" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RuleType, Converter={StaticResource RuleTypeToVisibilityConverter}, ConverterParameter=DateTime}">
+                      <ComboBox ItemsSource="{x:Static viewModels:RenameRuleViewModel.DateSourceOptions}" SelectedItem="{Binding DateSource}" Width="120" Height="28" Margin="0,0,8,0" />
+                      <TextBlock Text="format" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubTextColor}" />
+                      <TextBox Text="{Binding DateFormat, UpdateSourceTrigger=PropertyChanged}" Width="110" Margin="0,0,8,0" ToolTip=".NET date format, e.g. yyyy-MM-dd" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource CardBackground}" Foreground="{DynamicResource PrimaryTextColor}" />
+                      <ComboBox ItemsSource="{x:Static viewModels:RenameRuleViewModel.PositionOptions}" SelectedItem="{Binding Position}" Width="90" Height="28" Margin="0,0,8,0" />
+                    </StackPanel>
+                  </StackPanel>
 
                     <!-- Remove Button -->
                     <Button Grid.Column="3" Width="24" Height="24" Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Style="{DynamicResource SmallIconButtonStyle}">
@@ -99,6 +137,10 @@
           <Button Content="+ Counter" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="Counter" Style="{DynamicResource SecondaryButtonStyle}" />
           <Button Content="+ Case" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="ChangeCase" Style="{DynamicResource SecondaryButtonStyle}" />
           <Button Content="+ Extension" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="ChangeExtension" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="+ Add Text" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="AddText" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="+ Remove Text" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="RemoveText" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="+ Date" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="DateTime" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="+ Regex" Height="28" Margin="0,0,5,0" Command="{Binding AddRuleCommand}" CommandParameter="RegularExpression" Style="{DynamicResource SecondaryButtonStyle}" />
           <Border Width="1" Height="20" Background="#404040" Margin="10,0" />
           <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" DisplayMemberPath="Name" Width="150" Height="28" />
           <Button Content="Load Preset" Height="28" Margin="5,0,0,0" Command="{Binding LoadPresetCommand}" CommandParameter="{Binding SelectedPreset}" Style="{DynamicResource SecondaryButtonStyle}" />
@@ -123,7 +165,7 @@
         <ListView Grid.Row="1" ItemsSource="{Binding PreviewItems}" Background="Transparent" BorderThickness="0" VirtualizingPanel.IsVirtualizing="True">
           <ListView.View>
             <GridView>
-              <GridViewColumn Header="#" Width="40" DisplayMemberBinding="{Binding}" />
+              <GridViewColumn Header="#" Width="40" DisplayMemberBinding="{Binding Index}" />
               <GridViewColumn Header="Original Name" Width="250" DisplayMemberBinding="{Binding OriginalName}" />
               <GridViewColumn Header="" Width="30">
                 <GridViewColumn.CellTemplate>
@@ -148,11 +190,14 @@
 
     <!-- Action Buttons -->
     <Border Grid.Row="3" Background="{DynamicResource MainContainerBorderBrush}" CornerRadius="8" Padding="15" Margin="0,10,0,0">
+      <DockPanel>
+      <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" VerticalAlignment="Center" FontSize="14" TextTrimming="CharacterEllipsis" ToolTip="{Binding StatusMessage}" Foreground="{DynamicResource SubTextColor}" />
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
         <Button Content="Preview Refresh" Width="120" Height="35" Margin="0,0,10,0" Command="{Binding RefreshPreviewCommand}" Style="{DynamicResource SecondaryButtonStyle}" />
         <Button Content="Apply Rename" Width="120" Height="35" Margin="0,0,10,0" Command="{Binding ApplyRenameCommand}" Style="{DynamicResource PrimaryButtonStyle}" />
         <Button Content="Undo Last Batch" Width="120" Height="35" Command="{Binding UndoLastBatchCommand}" IsEnabled="{Binding CanUndo}" Style="{DynamicResource SecondaryButtonStyle}" />
       </StackPanel>
+      </DockPanel>
     </Border>
   </Grid>
 </UserControl>

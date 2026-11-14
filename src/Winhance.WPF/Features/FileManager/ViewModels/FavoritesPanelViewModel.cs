@@ -516,21 +516,6 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
     }
 
     /// <summary>
-    /// Represents a group of favorites.
-    /// </summary>
-    public partial class FavoriteGroupViewModel : ObservableObject
-    {
-        [ObservableProperty]
-        private string _name = string.Empty;
-
-        [ObservableProperty]
-        private bool _isExpanded = true;
-
-        [ObservableProperty]
-        private ObservableCollection<FavoriteItem> _items = new();
-    }
-
-    /// <summary>
     /// Represents a recently visited location.
     /// </summary>
     public class RecentLocationItem

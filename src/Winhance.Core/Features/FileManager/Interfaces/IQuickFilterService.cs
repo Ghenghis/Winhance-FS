@@ -193,30 +193,6 @@ namespace Winhance.Core.Features.FileManager.Interfaces
     }
 
     /// <summary>
-    /// Size categories for quick filtering.
-    /// </summary>
-    public enum SizeCategory
-    {
-        /// <summary>Empty files (0 bytes).</summary>
-        Empty,
-
-        /// <summary>Tiny (less than 16 KB).</summary>
-        Tiny,
-
-        /// <summary>Small (16 KB - 1 MB).</summary>
-        Small,
-
-        /// <summary>Medium (1 MB - 128 MB).</summary>
-        Medium,
-
-        /// <summary>Large (128 MB - 1 GB).</summary>
-        Large,
-
-        /// <summary>Huge (greater than 1 GB).</summary>
-        Huge
-    }
-
-    /// <summary>
     /// Date filter settings.
     /// </summary>
     public class DateFilter

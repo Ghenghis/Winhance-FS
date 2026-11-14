@@ -19,6 +19,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
     {
         private readonly ISearchService? _searchService;
         private CancellationTokenSource? _searchCts;
+        private CancellationTokenSource? _debounceCts;
 
         [ObservableProperty]
         private string _searchQuery = string.Empty;
@@ -92,10 +93,12 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 return;
             }
 
-            // Cancel any ongoing search
+            // Cancel any pending debounced search and any ongoing search
+            _debounceCts?.Cancel();
             _searchCts?.Cancel();
-            _searchCts = new CancellationTokenSource();
-            var token = _searchCts.Token;
+            var cts = new CancellationTokenSource();
+            _searchCts = cts;
+            var token = cts.Token;
 
             IsSearching = true;
             StatusMessage = $"Searching for '{SearchQuery}'...";
@@ -124,7 +127,11 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             }
             catch (OperationCanceledException)
             {
-                StatusMessage = "Search cancelled";
+                // A newer search owns the status when this one was superseded.
+                if (ReferenceEquals(cts, _searchCts))
+                {
+                    StatusMessage = "Search cancelled";
+                }
             }
             catch (Exception ex)
             {
@@ -132,7 +139,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             }
             finally
             {
-                IsSearching = false;
+                if (ReferenceEquals(cts, _searchCts))
+                {
+                    IsSearching = false;
+                }
             }
         }
 
@@ -146,29 +156,50 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             var extensions = string.IsNullOrWhiteSpace(ExtensionFilter)
                 ? null
                 : ExtensionFilter.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(e => e.Trim())
+                    .Select(e => e.Trim().TrimStart('*'))
+                    .Where(e => e.Length > 0 && e != ".")
                     .Select(e => e.StartsWith(".") ? e : "." + e)
                     .ToArray();
 
-            var options = new SearchOptions
+            var searchRoot = string.IsNullOrWhiteSpace(SearchPath)
+                ? null
+                : Path.GetFullPath(SearchPath);
+
+            var options = new Winhance.Core.Features.FileManager.Models.SearchOptions
             {
+                Query = SearchQuery,
                 UseRegex = UseRegex,
                 CaseSensitive = CaseSensitive,
                 IncludeHidden = false,
-                Extensions = extensions,
-                SearchPaths = string.IsNullOrEmpty(SearchPath) ? null : new[] { SearchPath },
+                Extensions = extensions ?? Array.Empty<string>(),
+                FileExtensions = extensions ?? Array.Empty<string>(),
+                // null lets the Core service fall back to its default search roots.
+                SearchPaths = searchRoot == null ? null! : new[] { searchRoot },
+                Recursive = SearchRecursively,
+                IncludeSubdirectories = SearchRecursively,
                 MinSize = MinSize,
                 MaxSize = MaxSize,
                 ModifiedAfter = ModifiedAfter,
                 ModifiedBefore = ModifiedBefore,
                 MaxResults = MaxResults,
+                // Relevance sorts by Score; descending puts the best matches first.
+                SortBy = Winhance.Core.Features.FileManager.Models.SearchSortMode.Relevance,
+                SortDescending = true,
             };
 
             var results = await _searchService.SearchAsync(SearchQuery, options, token);
+            token.ThrowIfCancellationRequested();
 
             foreach (var result in results)
             {
                 token.ThrowIfCancellationRequested();
+
+                // Indexed search is not scoped to SearchPaths and the file-system search always
+                // recurses, so scope results to the requested folder here.
+                if (searchRoot != null && !SearchResultScope.IsWithinScope(result.FullPath, searchRoot, SearchRecursively))
+                {
+                    continue;
+                }
 
                 var item = new SearchResultItem
                 {
@@ -206,22 +237,51 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             var extensions = string.IsNullOrWhiteSpace(ExtensionFilter)
                 ? null
                 : ExtensionFilter.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(e => e.Trim().ToLowerInvariant())
+                    .Select(e => e.Trim().TrimStart('*').ToLowerInvariant())
+                    .Where(e => e.Length > 0 && e != ".")
                     .Select(e => e.StartsWith(".") ? e : "." + e)
                     .ToHashSet();
 
-            var searchOption = SearchRecursively
-                ? SearchOption.AllDirectories
-                : SearchOption.TopDirectoryOnly;
+            if (extensions != null && extensions.Count == 0)
+            {
+                extensions = null;
+            }
+
+            // Skip inaccessible folders instead of aborting the whole search on the first one.
+            var enumerationOptions = new EnumerationOptions
+            {
+                RecurseSubdirectories = SearchRecursively,
+                IgnoreInaccessible = true,
+                AttributesToSkip = 0
+            };
 
             var query = CaseSensitive ? SearchQuery : SearchQuery.ToLowerInvariant();
+            System.Text.RegularExpressions.Regex? regex = null;
+            if (UseRegex)
+            {
+                try
+                {
+                    // Build from the original pattern: lower-casing a regex changes its meaning (e.g. \D vs \d).
+                    regex = new System.Text.RegularExpressions.Regex(
+                        SearchQuery,
+                        CaseSensitive
+                            ? System.Text.RegularExpressions.RegexOptions.None
+                            : System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                }
+                catch (ArgumentException ex)
+                {
+                    StatusMessage = $"Invalid regular expression: {ex.Message}";
+                    return;
+                }
+            }
+
             var count = 0;
 
             await Task.Run(() =>
             {
                 try
                 {
-                    var entries = Directory.EnumerateFileSystemEntries(searchPath, "*", searchOption);
+                    var entries = Directory.EnumerateFileSystemEntries(searchPath, "*", enumerationOptions);
 
                     foreach (var entry in entries)
                     {
@@ -238,27 +298,9 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                             var compareName = CaseSensitive ? name : name.ToLowerInvariant();
 
                             // Name match
-                            bool matches;
-                            if (UseRegex)
-                            {
-                                try
-                                {
-                                    var regex = new System.Text.RegularExpressions.Regex(
-                                        query,
-                                        CaseSensitive
-                                            ? System.Text.RegularExpressions.RegexOptions.None
-                                            : System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                    matches = regex.IsMatch(name);
-                                }
-                                catch
-                                {
-                                    matches = false;
-                                }
-                            }
-                            else
-                            {
-                                matches = compareName.Contains(query);
-                            }
+                            var matches = regex != null
+                                ? regex.IsMatch(name)
+                                : compareName.Contains(query);
 
                             if (!matches)
                             {
@@ -457,10 +499,32 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
         partial void OnSearchQueryChanged(string value)
         {
-            // Auto-search after short delay (debounce)
-            if (value.Length >= 2)
+            // Auto-search after short delay (debounce) so each keystroke does not start a full search
+            _debounceCts?.Cancel();
+            if (value.Length < 2)
             {
-                _ = SearchAsync();
+                return;
+            }
+
+            var cts = new CancellationTokenSource();
+            _debounceCts = cts;
+            _ = DebouncedSearchAsync(cts.Token);
+        }
+
+        private async Task DebouncedSearchAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(400, token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (!token.IsCancellationRequested)
+            {
+                await SearchAsync();
             }
         }
 

@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from nexus_ai.core.logging_config import LogPerformance, get_logger
+from nexus_ai.paths import nexus_home
 
 logger = get_logger("backup_system")
 
@@ -128,7 +129,7 @@ class BackupConfig:
     """Backup system configuration."""
 
     # Locations
-    primary_backup_path: Path = field(default_factory=lambda: Path("D:/NexusFS/backups"))
+    primary_backup_path: Path = field(default_factory=lambda: nexus_home() / "backups")
     secondary_backup_paths: list[Path] = field(
         default_factory=lambda: [
             Path("E:/NexusFS_Backup"),

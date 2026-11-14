@@ -853,64 +853,86 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             }
         }
 
-        [RelayCommand]
-        private async Task CopyToOtherPaneAsync()
+        /// <summary>
+        /// Copies or moves the active pane's selection into the other pane's folder, reporting the outcome in
+        /// <see cref="StatusMessage"/>. Refuses no-op moves and copying a folder into itself.
+        /// </summary>
+        private async Task TransferToOtherPaneAsync(bool isMove)
         {
-            var sourceItems = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
-            var destPath = IsLeftPaneActive ? RightPanePath : LeftPanePath;
-
-            if (sourceItems.Count == 0 || _fileManagerService == null)
+            var verb = isMove ? "Move" : "Copy";
+            var items = (IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems).Where(i => !i.IsParentDirectory).ToList();
+            if (items.Count == 0)
             {
+                var single = IsLeftPaneActive ? SelectedLeftItem : SelectedRightItem;
+                if (single != null && !single.IsParentDirectory)
+                {
+                    items.Add(single);
+                }
+            }
+
+            if (items.Count == 0)
+            {
+                StatusMessage = $"Select the items to {verb.ToLowerInvariant()} first";
                 return;
             }
 
-            var sourcePaths = sourceItems.Select(i => i.FullPath).ToList();
-            await _fileManagerService.CopyFilesAsync(sourcePaths, destPath);
-            await RefreshAsync();
-        }
-
-        [RelayCommand]
-        private async Task MoveToOtherPaneAsync()
-        {
-            var sourceItems = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
-            var destPath = IsLeftPaneActive ? RightPanePath : LeftPanePath;
-
-            if (sourceItems.Count == 0 || _fileManagerService == null)
-            {
-                return;
-            }
-
-            var sourcePaths = sourceItems.Select(i => i.FullPath).ToList();
-            await _fileManagerService.MoveFilesAsync(sourcePaths, destPath);
-            await RefreshAsync();
-        }
-
-        [RelayCommand]
-        private async Task DeleteSelectedAsync()
-        {
-            var sourceItems = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
-            if (sourceItems.Count == 0 || _fileManagerService == null)
-            {
-                return;
-            }
-
-            var sourcePaths = sourceItems.Select(i => i.FullPath).ToList();
-            await _fileManagerService.DeleteFilesAsync(sourcePaths, permanent: false);
-            await RefreshAsync();
-        }
-
-        [RelayCommand]
-        private async Task CreateNewFolderAsync()
-        {
-            var currentPath = IsLeftPaneActive ? LeftPanePath : RightPanePath;
             if (_fileManagerService == null)
             {
                 return;
             }
 
-            var newFolderPath = Path.Combine(currentPath, "New Folder");
-            await _fileManagerService.CreateDirectoryAsync(newFolderPath);
+            var sourceFolder = IsLeftPaneActive ? LeftPanePath : RightPanePath;
+            var destPath = IsLeftPaneActive ? RightPanePath : LeftPanePath;
+            var destFull = Path.GetFullPath(destPath).TrimEnd(Path.DirectorySeparatorChar);
+            if (isMove && string.Equals(Path.GetFullPath(sourceFolder).TrimEnd(Path.DirectorySeparatorChar), destFull, StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Both panes show the same folder; nothing to move";
+                return;
+            }
+
+            var intoItself = items.FirstOrDefault(i => i.IsDirectory &&
+                (destFull.Equals(Path.GetFullPath(i.FullPath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase) ||
+                 destFull.StartsWith(Path.GetFullPath(i.FullPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)));
+            if (intoItself != null)
+            {
+                StatusMessage = $"Cannot {verb.ToLowerInvariant()} \"{intoItself.Name}\" into itself";
+                return;
+            }
+
+            IsLoading = true;
+            StatusMessage = $"{(isMove ? "Moving" : "Copying")} {items.Count} item(s)...";
+            try
+            {
+                var paths = items.Select(i => i.FullPath).ToList();
+                var result = isMove
+                    ? await _fileManagerService.MoveFilesAsync(paths, destPath)
+                    : await _fileManagerService.CopyFilesAsync(paths, destPath);
+                StatusMessage = result.Success
+                    ? $"{(isMove ? "Moved" : "Copied")} {result.ItemsProcessed} item(s) to {destPath}"
+                    : $"{verb} finished with errors: {string.Join("; ", result.Errors.Take(3))}";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                StatusMessage = $"{verb} failed: {ex.Message}";
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+
             await RefreshAsync();
+        }
+
+        [RelayCommand]
+        private async Task CopyToOtherPaneAsync()
+        {
+            await TransferToOtherPaneAsync(isMove: false);
+        }
+
+        [RelayCommand]
+        private async Task MoveToOtherPaneAsync()
+        {
+            await TransferToOtherPaneAsync(isMove: true);
         }
 
         /// <summary>
@@ -1021,61 +1043,97 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         /// Copy selected items to clipboard.
         /// </summary>
         [RelayCommand]
-        private void CopyToClipboard()
-        {
-            var items = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
-            if (items.Count == 0)
-            {
-                // Try single selected item
-                var single = IsLeftPaneActive ? SelectedLeftItem : SelectedRightItem;
-                if (single != null && !single.IsParentDirectory)
-                {
-                    ClipboardPaths = new List<string> { single.FullPath };
-                    ClipboardIsCut = false;
-                    StatusMessage = $"Copied: {single.Name}";
-                }
-                return;
-            }
-
-            ClipboardPaths = items.Where(i => !i.IsParentDirectory).Select(i => i.FullPath).ToList();
-            ClipboardIsCut = false;
-            StatusMessage = $"Copied {ClipboardPaths.Count} item(s)";
-
-            // Also copy to Windows clipboard
-            try
-            {
-                var paths = new System.Collections.Specialized.StringCollection();
-                foreach (var path in ClipboardPaths)
-                {
-                    paths.Add(path);
-                }
-                Clipboard.SetFileDropList(paths);
-            }
-            catch { /* Clipboard may fail */ }
-        }
+        private void CopyToClipboard() => PlaceOnClipboard(isCut: false);
 
         /// <summary>
         /// Cut selected items to clipboard.
         /// </summary>
         [RelayCommand]
-        private void CutToClipboard()
+        private void CutToClipboard() => PlaceOnClipboard(isCut: true);
+
+        /// <summary>
+        /// Puts the active pane's selection on the Windows clipboard as a file drop list with the
+        /// standard "Preferred DropEffect" (copy or move), so Explorer and Winhance agree on what a
+        /// paste will do.
+        /// </summary>
+        private void PlaceOnClipboard(bool isCut)
         {
-            var items = IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems;
+            var items = (IsLeftPaneActive ? SelectedLeftItems : SelectedRightItems)
+                .Where(i => !i.IsParentDirectory)
+                .ToList();
             if (items.Count == 0)
             {
                 var single = IsLeftPaneActive ? SelectedLeftItem : SelectedRightItem;
                 if (single != null && !single.IsParentDirectory)
                 {
-                    ClipboardPaths = new List<string> { single.FullPath };
-                    ClipboardIsCut = true;
-                    StatusMessage = $"Cut: {single.Name}";
+                    items.Add(single);
                 }
+            }
+
+            if (items.Count == 0)
+            {
+                StatusMessage = "Nothing selected";
                 return;
             }
 
-            ClipboardPaths = items.Where(i => !i.IsParentDirectory).Select(i => i.FullPath).ToList();
-            ClipboardIsCut = true;
-            StatusMessage = $"Cut {ClipboardPaths.Count} item(s)";
+            ClipboardPaths = items.Select(i => i.FullPath).ToList();
+            ClipboardIsCut = isCut;
+
+            try
+            {
+                var paths = new System.Collections.Specialized.StringCollection();
+                paths.AddRange(ClipboardPaths.ToArray());
+                var data = new DataObject();
+                data.SetFileDropList(paths);
+                // DROPEFFECT_MOVE = 2, DROPEFFECT_COPY | DROPEFFECT_LINK = 5 (what Explorer writes for copy)
+                var effect = BitConverter.GetBytes(isCut ? 2 : 5);
+                data.SetData("Preferred DropEffect", new MemoryStream(effect));
+                Clipboard.SetDataObject(data, copy: true);
+            }
+            catch (Exception ex)
+            {
+                // The in-app clipboard still works if the system clipboard is locked by another process.
+                StatusMessage = $"System clipboard unavailable: {ex.Message}";
+            }
+
+            var verb = isCut ? "Cut" : "Copied";
+            StatusMessage = ClipboardPaths.Count == 1
+                ? $"{verb}: {items[0].Name}"
+                : $"{verb} {ClipboardPaths.Count} item(s)";
+        }
+
+        /// <summary>
+        /// Reads the Windows clipboard. Returns the file list and whether the source asked for a move.
+        /// Falls back to the in-app clipboard when the system clipboard has no files.
+        /// </summary>
+        private (List<string> Paths, bool IsCut) ReadClipboard()
+        {
+            try
+            {
+                if (Clipboard.ContainsFileDropList())
+                {
+                    var paths = Clipboard.GetFileDropList().Cast<string>().ToList();
+                    var isCut = false;
+                    if (Clipboard.GetData("Preferred DropEffect") is MemoryStream effectStream)
+                    {
+                        var buffer = new byte[4];
+                        if (effectStream.Read(buffer, 0, 4) == 4)
+                        {
+                            // DROPEFFECT_MOVE without DROPEFFECT_COPY means cut
+                            var effect = BitConverter.ToInt32(buffer, 0);
+                            isCut = (effect & 2) != 0 && (effect & 1) == 0;
+                        }
+                    }
+
+                    return (paths, isCut);
+                }
+            }
+            catch (Exception)
+            {
+                // Clipboard busy or unreadable: fall back to the in-app clipboard below.
+            }
+
+            return (ClipboardPaths.ToList(), ClipboardIsCut);
         }
 
         /// <summary>
@@ -1085,69 +1143,116 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private async Task PasteFromClipboardAsync()
         {
             var destPath = IsLeftPaneActive ? LeftPanePath : RightPanePath;
+            var (sources, isCut) = ReadClipboard();
 
-            // Try Windows clipboard first
-            if (Clipboard.ContainsFileDropList())
-            {
-                var files = Clipboard.GetFileDropList();
-                ClipboardPaths = files.Cast<string>().ToList();
-            }
-
-            if (ClipboardPaths.Count == 0)
+            if (sources.Count == 0)
             {
                 StatusMessage = "Nothing to paste";
                 return;
             }
 
+            if (!Directory.Exists(destPath))
+            {
+                StatusMessage = $"Destination does not exist: {destPath}";
+                return;
+            }
+
             IsLoading = true;
-            StatusMessage = $"Pasting {ClipboardPaths.Count} item(s)...";
+            StatusMessage = $"Pasting {sources.Count} item(s)...";
+            var done = 0;
+            var skipped = new List<string>();
 
             try
             {
-                foreach (var sourcePath in ClipboardPaths)
+                var destFull = Path.GetFullPath(destPath).TrimEnd(Path.DirectorySeparatorChar);
+                foreach (var sourcePath in sources)
                 {
-                    var fileName = Path.GetFileName(sourcePath);
-                    var destFilePath = Path.Combine(destPath, fileName);
+                    var sourceFull = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar);
+                    var sourceParent = Path.GetDirectoryName(sourceFull) ?? string.Empty;
+                    var isDirectory = Directory.Exists(sourceFull);
 
-                    // Handle name conflicts
-                    destFilePath = GetUniqueDestPath(destFilePath);
-
-                    if (Directory.Exists(sourcePath))
+                    if (!isDirectory && !File.Exists(sourceFull))
                     {
-                        if (ClipboardIsCut)
+                        skipped.Add($"{Path.GetFileName(sourceFull)} (no longer exists)");
+                        continue;
+                    }
+
+                    // A folder cannot be pasted into itself or one of its own subfolders.
+                    if (isDirectory &&
+                        (destFull.Equals(sourceFull, StringComparison.OrdinalIgnoreCase) ||
+                         destFull.StartsWith(sourceFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        skipped.Add($"{Path.GetFileName(sourceFull)} (cannot paste a folder into itself)");
+                        continue;
+                    }
+
+                    // Cut + paste into the folder it came from is a no-op (same as Explorer).
+                    if (isCut && sourceParent.Equals(destFull, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var destItemPath = GetUniqueDestPath(Path.Combine(destFull, Path.GetFileName(sourceFull)));
+                    var sameVolume = string.Equals(Path.GetPathRoot(sourceFull), Path.GetPathRoot(destFull), StringComparison.OrdinalIgnoreCase);
+
+                    await Task.Run(() =>
+                    {
+                        if (isDirectory)
                         {
-                            Directory.Move(sourcePath, destFilePath);
+                            if (isCut && sameVolume)
+                            {
+                                Directory.Move(sourceFull, destItemPath);
+                            }
+                            else
+                            {
+                                CopyDirectory(sourceFull, destItemPath);
+                                if (isCut)
+                                {
+                                    // Cross-volume move: only remove the source after a complete copy.
+                                    Directory.Delete(sourceFull, recursive: true);
+                                }
+                            }
+                        }
+                        else if (isCut)
+                        {
+                            File.Move(sourceFull, destItemPath);
                         }
                         else
                         {
-                            CopyDirectory(sourcePath, destFilePath);
+                            File.Copy(sourceFull, destItemPath);
                         }
-                    }
-                    else if (File.Exists(sourcePath))
-                    {
-                        if (ClipboardIsCut)
-                        {
-                            File.Move(sourcePath, destFilePath);
-                        }
-                        else
-                        {
-                            File.Copy(sourcePath, destFilePath);
-                        }
-                    }
+                    });
+
+                    done++;
                 }
 
-                if (ClipboardIsCut)
+                if (isCut)
                 {
+                    // A cut can only be pasted once (Explorer clears it too).
                     ClipboardPaths.Clear();
                     ClipboardIsCut = false;
+                    try
+                    {
+                        if (Clipboard.ContainsFileDropList())
+                        {
+                            Clipboard.Clear();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Ignore: clipboard owned by another process.
+                    }
                 }
 
-                StatusMessage = "Paste complete";
+                StatusMessage = skipped.Count == 0
+                    ? $"Pasted {done} item(s)"
+                    : $"Pasted {done} item(s); skipped {skipped.Count}: {string.Join(", ", skipped)}";
                 await RefreshAsync();
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Paste error: {ex.Message}";
+                StatusMessage = $"Paste error after {done} item(s): {ex.Message}";
+                await RefreshAsync();
             }
             finally
             {

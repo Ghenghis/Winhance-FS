@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from nexus_ai.paths import nexus_home
 
 
 class LogLevel(Enum):
@@ -48,13 +49,13 @@ class LogConfig:
 
     file_enabled: bool = True
     file_level: LogLevel = LogLevel.DEBUG
-    file_path: Path = field(default_factory=lambda: Path("D:/NexusFS/logs/nexus.log"))
+    file_path: Path = field(default_factory=lambda: nexus_home() / "logs" / "nexus.log")
     file_rotation: str = "10 MB"
     file_retention: str = "7 days"
     file_compression: str = "zip"
 
     json_enabled: bool = True
-    json_path: Path = field(default_factory=lambda: Path("D:/NexusFS/logs/nexus.json"))
+    json_path: Path = field(default_factory=lambda: nexus_home() / "logs" / "nexus.json")
 
     # Real-time callbacks
     realtime_callbacks: list = field(default_factory=list)

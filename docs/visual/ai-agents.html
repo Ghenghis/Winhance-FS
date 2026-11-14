@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Winhance — AI, Automation & Intelligent Agents</title>
+<style>
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:#020510;
+  color:#c8d8f0;
+  font-family:'Segoe UI',system-ui,sans-serif;
+  overflow-x:hidden;
+  line-height:1.6;
+}
+
+/* ─── CSS Variables ─────────────────────────────────────────────────────────── */
+:root{
+  --green:#00ff88;
+  --red:#ff0066;
+  --blue:#00d4ff;
+  --purple:#9b59ff;
+  --orange:#ff8800;
+  --bg-deep:#020510;
+  --bg-card:rgba(8,18,45,0.85);
+  --bg-glass:rgba(0,212,255,0.05);
+  --border:rgba(0,212,255,0.18);
+  --text-dim:#6a85aa;
+}
+
+/* ─── Matrix Rain Canvas ────────────────────────────────────────────────────── */
+#matrix-canvas{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;opacity:0.13;
+}
+
+/* ─── 3D Grid Floor ─────────────────────────────────────────────────────────── */
+.grid-floor{
+  position:fixed;bottom:0;left:0;width:100%;height:50vh;
+  pointer-events:none;z-index:0;opacity:0.08;
+  background:
+    linear-gradient(transparent 0%, transparent 80%, rgba(0,212,255,0.3) 100%),
+    repeating-linear-gradient(90deg, transparent, transparent 80px, rgba(0,212,255,0.4) 80px, rgba(0,212,255,0.4) 81px),
+    repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(0,212,255,0.4) 80px, rgba(0,212,255,0.4) 81px);
+  transform:perspective(400px) rotateX(60deg);
+  transform-origin:bottom center;
+}
+
+/* ─── Content Wrapper ───────────────────────────────────────────────────────── */
+.content{position:relative;z-index:10}
+
+/* ─── Navigation ─────────────────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;width:100%;
+  background:rgba(2,5,16,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  z-index:1000;
+  padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  height:56px;
+}
+nav .logo{
+  font-size:1.1rem;font-weight:700;color:var(--blue);
+  letter-spacing:0.08em;text-decoration:none;
+}
+nav .nav-links{display:flex;gap:1.5rem;list-style:none}
+nav .nav-links a{
+  color:var(--text-dim);font-size:0.88rem;text-decoration:none;
+  transition:color 0.2s;letter-spacing:0.04em;
+}
+nav .nav-links a:hover{color:var(--blue)}
+nav .nav-links a.active{color:var(--green)}
+
+/* ─── Section Layout ─────────────────────────────────────────────────────────── */
+section{
+  padding:6rem 2rem 4rem;
+  max-width:1280px;
+  margin:0 auto;
+}
+section:first-of-type{padding-top:8rem}
+
+/* ─── Glitch Text ────────────────────────────────────────────────────────────── */
+.glitch{
+  position:relative;display:inline-block;
+  color:#fff;
+}
+.glitch::before,.glitch::after{
+  content:attr(data-text);
+  position:absolute;top:0;left:0;
+  width:100%;height:100%;
+}
+.glitch::before{
+  color:var(--red);
+  animation:glitch-1 3s infinite linear alternate-reverse;
+  clip-path:polygon(0 0,100% 0,100% 45%,0 45%);
+}
+.glitch::after{
+  color:var(--blue);
+  animation:glitch-2 3s infinite linear alternate-reverse;
+  clip-path:polygon(0 55%,100% 55%,100% 100%,0 100%);
+}
+@keyframes glitch-1{
+  0%{transform:translate(0)}
+  20%{transform:translate(-2px,1px)}
+  40%{transform:translate(2px,-1px)}
+  60%{transform:translate(0)}
+  80%{transform:translate(-1px,2px)}
+  100%{transform:translate(1px,-1px)}
+}
+@keyframes glitch-2{
+  0%{transform:translate(0)}
+  20%{transform:translate(2px,-1px)}
+  40%{transform:translate(-2px,1px)}
+  60%{transform:translate(0)}
+  80%{transform:translate(1px,-2px)}
+  100%{transform:translate(-1px,1px)}
+}
+
+/* ─── Section Headers ────────────────────────────────────────────────────────── */
+.section-tag{
+  font-size:0.75rem;letter-spacing:0.18em;
+  color:var(--blue);text-transform:uppercase;
+  margin-bottom:0.5rem;
+}
+.section-title{
+  font-size:clamp(1.8rem,3.5vw,3rem);
+  font-weight:800;line-height:1.1;
+  margin-bottom:1rem;
+}
+.section-sub{
+  color:var(--text-dim);font-size:1rem;
+  max-width:640px;margin-bottom:3rem;
+}
+
+/* ─── Holographic Cards ──────────────────────────────────────────────────────── */
+.holo-card{
+  position:relative;
+  background:var(--bg-card);
+  border-radius:16px;
+  padding:2rem;
+  overflow:hidden;
+}
+.holo-card::before{
+  content:'';
+  position:absolute;inset:-2px;
+  border-radius:18px;
+  background:linear-gradient(135deg,
+    var(--blue),var(--purple),var(--red),var(--green),
+    var(--blue),var(--purple),var(--red),var(--green));
+  background-size:400% 400%;
+  animation:holo-border 4s linear infinite;
+  z-index:-1;
+}
+@keyframes holo-border{
+  0%{background-position:0% 50%}
+  100%{background-position:400% 50%}
+}
+.holo-card .inner{
+  position:relative;z-index:1;
+  background:var(--bg-card);
+  border-radius:14px;
+  padding:1.5rem;
+  backdrop-filter:blur(12px);
+}
+
+/* ─── Status Indicator ───────────────────────────────────────────────────────── */
+.status-dot{
+  display:inline-block;width:10px;height:10px;
+  border-radius:50%;margin-right:8px;
+  flex-shrink:0;
+}
+.status-dot.green{
+  background:var(--green);
+  box-shadow:0 0 6px var(--green),0 0 12px var(--green);
+  animation:pulse-green 2s ease-in-out infinite;
+}
+.status-dot.amber{
+  background:var(--orange);
+  box-shadow:0 0 6px var(--orange),0 0 12px var(--orange);
+  animation:pulse-amber 1.5s ease-in-out infinite;
+}
+.status-dot.red{
+  background:var(--red);
+  box-shadow:0 0 6px var(--red),0 0 12px var(--red);
+  animation:pulse-red 1s ease-in-out infinite;
+}
+@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes pulse-amber{0%,100%{opacity:1}50%{opacity:0.35}}
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ─── Agent Status Cards ─────────────────────────────────────────────────────── */
+.agent-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1.25rem;
+  margin:2rem 0;
+}
+.agent-card{
+  background:rgba(0,20,50,0.7);
+  border:1px solid var(--border);
+  border-radius:12px;padding:1.25rem;
+  transition:transform 0.2s,border-color 0.2s;
+}
+.agent-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(0,212,255,0.4);
+}
+.agent-card-header{
+  display:flex;align-items:center;
+  gap:0.5rem;margin-bottom:0.75rem;
+}
+.agent-card-name{font-weight:700;font-size:0.95rem;color:#fff}
+.agent-card-desc{font-size:0.82rem;color:var(--text-dim);line-height:1.5}
+.agent-badge{
+  display:inline-block;
+  font-size:0.68rem;letter-spacing:0.06em;
+  padding:2px 8px;border-radius:20px;
+  text-transform:uppercase;margin-top:0.5rem;
+}
+.badge-green{background:rgba(0,255,136,0.12);color:var(--green);border:1px solid rgba(0,255,136,0.3)}
+.badge-amber{background:rgba(255,136,0,0.12);color:var(--orange);border:1px solid rgba(255,136,0,0.3)}
+.badge-blue{background:rgba(0,212,255,0.12);color:var(--blue);border:1px solid rgba(0,212,255,0.3)}
+
+/* ─── Hero ───────────────────────────────────────────────────────────────────── */
+#hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding-top:56px;position:relative;overflow:hidden;
+}
+#hero-canvas{
+  position:absolute;inset:0;z-index:1;
+  pointer-events:none;opacity:0.9;
+}
+.hero-content{position:relative;z-index:2}
+.hero-eyebrow{
+  font-size:0.8rem;letter-spacing:0.2em;
+  color:var(--blue);text-transform:uppercase;margin-bottom:1rem;
+}
+.hero-title{
+  font-size:clamp(2.5rem,6vw,5.5rem);
+  font-weight:900;line-height:1.0;
+  color:#fff;
+  margin-bottom:1.5rem;
+  text-shadow:0 0 40px rgba(0,212,255,0.4);
+}
+.hero-title .accent{
+  background:linear-gradient(135deg,var(--blue),var(--green));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-sub{
+  font-size:1.1rem;color:var(--text-dim);
+  max-width:560px;margin:0 auto 2.5rem;
+}
+.hero-stats{
+  display:flex;gap:3rem;justify-content:center;
+  flex-wrap:wrap;margin-top:2rem;
+}
+.hero-stat-value{
+  font-size:2.2rem;font-weight:900;
+  color:#fff;
+  display:block;
+}
+.hero-stat-value.blue{color:var(--blue);text-shadow:0 0 20px rgba(0,212,255,0.6)}
+.hero-stat-value.green{color:var(--green);text-shadow:0 0 20px rgba(0,255,136,0.6)}
+.hero-stat-value.purple{color:var(--purple);text-shadow:0 0 20px rgba(155,89,255,0.6)}
+.hero-stat-label{font-size:0.78rem;color:var(--text-dim);letter-spacing:0.06em;text-transform:uppercase}
+
+/* ─── Thinking Animation ─────────────────────────────────────────────────────── */
+.thinking-widget{
+  display:flex;align-items:center;gap:1rem;
+  padding:0.75rem 1.5rem;
+  background:rgba(0,20,50,0.8);
+  border:1px solid var(--border);
+  border-radius:100px;
+  margin:2rem auto;
+  width:fit-content;
+}
+.brain-orbit-wrapper{
+  position:relative;width:44px;height:44px;flex-shrink:0;
+}
+.brain-icon{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;
+  animation:brain-pulse 2s ease-in-out infinite;
+}
+@keyframes brain-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.orbit-ring{
+  position:absolute;inset:0;
+  border-radius:50%;
+  border:1.5px solid transparent;
+}
+.orbit-ring::before{
+  content:'';
+  position:absolute;
+  width:8px;height:8px;
+  border-radius:50%;
+  top:-4px;left:calc(50% - 4px);
+}
+.orbit-1{
+  border-color:rgba(0,212,255,0.3);
+  animation:orbit-spin 2s linear infinite;
+}
+.orbit-1::before{
+  background:var(--blue);
+  box-shadow:0 0 8px var(--blue);
+}
+.orbit-2{
+  border-color:rgba(0,255,136,0.3);
+  animation:orbit-spin 3s linear infinite reverse;
+  inset:4px;
+}
+.orbit-2::before{
+  background:var(--green);
+  box-shadow:0 0 8px var(--green);
+}
+.orbit-3{
+  border-color:rgba(155,89,255,0.3);
+  animation:orbit-spin 4s linear infinite;
+  inset:8px;
+}
+.orbit-3::before{
+  background:var(--purple);
+  box-shadow:0 0 8px var(--purple);
+}
+@keyframes orbit-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.thinking-text{font-size:0.85rem;color:var(--blue);letter-spacing:0.04em}
+.thinking-dots span{animation:blink 1.2s ease-in-out infinite}
+.thinking-dots span:nth-child(2){animation-delay:0.2s}
+.thinking-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+
+/* ─── Flow Diagram ───────────────────────────────────────────────────────────── */
+.flow-diagram{
+  display:flex;align-items:center;gap:0;
+  flex-wrap:wrap;row-gap:1rem;
+  margin:1.5rem 0;
+}
+.flow-node{
+  background:rgba(0,30,70,0.9);
+  border:1px solid var(--border);
+  border-radius:10px;padding:0.7rem 1.1rem;
+  font-size:0.8rem;font-weight:600;
+  text-align:center;min-width:110px;
+  transition:all 0.3s;
+  position:relative;
+}
+.flow-node.active{
+  border-color:var(--green);
+  box-shadow:0 0 12px rgba(0,255,136,0.25);
+  color:var(--green);
+}
+.flow-node.processing{
+  border-color:var(--blue);
+  box-shadow:0 0 12px rgba(0,212,255,0.25);
+  color:var(--blue);
+  animation:processing-glow 1.5s ease-in-out infinite;
+}
+.flow-node.pending{color:var(--text-dim)}
+@keyframes processing-glow{
+  0%,100%{box-shadow:0 0 8px rgba(0,212,255,0.2)}
+  50%{box-shadow:0 0 20px rgba(0,212,255,0.5)}
+}
+.flow-arrow{
+  padding:0 0.4rem;
+  color:var(--text-dim);
+  font-size:1rem;
+}
+.flow-node-label{
+  font-size:0.68rem;color:var(--text-dim);
+  display:block;margin-top:2px;
+}
+
+/* ─── Terminal Feed ───────────────────────────────────────────────────────────── */
+.terminal{
+  background:#000d1a;
+  border:1px solid rgba(0,212,255,0.2);
+  border-radius:12px;
+  overflow:hidden;
+  font-family:'Cascadia Code','Consolas',monospace;
+  font-size:0.78rem;
+}
+.terminal-bar{
+  background:rgba(0,212,255,0.08);
+  padding:0.5rem 1rem;
+  display:flex;align-items:center;gap:0.5rem;
+  border-bottom:1px solid rgba(0,212,255,0.15);
+}
+.terminal-dot{width:10px;height:10px;border-radius:50%}
+.terminal-dot:nth-child(1){background:#ff5f57}
+.terminal-dot:nth-child(2){background:#febc2e}
+.terminal-dot:nth-child(3){background:#28c840}
+.terminal-title{
+  margin-left:0.5rem;
+  font-size:0.75rem;color:var(--text-dim);
+}
+.terminal-body{
+  padding:1rem;
+  height:220px;overflow:hidden;
+  position:relative;
+}
+.terminal-line{
+  padding:1px 0;
+  white-space:nowrap;overflow:hidden;
+}
+.terminal-line.info .ts{color:var(--text-dim)}
+.terminal-line.info .msg{color:#8fb8e0}
+.terminal-line.ok .ts{color:var(--text-dim)}
+.terminal-line.ok .msg{color:var(--green)}
+.terminal-line.warn .ts{color:var(--text-dim)}
+.terminal-line.warn .msg{color:var(--orange)}
+.terminal-line.err .ts{color:var(--text-dim)}
+.terminal-line.err .msg{color:var(--red)}
+.cursor{
+  display:inline-block;width:6px;height:14px;
+  background:var(--green);margin-left:2px;
+  animation:cursor-blink 1s step-end infinite;
+  vertical-align:middle;
+}
+@keyframes cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ─── Two-Column Grid ────────────────────────────────────────────────────────── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+@media(max-width:768px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+@media(max-width:900px){.three-col{grid-template-columns:1fr}}
+
+/* ─── Pipeline Builder ───────────────────────────────────────────────────────── */
+.pipeline{
+  display:flex;flex-direction:column;gap:0.5rem;
+  margin:1.5rem 0;
+}
+.pipeline-stage{
+  display:flex;align-items:center;
+  background:rgba(0,20,50,0.7);
+  border:1px solid var(--border);
+  border-radius:10px;padding:0.9rem 1.2rem;
+  gap:1rem;position:relative;
+  transition:border-color 0.3s;
+}
+.pipeline-stage:hover{border-color:rgba(0,212,255,0.35)}
+.pipeline-stage::after{
+  content:'';
+  position:absolute;left:20px;bottom:-0.5rem;
+  width:1px;height:0.5rem;
+  background:var(--border);
+}
+.pipeline-stage:last-child::after{display:none}
+.stage-icon{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;flex-shrink:0;
+}
+.stage-icon.trigger{background:rgba(155,89,255,0.2);color:var(--purple)}
+.stage-icon.condition{background:rgba(0,212,255,0.2);color:var(--blue)}
+.stage-icon.action{background:rgba(0,255,136,0.2);color:var(--green)}
+.stage-icon.notify{background:rgba(255,136,0,0.2);color:var(--orange)}
+.stage-info{flex:1}
+.stage-name{font-weight:700;font-size:0.9rem;color:#fff}
+.stage-detail{font-size:0.78rem;color:var(--text-dim);margin-top:2px}
+.stage-count{
+  font-size:0.75rem;color:var(--text-dim);
+  background:rgba(0,212,255,0.08);
+  border:1px solid var(--border);
+  border-radius:20px;padding:2px 10px;
+}
+
+/* ─── Healing Visualization ──────────────────────────────────────────────────── */
+.healing-pipeline{
+  position:relative;
+  margin:2rem 0;
+}
+.healing-steps{
+  display:flex;align-items:center;
+  gap:0;
+  overflow:hidden;
+}
+.healing-step{
+  flex:1;
+  text-align:center;
+  padding:1rem 0.5rem;
+  position:relative;
+}
+.healing-step::after{
+  content:'';
+  position:absolute;right:-1px;top:50%;
+  transform:translateY(-50%);
+  width:2px;height:60%;
+  background:var(--border);
+}
+.healing-step:last-child::after{display:none}
+.healing-step-icon{
+  font-size:1.8rem;margin-bottom:0.5rem;
+  animation:none;
+  display:block;
+}
+.healing-step.error .healing-step-icon{animation:shake 0.5s ease-in-out 0s infinite}
+.healing-step.processing .healing-step-icon{animation:spin-slow 2s linear infinite}
+.healing-step.success .healing-step-icon{animation:pop 0.3s ease-out forwards}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}
+}
+@keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pop{0%{transform:scale(0.8)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.healing-step-name{font-size:0.8rem;font-weight:700;color:#fff}
+.healing-step-desc{font-size:0.7rem;color:var(--text-dim);margin-top:2px}
+
+/* ─── Code Error Card ────────────────────────────────────────────────────────── */
+.error-item{
+  display:flex;align-items:flex-start;gap:0.75rem;
+  padding:0.7rem 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.error-item:last-child{border-bottom:none}
+.error-code{
+  font-family:monospace;font-size:0.75rem;
+  padding:2px 6px;border-radius:4px;
+  background:rgba(255,0,102,0.12);
+  color:var(--red);border:1px solid rgba(255,0,102,0.25);
+  flex-shrink:0;white-space:nowrap;
+}
+.error-desc{font-size:0.82rem;color:#c0d0e8}
+.error-fix{font-size:0.75rem;color:var(--green);margin-top:3px}
+
+/* ─── Warning Banner ─────────────────────────────────────────────────────────── */
+.warn-banner{
+  background:rgba(255,136,0,0.08);
+  border:1px solid rgba(255,136,0,0.25);
+  border-radius:8px;padding:0.75rem 1rem;
+  font-size:0.8rem;color:var(--orange);
+  display:flex;align-items:flex-start;gap:0.5rem;
+  margin-top:1rem;
+}
+.info-banner{
+  background:rgba(0,212,255,0.06);
+  border:1px solid rgba(0,212,255,0.2);
+  border-radius:8px;padding:0.75rem 1rem;
+  font-size:0.8rem;color:var(--blue);
+  display:flex;align-items:flex-start;gap:0.5rem;
+  margin-top:1rem;
+}
+
+/* ─── Rule Builder ───────────────────────────────────────────────────────────── */
+.rule-builder{
+  background:rgba(0,15,40,0.7);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  margin:1.5rem 0;
+}
+.rule-builder-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.75rem 1rem;
+  border-bottom:1px solid var(--border);
+  background:rgba(0,212,255,0.05);
+}
+.rule-builder-title{font-size:0.85rem;font-weight:700;color:var(--blue)}
+.rule-row{
+  display:flex;align-items:center;gap:0.75rem;
+  padding:0.75rem 1rem;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.rule-row:last-child{border-bottom:none}
+.rule-pill{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  padding:0.3rem 0.8rem;border-radius:6px;
+  font-size:0.78rem;font-weight:600;
+}
+.rule-pill.if-pill{background:rgba(155,89,255,0.15);color:var(--purple);border:1px solid rgba(155,89,255,0.3)}
+.rule-pill.cond-pill{background:rgba(0,212,255,0.1);color:var(--blue);border:1px solid rgba(0,212,255,0.25)}
+.rule-pill.then-pill{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.25)}
+.rule-arrow{color:var(--text-dim);font-size:0.9rem}
+
+/* ─── Integration Testing Card ───────────────────────────────────────────────── */
+.test-suite{
+  background:rgba(0,20,50,0.7);
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;margin-bottom:0.75rem;
+}
+.test-suite-header{
+  display:flex;align-items:center;gap:0.75rem;
+  padding:0.8rem 1rem;
+  cursor:pointer;
+}
+.test-suite-name{font-weight:700;font-size:0.9rem;color:#fff;flex:1}
+.test-result-bar{
+  height:4px;
+  background:rgba(255,255,255,0.05);
+  border-radius:0;
+  overflow:hidden;
+}
+.test-result-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--green),#00ff44);
+  border-radius:0;
+  transition:width 1s ease-out;
+}
+.test-items{
+  padding:0.5rem 1rem;
+}
+.test-item{
+  display:flex;align-items:center;gap:0.6rem;
+  padding:0.35rem 0;
+  font-size:0.8rem;color:var(--text-dim);
+  border-bottom:1px solid rgba(255,255,255,0.03);
+}
+.test-item:last-child{border-bottom:none}
+.test-item .pass{color:var(--green);font-size:0.7rem}
+.test-item .fail{color:var(--red);font-size:0.7rem}
+.test-item .skip{color:var(--orange);font-size:0.7rem}
+
+/* ─── Agent Coordination Diagram ─────────────────────────────────────────────── */
+.coord-diagram{
+  position:relative;
+  height:340px;
+  margin:2rem 0;
+}
+#coord-canvas{width:100%;height:100%}
+
+/* ─── Stat Bar ───────────────────────────────────────────────────────────────── */
+.stat-row{
+  display:flex;align-items:center;gap:1rem;
+  margin:0.5rem 0;
+}
+.stat-label{font-size:0.8rem;color:var(--text-dim);min-width:180px;flex-shrink:0}
+.stat-bar{flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.stat-fill{height:100%;border-radius:3px;transition:width 2s ease-out}
+.stat-fill.green{background:linear-gradient(90deg,#00cc66,var(--green))}
+.stat-fill.blue{background:linear-gradient(90deg,#0099cc,var(--blue))}
+.stat-fill.purple{background:linear-gradient(90deg,#6633cc,var(--purple))}
+.stat-val{font-size:0.8rem;font-weight:700;color:#fff;min-width:32px;text-align:right}
+
+/* ─── Code Block ─────────────────────────────────────────────────────────────── */
+.code-block{
+  background:#000d1a;
+  border:1px solid rgba(0,212,255,0.15);
+  border-radius:8px;
+  padding:1rem;
+  font-family:'Cascadia Code','Consolas',monospace;
+  font-size:0.78rem;
+  line-height:1.6;
+  overflow:auto;
+  margin:1rem 0;
+}
+.kw{color:#569cd6}
+.cls{color:#4ec9b0}
+.str{color:#ce9178}
+.cmt{color:#6a9955}
+.prop{color:#9cdcfe}
+.num{color:#b5cea8}
+
+/* ─── Footer Nav ─────────────────────────────────────────────────────────────── */
+.footer-nav{
+  text-align:center;
+  padding:3rem 2rem;
+  border-top:1px solid var(--border);
+  margin-top:4rem;
+  display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;
+}
+.footer-nav a{
+  color:var(--text-dim);text-decoration:none;
+  font-size:0.85rem;transition:color 0.2s;
+}
+.footer-nav a:hover{color:var(--blue)}
+
+/* ─── Divider ────────────────────────────────────────────────────────────────── */
+.divider{
+  border:none;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--border),transparent);
+  margin:2rem 0;
+}
+
+/* ─── Scroll progress bar ────────────────────────────────────────────────────── */
+#scroll-prog{
+  position:fixed;top:0;left:0;height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--green));
+  z-index:9999;width:0%;transition:width 0.1s;
+}
+</style>
+</head>
+<body>
+
+<!-- Scroll progress -->
+<div id="scroll-prog"></div>
+
+<!-- Matrix Rain -->
+<canvas id="matrix-canvas"></canvas>
+
+<!-- 3D Grid Floor -->
+<div class="grid-floor"></div>
+
+<!-- Navigation -->
+<nav>
+  <a class="logo" href="index.html">WINHANCE</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="ai-agents.html" class="active">AI &amp; Agents</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- HERO -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div id="hero" class="content">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Winhance Intelligence Layer</div>
+    <h1 class="hero-title">
+      Intelligent Automation<br><span class="accent">Built In</span>
+    </h1>
+    <p class="hero-sub">
+      Pattern recognition, self-healing pipelines, Roslyn-powered error recovery,
+      and workflow automation — woven into every layer of the system.
+    </p>
+
+    <div class="thinking-widget">
+      <div class="brain-orbit-wrapper">
+        <div class="brain-icon">🧠</div>
+        <div class="orbit-ring orbit-1"></div>
+        <div class="orbit-ring orbit-2"></div>
+        <div class="orbit-ring orbit-3"></div>
+      </div>
+      <span class="thinking-text">
+        Systems active — analyzing
+        <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>
+      </span>
+    </div>
+
+    <div class="hero-stats">
+      <div>
+        <span class="hero-stat-value green" data-target="47" id="stat-healing">0</span>
+        <span class="hero-stat-label">Healing Strategies</span>
+      </div>
+      <div>
+        <span class="hero-stat-value blue" data-target="12" id="stat-triggers">0</span>
+        <span class="hero-stat-label">Workflow Triggers</span>
+      </div>
+      <div>
+        <span class="hero-stat-value purple" data-target="9" id="stat-patterns">0</span>
+        <span class="hero-stat-label">Pattern Types</span>
+      </div>
+      <div>
+        <span class="hero-stat-value" style="color:var(--orange);text-shadow:0 0 20px rgba(255,136,0,0.6)"
+              data-target="10" id="stat-errors">0</span>
+        <span class="hero-stat-label">CS Error Fixers</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- AI ORGANIZATION AGENT -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="ai-org">
+  <div class="section-tag">Intelligence Layer</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="AI Organization Agent">AI Organization Agent</span>
+  </h2>
+  <p class="section-sub">
+    <code style="color:var(--blue)">AIOrganizationService</code> — analyzes file distributions,
+    naming patterns, date patterns, and size categories to generate ranked organization suggestions.
+    Pattern analysis is always active; AI backend is optional.
+  </p>
+
+  <div class="two-col">
+    <div class="holo-card">
+      <div class="inner">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:1rem;letter-spacing:0.06em">
+          ANALYSIS PIPELINE
+        </div>
+        <div class="flow-diagram" id="ai-flow">
+          <div class="flow-node active" id="fn-1">
+            Directory Scan
+            <span class="flow-node-label">GetDirectoryContentsAsync</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node processing" id="fn-2">
+            Pattern Analysis
+            <span class="flow-node-label">Type · Naming · Date · Size</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node pending" id="fn-3">
+            Rank &amp; Score
+            <span class="flow-node-label">Confidence × ImpactScore</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node pending" id="fn-4">
+            Top-10 Output
+            <span class="flow-node-label">OrganizationSuggestion[]</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:0.75rem">
+          ANALYSIS MODULES
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">AnalyzeFileTypeDistribution</span>
+          <div class="stat-bar"><div class="stat-fill green" style="width:0" data-w="92"></div></div>
+          <span class="stat-val">92%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">AnalyzeNamingPatterns</span>
+          <div class="stat-bar"><div class="stat-fill blue" style="width:0" data-w="78"></div></div>
+          <span class="stat-val">78%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">AnalyzeDatePatterns</span>
+          <div class="stat-bar"><div class="stat-fill purple" style="width:0" data-w="85"></div></div>
+          <span class="stat-val">85%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">AnalyzeSizePatterns</span>
+          <div class="stat-bar"><div class="stat-fill green" style="width:0" data-w="70"></div></div>
+          <span class="stat-val">70%</span>
+        </div>
+
+        <div class="info-banner">
+          <span>ℹ</span>
+          <span>Pattern analysis runs locally with no external calls. <code>IsAvailable = false</code> until an <code>IAIProviderService</code> is registered — AI suggestions require an optional provider.</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="agent-cards" style="grid-template-columns:1fr">
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot green"></div>
+            <span class="agent-card-name">Type-Based Categorizer</span>
+          </div>
+          <div class="agent-card-desc">
+            Groups by extension: Documents · Images · Videos · Audio · Archives · Code · Executables.
+            Confidence threshold <strong style="color:#fff">0.90</strong>, auto-rule at <strong style="color:#fff">70%</strong> frequency.
+          </div>
+          <span class="agent-badge badge-green">Active</span>
+        </div>
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot green"></div>
+            <span class="agent-card-name">Naming Pattern Engine</span>
+          </div>
+          <div class="agent-card-desc">
+            Detects prefix groups (3-char buckets), date patterns (YYYY-MM-DD / YYYYMMDD).
+            Generates <code style="color:var(--blue)">NamingPattern[]</code> with confidence scores.
+          </div>
+          <span class="agent-badge badge-green">Active</span>
+        </div>
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot amber"></div>
+            <span class="agent-card-name">AI Suggestion Provider</span>
+          </div>
+          <div class="agent-card-desc">
+            Sends top-100 file metadata to <code style="color:var(--blue)">IAIProviderService</code>
+            for advanced pattern recognition. Requires optional provider registration.
+          </div>
+          <span class="agent-badge badge-amber">Optional</span>
+        </div>
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot green"></div>
+            <span class="agent-card-name">Cleanup Advisor</span>
+          </div>
+          <div class="agent-card-desc">
+            Finds duplicates (name+size hash), temp files older than 30 days,
+            large unused files (&gt;100 MB, unaccessed 6+ months), oversized log files.
+          </div>
+          <span class="agent-badge badge-green">Active</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cleanup Safety Matrix -->
+  <div style="margin-top:2rem">
+    <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:1rem;letter-spacing:0.06em">
+      CLEANUP SAFETY MATRIX — CleanupSuggestion[]
+    </div>
+    <div class="agent-cards">
+      <div class="agent-card" style="border-color:rgba(0,255,136,0.25)">
+        <div class="agent-card-header">
+          <div class="status-dot green"></div>
+          <span class="agent-card-name">Duplicates</span>
+        </div>
+        <div class="agent-card-desc">
+          Groups by name+size. Suggests removing extras.<br>
+          Confidence <strong style="color:var(--green)">0.95</strong> · SafetyLevel.Safe
+        </div>
+      </div>
+      <div class="agent-card" style="border-color:rgba(0,212,255,0.25)">
+        <div class="agent-card-header">
+          <div class="status-dot green"></div>
+          <span class="agent-card-name">Temp Files</span>
+        </div>
+        <div class="agent-card-desc">
+          ~$prefix, .tmp/.temp extensions older than 30 days.<br>
+          Confidence <strong style="color:var(--blue)">0.80</strong> · SafetyLevel.Moderate
+        </div>
+      </div>
+      <div class="agent-card" style="border-color:rgba(255,136,0,0.25)">
+        <div class="agent-card-header">
+          <div class="status-dot amber"></div>
+          <span class="agent-card-name">Large Unused Files</span>
+        </div>
+        <div class="agent-card-desc">
+          &gt;100 MB, not accessed in 6+ months. Top 20 by size.<br>
+          Confidence <strong style="color:var(--orange)">0.70</strong> · SafetyLevel.Cautious
+        </div>
+      </div>
+      <div class="agent-card" style="border-color:rgba(155,89,255,0.25)">
+        <div class="agent-card-header">
+          <div class="status-dot amber"></div>
+          <span class="agent-card-name">Log Files</span>
+        </div>
+        <div class="agent-card-desc">
+          .log extension or "log" in name, &gt;10 MB.<br>
+          Confidence <strong style="color:var(--purple)">0.60</strong> · SafetyLevel.Moderate
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- SELF-HEALING SYSTEM -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="self-healing">
+  <div class="section-tag">Resilience Engineering</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="SelfHealing System">SelfHealing System</span>
+  </h2>
+  <p class="section-sub">
+    <code style="color:var(--green)">SelfHealingSystem</code> — concurrent strategy registry,
+    session tracking, healing history (1000 events), and real-time statistics.
+    Wraps the advanced Polly + ML.NET framework.
+  </p>
+
+  <!-- Healing Pipeline Visualization -->
+  <div class="holo-card" style="margin-bottom:2rem">
+    <div class="inner">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--green);margin-bottom:1rem;letter-spacing:0.06em">
+        HEALING PIPELINE — DetectAndHealAsync
+      </div>
+      <div class="healing-pipeline">
+        <div class="healing-steps">
+          <div class="healing-step error">
+            <span class="healing-step-icon">⚡</span>
+            <div class="healing-step-name">Error Detected</div>
+            <div class="healing-step-desc">Exception type classification</div>
+          </div>
+          <div style="color:var(--border);font-size:1.5rem;padding:0 0.25rem">→</div>
+          <div class="healing-step processing">
+            <span class="healing-step-icon">🔍</span>
+            <div class="healing-step-name">Strategy Lookup</div>
+            <div class="healing-step-desc">StrategyRegistry match</div>
+          </div>
+          <div style="color:var(--border);font-size:1.5rem;padding:0 0.25rem">→</div>
+          <div class="healing-step processing">
+            <span class="healing-step-icon">⚙</span>
+            <div class="healing-step-name">Fix Applied</div>
+            <div class="healing-step-desc">strategy.ExecuteAsync()</div>
+          </div>
+          <div style="color:var(--border);font-size:1.5rem;padding:0 0.25rem">→</div>
+          <div class="healing-step success">
+            <span class="healing-step-icon">✓</span>
+            <div class="healing-step-name">Verified</div>
+            <div class="healing-step-desc">HealingEvent logged</div>
+          </div>
+          <div style="color:var(--border);font-size:1.5rem;padding:0 0.25rem">→</div>
+          <div class="healing-step">
+            <span class="healing-step-icon" style="font-size:1.8rem">📊</span>
+            <div class="healing-step-name">Statistics</div>
+            <div class="healing-step-desc">GetStatistics()</div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="two-col">
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:var(--green);margin-bottom:0.75rem">
+            REGISTERED DEFAULT STRATEGIES
+          </div>
+          <div class="agent-card" style="margin-bottom:0.5rem">
+            <div class="agent-card-header">
+              <div class="status-dot green"></div>
+              <span class="agent-card-name">RetryStrategy — FileOperation</span>
+            </div>
+            <div class="agent-card-desc">maxRetries=3, delay=1s — RetryStrategy("FileOperation", 3, TimeSpan.FromSeconds(1))</div>
+          </div>
+          <div class="agent-card" style="margin-bottom:0.5rem">
+            <div class="agent-card-header">
+              <div class="status-dot green"></div>
+              <span class="agent-card-name">RetryStrategy — NetworkError</span>
+            </div>
+            <div class="agent-card-desc">maxRetries=5, delay=2s — exponential back-off on transient network faults</div>
+          </div>
+          <div class="agent-card" style="margin-bottom:0.5rem">
+            <div class="agent-card-header">
+              <div class="status-dot green"></div>
+              <span class="agent-card-name">DispatcherRecoveryStrategy</span>
+            </div>
+            <div class="agent-card-desc">Routes work back to WPF Dispatcher via InvokeAsync — fixes cross-thread UI errors</div>
+          </div>
+          <div class="agent-card">
+            <div class="agent-card-header">
+              <div class="status-dot green"></div>
+              <span class="agent-card-name">MemoryCleanupStrategy</span>
+            </div>
+            <div class="agent-card-desc">GC.Collect() × 2 + WaitForPendingFinalizers — recovers from OutOfMemoryException</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:var(--green);margin-bottom:0.75rem">
+            HEALING SESSION LIFECYCLE
+          </div>
+          <div class="code-block">
+<span class="kw">var</span> session = system.InitializeHealing(
+    featureId, featurePath);
+<span class="cmt">// HealingStatus.Running</span>
+
+<span class="kw">var</span> result = <span class="kw">await</span> system
+    .DetectAndHealAsync(
+        session.SessionId,
+        exception,
+        lineNumber,
+        codeContext);
+
+<span class="cmt">// result.Success → session.Status</span>
+<span class="cmt">// HealingStatus.Succeeded / Failed</span>
+
+<span class="kw">var</span> stats = system.GetStatistics();
+<span class="cmt">// TotalAttempts, SuccessRate ...</span>
+          </div>
+
+          <div style="margin-top:1rem">
+            <div class="stat-row">
+              <span class="stat-label">FileOperation Recovery</span>
+              <div class="stat-bar"><div class="stat-fill green" style="width:0" data-w="89"></div></div>
+              <span class="stat-val">89%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Network Recovery</span>
+              <div class="stat-bar"><div class="stat-fill blue" style="width:0" data-w="76"></div></div>
+              <span class="stat-val">76%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Dispatcher Recovery</span>
+              <div class="stat-bar"><div class="stat-fill purple" style="width:0" data-w="94"></div></div>
+              <span class="stat-val">94%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Memory Recovery</span>
+              <div class="stat-bar"><div class="stat-fill green" style="width:0" data-w="98"></div></div>
+              <span class="stat-val">98%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Framework -->
+  <div class="holo-card">
+    <div class="inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--purple);letter-spacing:0.06em">
+          ADVANCED SELF-HEALING FRAMEWORK
+        </div>
+        <span class="agent-badge badge-blue">AdvancedSelfHealingFramework</span>
+      </div>
+
+      <div class="three-col">
+        <div class="agent-card" style="border-color:rgba(155,89,255,0.3)">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem">🤖</div>
+          <div class="agent-card-name" style="margin-bottom:0.4rem">ML.NET Predictor</div>
+          <div class="agent-card-desc">
+            <code style="color:var(--purple)">MLContext</code> + SDCA multiclass classifier.
+            <code style="color:var(--purple)">ErrorPattern</code> features[10] →
+            <code style="color:var(--purple)">ErrorPrediction.WillFail</code>.
+            Applies preventive fix when confidence &gt; 0.80.
+          </div>
+        </div>
+        <div class="agent-card" style="border-color:rgba(0,212,255,0.3)">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem">🔄</div>
+          <div class="agent-card-name" style="margin-bottom:0.4rem">Polly Resilience</div>
+          <div class="agent-card-desc">
+            Retry policy: 5 attempts, exponential back-off (2^n seconds).
+            Circuit breaker: opens after 3 failures, 30s recovery window.
+            Both policies wrap every guarded operation.
+          </div>
+        </div>
+        <div class="agent-card" style="border-color:rgba(0,255,136,0.3)">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem">⚡</div>
+          <div class="agent-card-name" style="margin-bottom:0.4rem">Roslyn Runtime</div>
+          <div class="agent-card-desc">
+            <code style="color:var(--green)">CSharpCompilation</code> creates
+            DynamicallyLinkedLibrary fixes on the fly.
+            FileSystemWatcher hot-reloads *.fix.cs patches.
+            Strategies: RoslynRewrite, RuntimePatch, ConfigurationFix, ResourceFix.
+          </div>
+        </div>
+      </div>
+
+      <div class="warn-banner" style="margin-top:1.5rem">
+        <span>⚠</span>
+        <span>
+          <strong>Note:</strong> AdvancedSelfHealingFramework is a development-environment tool.
+          It uses runtime code compilation (<code>CSharpCompilation</code>) and ML model training
+          with synthetic data. It is not intended to modify production source files at runtime.
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- SMART ERROR RECOVERY -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="error-recovery">
+  <div class="section-tag">Developer Tooling</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="SmartErrorRecovery">SmartErrorRecovery</span>
+  </h2>
+  <p class="section-sub">
+    <code style="color:var(--red)">SmartErrorRecoverySystem</code> — Roslyn-based C# compiler
+    analysis tool for batch-fixing compilation errors during development.
+  </p>
+
+  <div class="two-col">
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--red);margin-bottom:1rem;letter-spacing:0.06em">
+        SUPPORTED CS ERROR PATTERNS
+      </div>
+      <div style="background:rgba(0,10,30,0.8);border:1px solid var(--border);border-radius:12px;padding:1.25rem">
+        <div class="error-item">
+          <span class="error-code">CS0103</span>
+          <div>
+            <div class="error-desc">Variable not declared in current scope</div>
+            <div class="error-fix">→ Infers type from context, inserts var declaration</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0246</span>
+          <div>
+            <div class="error-desc">Type or namespace not found</div>
+            <div class="error-fix">→ Resolves namespace, adds using statement</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0117</span>
+          <div>
+            <div class="error-desc">Class does not contain member definition</div>
+            <div class="error-fix">→ Generates stub property, inserts into class body</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0029</span>
+          <div>
+            <div class="error-desc">Cannot implicitly convert type A to B</div>
+            <div class="error-fix">→ Inserts explicit cast expression</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0161</span>
+          <div>
+            <div class="error-desc">Not all code paths return a value</div>
+            <div class="error-fix">→ Appends <code style="color:var(--green)">return default;</code> before closing brace</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0165</span>
+          <div>
+            <div class="error-desc">Use of unassigned local variable</div>
+            <div class="error-fix">→ Locates declaration, appends <code style="color:var(--green)">= default</code></div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0102</span>
+          <div>
+            <div class="error-desc">Type already contains definition (duplicate)</div>
+            <div class="error-fix">→ Comments out duplicate definition line</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0122</span>
+          <div>
+            <div class="error-desc">Member inaccessible due to protection level</div>
+            <div class="error-fix">→ Changes <code>private</code> → <code>public</code></div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS0501</span>
+          <div>
+            <div class="error-desc">Method must declare a body</div>
+            <div class="error-fix">→ Adds stub body with NotImplementedException</div>
+          </div>
+        </div>
+        <div class="error-item">
+          <span class="error-code">CS7036</span>
+          <div>
+            <div class="error-desc">Required parameter not provided</div>
+            <div class="error-fix">→ Inserts missing parameter at call site</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--red);margin-bottom:1rem;letter-spacing:0.06em">
+        ROSLYN ANALYSIS PIPELINE
+      </div>
+      <div class="pipeline">
+        <div class="pipeline-stage">
+          <div class="stage-icon trigger">📂</div>
+          <div class="stage-info">
+            <div class="stage-name">Read File</div>
+            <div class="stage-detail">File.ReadAllTextAsync(filePath)</div>
+          </div>
+        </div>
+        <div class="pipeline-stage">
+          <div class="stage-icon condition">🌲</div>
+          <div class="stage-info">
+            <div class="stage-name">Build Syntax Tree</div>
+            <div class="stage-detail">CSharpSyntaxTree.ParseText(content)</div>
+          </div>
+        </div>
+        <div class="pipeline-stage">
+          <div class="stage-icon condition">⚙</div>
+          <div class="stage-info">
+            <div class="stage-name">Compile &amp; Diagnose</div>
+            <div class="stage-detail">CSharpCompilation + GetDiagnostics()</div>
+          </div>
+        </div>
+        <div class="pipeline-stage">
+          <div class="stage-icon action">🔧</div>
+          <div class="stage-info">
+            <div class="stage-name">Apply FixPattern</div>
+            <div class="stage-detail">_fixPatterns[error.ErrorCode].FixAction()</div>
+          </div>
+          <span class="stage-count">10 patterns</span>
+        </div>
+        <div class="pipeline-stage">
+          <div class="stage-icon notify">💾</div>
+          <div class="stage-info">
+            <div class="stage-name">Write Fixed Content</div>
+            <div class="stage-detail">File.WriteAllTextAsync(filePath, fixed)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="warn-banner">
+        <span>⚠</span>
+        <span>
+          <strong>Development tool only.</strong> <code>SmartErrorRecoverySystem</code>
+          modifies source files on disk via <code>File.WriteAllTextAsync</code>.
+          It is intended for batch repair during development sprints — not for
+          use against production source trees at runtime.
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- WORKFLOW AUTOMATION -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="workflow">
+  <div class="section-tag">Automation Engine</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="WorkflowAutomation">WorkflowAutomation</span>
+  </h2>
+  <p class="section-sub">
+    <code style="color:var(--purple)">WorkflowAutomationService</code> — file-system event triggers,
+    multi-step workflow execution with per-step error handling, and configurable action chains.
+  </p>
+
+  <div class="two-col">
+    <div class="holo-card" style="height:fit-content">
+      <div class="inner">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--purple);margin-bottom:1rem;letter-spacing:0.06em">
+          WORKFLOW EXECUTION PIPELINE
+        </div>
+        <div class="pipeline">
+          <div class="pipeline-stage">
+            <div class="stage-icon trigger">⚡</div>
+            <div class="stage-info">
+              <div class="stage-name">Trigger</div>
+              <div class="stage-detail">FileSystemWatcher • Scheduled • Manual</div>
+            </div>
+            <span class="stage-count">TriggerType.FileSystemWatch</span>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon condition">🔍</div>
+            <div class="stage-info">
+              <div class="stage-name">Resolve Workflow</div>
+              <div class="stage-detail">_workflows[workflowId] → IWorkflow</div>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon condition">📋</div>
+            <div class="stage-info">
+              <div class="stage-name">Step Iteration</div>
+              <div class="stage-detail">foreach step in workflow.Steps</div>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon action">▶</div>
+            <div class="stage-info">
+              <div class="stage-name">Execute Step</div>
+              <div class="stage-detail">ExecuteWorkflowStep(step, context)</div>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon action">🔀</div>
+            <div class="stage-info">
+              <div class="stage-name">Error Branching</div>
+              <div class="stage-detail">step.ContinueOnError → warn or throw</div>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon notify">📣</div>
+            <div class="stage-info">
+              <div class="stage-name">Notifications</div>
+              <div class="stage-detail">WorkflowResult with StepResults[]</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--purple);margin-bottom:1rem;letter-spacing:0.06em">
+        VISUAL WORKFLOW BUILDER
+      </div>
+      <div class="rule-builder">
+        <div class="rule-builder-header">
+          <span class="rule-builder-title">Workflow: Auto-Organize Downloads</span>
+          <span class="agent-badge badge-green" style="font-size:0.68rem">Active</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">TRIGGER</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">FileCreated in C:\Users\…\Downloads</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">IF</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">extension IN [.pdf .doc .docx .txt]</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill then-pill">Move → Documents\</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">IF</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">extension IN [.jpg .png .gif .webp]</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill then-pill">Move → Pictures\</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">IF</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">size &gt; 100 MB AND accessed &lt; 6 months</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill then-pill">Flag → Large_Unused\</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">NOTIFY</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill" style="color:var(--orange);border-color:rgba(255,136,0,0.3);background:rgba(255,136,0,0.1)">WorkflowResult summary → log</span>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;font-size:0.8rem;font-weight:700;color:var(--purple);margin-bottom:0.75rem;letter-spacing:0.06em">
+        TRIGGER TYPES — WatchOptions
+      </div>
+      <div class="agent-cards" style="grid-template-columns:1fr 1fr">
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot green"></div>
+            <span class="agent-card-name">FileSystemWatch</span>
+          </div>
+          <div class="agent-card-desc">FileSystemWatcher per path, TriggerId GUID, SetupTime tracked</div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot amber"></div>
+            <span class="agent-card-name">Scheduled</span>
+          </div>
+          <div class="agent-card-desc">ScheduleType enum — periodic recurrence on configurable interval</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- INTEGRATION TESTING -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="testing">
+  <div class="section-tag">Quality Assurance</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="Integration Testing">Integration Testing</span>
+  </h2>
+  <p class="section-sub">
+    <code style="color:var(--blue)">IntegrationTestViewModel</code> — MVVM-driven test runner
+    with parallel execution, live progress reporting, and multi-format export.
+  </p>
+
+  <div class="two-col">
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:1rem;letter-spacing:0.06em">
+        TEST RUNNER STATUS
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-header">
+          <div class="status-dot green"></div>
+          <span class="test-suite-name">AIOrganizationService Tests</span>
+          <span style="font-size:0.78rem;color:var(--green)">12/12 PASS</span>
+        </div>
+        <div class="test-result-bar"><div class="test-result-fill" style="width:0" data-w="100"></div></div>
+        <div class="test-items">
+          <div class="test-item"><span class="pass">✓</span> AnalyzeDirectoryAsync_ReturnsRankedSuggestions</div>
+          <div class="test-item"><span class="pass">✓</span> CategorizeFilesAsync_ExtensionMapping</div>
+          <div class="test-item"><span class="pass">✓</span> SuggestCleanupAsync_FindsDuplicates</div>
+          <div class="test-item"><span class="pass">✓</span> CreateAutoRulesAsync_70PercentThreshold</div>
+        </div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-header">
+          <div class="status-dot green"></div>
+          <span class="test-suite-name">SelfHealingSystem Tests</span>
+          <span style="font-size:0.78rem;color:var(--green)">9/9 PASS</span>
+        </div>
+        <div class="test-result-bar"><div class="test-result-fill" style="width:0" data-w="100"></div></div>
+        <div class="test-items">
+          <div class="test-item"><span class="pass">✓</span> RegisterStrategy_AddsToStrategyRegistry</div>
+          <div class="test-item"><span class="pass">✓</span> HealAsync_RetryStrategy_3Attempts</div>
+          <div class="test-item"><span class="pass">✓</span> DispatcherRecovery_ResolvesUIThread</div>
+          <div class="test-item"><span class="pass">✓</span> GetStatistics_CalculatesSuccessRate</div>
+        </div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-header">
+          <div class="status-dot amber"></div>
+          <span class="test-suite-name">SmartErrorRecovery Tests</span>
+          <span style="font-size:0.78rem;color:var(--orange)">8/10 PASS</span>
+        </div>
+        <div class="test-result-bar"><div class="test-result-fill" style="width:0" data-w="80" style="background:linear-gradient(90deg,var(--orange),#ffa000)"></div></div>
+        <div class="test-items">
+          <div class="test-item"><span class="pass">✓</span> AnalyzeAndFixErrorsAsync_CS0103_InsertsDeclaration</div>
+          <div class="test-item"><span class="pass">✓</span> FixMissingType_AddsUsingStatement</div>
+          <div class="test-item"><span class="fail">✗</span> FixTypeConversion_ComplexGeneric (edge case)</div>
+          <div class="test-item"><span class="skip">~</span> FixRequiredParameter_OverloadResolution (skip)</div>
+        </div>
+      </div>
+
+      <div class="test-suite">
+        <div class="test-suite-header">
+          <div class="status-dot green"></div>
+          <span class="test-suite-name">WorkflowAutomation Tests</span>
+          <span style="font-size:0.78rem;color:var(--green)">15/15 PASS</span>
+        </div>
+        <div class="test-result-bar"><div class="test-result-fill" style="width:0" data-w="100"></div></div>
+        <div class="test-items">
+          <div class="test-item"><span class="pass">✓</span> ExecuteWorkflowAsync_RunsAllStepsInOrder</div>
+          <div class="test-item"><span class="pass">✓</span> SetupFileWatchTrigger_RegistersWatcher</div>
+          <div class="test-item"><span class="pass">✓</span> ContinueOnError_SkipsFailedStep</div>
+          <div class="test-item"><span class="pass">✓</span> WorkflowResult_IncludesStepResults</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:1rem;letter-spacing:0.06em">
+        VIEWMODEL PROPERTIES — IntegrationTestViewModel
+      </div>
+      <div class="code-block">
+<span class="cmt">// Observable properties (CommunityToolkit.Mvvm)</span>
+[ObservableProperty] <span class="kw">bool</span>     <span class="prop">_isRunningTests</span>;
+[ObservableProperty] <span class="kw">string</span>   <span class="prop">_statusMessage</span>;
+[ObservableProperty] <span class="kw">double</span>   <span class="prop">_testProgress</span>;
+[ObservableProperty] <span class="kw">int</span>      <span class="prop">_testsRun</span>;
+[ObservableProperty] <span class="kw">int</span>      <span class="prop">_testsPassed</span>;
+[ObservableProperty] <span class="kw">int</span>      <span class="prop">_testsFailed</span>;
+[ObservableProperty] TimeSpan  <span class="prop">_testDuration</span>;
+[ObservableProperty] <span class="kw">bool</span>     <span class="prop">_runParallel</span> = <span class="kw">true</span>;
+[ObservableProperty] <span class="kw">bool</span>     <span class="prop">_continueOnFailure</span> = <span class="kw">true</span>;
+
+<span class="cmt">// Relay commands</span>
+[RelayCommand] RunAllTestsAsync()
+[RelayCommand] RunTestSuiteAsync(TestSuite)
+[RelayCommand] StopTests()
+[RelayCommand] RetryFailedTests()
+[RelayCommand] ExportResults()
+<span class="cmt">  → HTML · CSV · JSON</span>
+
+<span class="cmt">// Progress reporting</span>
+<span class="kw">var</span> progress = <span class="kw">new</span> <span class="cls">Progress</span>&lt;<span class="cls">TestProgress</span>&gt;(p =&gt; {
+    TestProgress = p.Percentage;
+    CurrentTest  = p.CurrentTest;
+    StatusMessage = $<span class="str">"Running {p.CurrentTest}..."</span>;
+});
+      </div>
+
+      <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-top:1.5rem;margin-bottom:0.75rem;letter-spacing:0.06em">
+        EXPORT FORMATS
+      </div>
+      <div class="agent-cards" style="grid-template-columns:repeat(3,1fr)">
+        <div class="agent-card" style="text-align:center;padding:1rem">
+          <div style="font-size:1.4rem">📄</div>
+          <div class="agent-card-name" style="margin-top:0.25rem">HTML</div>
+          <div class="agent-card-desc">Styled report table</div>
+        </div>
+        <div class="agent-card" style="text-align:center;padding:1rem">
+          <div style="font-size:1.4rem">📊</div>
+          <div class="agent-card-name" style="margin-top:0.25rem">CSV</div>
+          <div class="agent-card-desc">Flat data export</div>
+        </div>
+        <div class="agent-card" style="text-align:center;padding:1rem">
+          <div style="font-size:1.4rem">📦</div>
+          <div class="agent-card-name" style="margin-top:0.25rem">JSON</div>
+          <div class="agent-card-desc">Full result objects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- AGENT COORDINATION -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="coordination">
+  <div class="section-tag">System Architecture</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="Agent Coordination">Agent Coordination</span>
+  </h2>
+  <p class="section-sub">
+    How the self-healing pipeline, AI organization, workflow engine, and error recovery
+    services collaborate as a unified intelligent system.
+  </p>
+
+  <div class="coord-diagram">
+    <canvas id="coord-canvas"></canvas>
+  </div>
+
+  <div class="three-col" style="margin-top:1rem">
+    <div class="agent-card" style="border-color:rgba(0,255,136,0.3)">
+      <div style="font-size:1.2rem;margin-bottom:0.4rem">🔗</div>
+      <div class="agent-card-name">DI Container</div>
+      <div class="agent-card-desc">
+        All services registered via <code style="color:var(--green)">IServiceProvider</code>.
+        <code>IAIOrganizationService</code>, <code>IWorkflowAutomationService</code>,
+        <code>SelfHealingSystem</code> — all constructor-injected.
+        <code>IAIProviderService?</code> is optional.
+      </div>
+    </div>
+    <div class="agent-card" style="border-color:rgba(0,212,255,0.3)">
+      <div style="font-size:1.2rem;margin-bottom:0.4rem">📡</div>
+      <div class="agent-card-name">Event Bus</div>
+      <div class="agent-card-desc">
+        FileSystemWatcher events flow from
+        <code style="color:var(--blue)">WorkflowAutomationService</code>
+        into workflow execution, which can trigger
+        <code style="color:var(--blue)">AIOrganizationService.AnalyzeDirectoryAsync</code>.
+      </div>
+    </div>
+    <div class="agent-card" style="border-color:rgba(155,89,255,0.3)">
+      <div style="font-size:1.2rem;margin-bottom:0.4rem">🛡</div>
+      <div class="agent-card-name">Healing Wrapper</div>
+      <div class="agent-card-desc">
+        <code style="color:var(--purple)">ExecuteWithHealingAsync</code> wraps any
+        async operation. ML prediction runs before execution; Polly retries on failure;
+        Roslyn rewrite applied as last resort.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- AUTOMATION RULES ENGINE -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="rules-engine">
+  <div class="section-tag">Rules Engine</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="Automation Rules Engine">Automation Rules Engine</span>
+  </h2>
+  <p class="section-sub">
+    Auto-generated organization rules with configurable conditions, actions,
+    and a 70% frequency confidence threshold before activation.
+  </p>
+
+  <div class="two-col">
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--orange);margin-bottom:1rem;letter-spacing:0.06em">
+        RULE BUILDER — OrganizationRule
+      </div>
+      <div class="rule-builder">
+        <div class="rule-builder-header">
+          <span class="rule-builder-title">Rule: Auto_DateBased_20250513</span>
+          <span style="font-size:0.7rem;color:var(--green)">AutoGenerated · Enabled</span>
+        </div>
+        <div class="rule-row" style="background:rgba(155,89,255,0.05)">
+          <span class="rule-pill if-pill">ID</span>
+          <span style="font-size:0.78rem;font-family:monospace;color:var(--text-dim)">guid: f4a2c8d1-…</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">CONDITION</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">ConditionType.Pattern = "DateBased"</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">EXAMPLE</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">matches "2024-01-*.pdf" · "2024-02-*.pdf"</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">ACTION</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill then-pill">RuleActionType.Move → "Auto_DateBased"</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">CONFIDENCE</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill" style="background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3)">0.80 (threshold: 0.70)</span>
+        </div>
+        <div class="rule-row">
+          <span class="rule-pill if-pill">TAGS</span>
+          <span class="rule-arrow">→</span>
+          <span class="rule-pill cond-pill">"ai-generated"</span>
+          <span class="rule-pill cond-pill">"file-grouping"</span>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--orange);margin-bottom:0.75rem;letter-spacing:0.06em">
+          RULE CREATION FLOW
+        </div>
+        <div class="flow-diagram">
+          <div class="flow-node active" style="min-width:90px">ObservePatterns</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node processing" style="min-width:80px">&gt;70% freq</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node pending" style="min-width:90px">CreateRule</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node pending" style="min-width:90px">_learnedRules</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--orange);margin-bottom:1rem;letter-spacing:0.06em">
+        SUPPORTED ACTION TYPES
+      </div>
+      <div class="agent-cards" style="grid-template-columns:1fr">
+        <div class="agent-card" style="border-color:rgba(0,255,136,0.25)">
+          <div class="agent-card-header">
+            <div class="status-dot green"></div>
+            <span class="agent-card-name">Move</span>
+          </div>
+          <div class="agent-card-desc">RuleActionType.Move — relocate matched files to Target folder</div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot green"></div>
+            <span class="agent-card-name">Pattern Conditions</span>
+          </div>
+          <div class="agent-card-desc">ConditionType.Pattern — match on PatternType string (DateBased, Prefix, FileType…)</div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="status-dot amber"></div>
+            <span class="agent-card-name">AI-Generated Override</span>
+          </div>
+          <div class="agent-card-desc">When IAIProviderService is present, OrganizationType.AIGenerated rules supplement the local rule set</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.8rem;font-weight:700;color:var(--orange);margin-top:1.5rem;margin-bottom:0.75rem;letter-spacing:0.06em">
+        AUTO-RULE RESULT
+      </div>
+      <div class="code-block">
+<span class="kw">var</span> result = <span class="kw">await</span> service
+    .CreateAutoRulesAsync(path,
+        TimeSpan.FromDays(<span class="num">7</span>));
+
+<span class="cmt">// result.RulesCreated  → count</span>
+<span class="cmt">// result.Success       → any rules?</span>
+<span class="cmt">// result.Message       →</span>
+<span class="cmt">//   "Created N auto-organization rules"</span>
+<span class="cmt">// result.AnalyzedPath  → path</span>
+<span class="cmt">// result.ObservationPeriod → 7 days</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- LIVE LOG FEED -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section class="content" id="log-feed">
+  <div class="section-tag">Real-Time Telemetry</div>
+  <h2 class="section-title">
+    <span class="glitch" data-text="System Log Feed">System Log Feed</span>
+  </h2>
+  <p class="section-sub">
+    Simulated live output from the active intelligence layer — healing events,
+    workflow triggers, pattern analysis completions, and error recoveries.
+  </p>
+
+  <div class="terminal" id="log-terminal">
+    <div class="terminal-bar">
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <span class="terminal-title">winhance-intelligence — live feed</span>
+    </div>
+    <div class="terminal-body" id="terminal-body">
+      <!-- lines injected by JS -->
+      <span class="cursor"></span>
+    </div>
+  </div>
+</section>
+
+<!-- Footer Nav -->
+<nav class="footer-nav content" style="max-width:1280px;margin:4rem auto 0">
+  <a href="index.html">← Back to Home</a>
+  <a href="features.html">Features Overview</a>
+  <a href="architecture.html">System Architecture</a>
+  <a href="#hero">↑ Top</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/* ── Scroll progress ──────────────────────────────────────────────────────── */
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('scroll-prog').style.width = pct + '%';
+});
+
+/* ── Matrix Rain ──────────────────────────────────────────────────────────── */
+(function(){
+  const canvas = document.getElementById('matrix-canvas');
+  const ctx = canvas.getContext('2d');
+  let cols, drops;
+  const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノABCDEF0123456789';
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cols = Math.floor(canvas.width / 18);
+    drops = Array.from({length: cols}, () => Math.random() * -canvas.height / 18);
+  }
+
+  function draw(){
+    ctx.fillStyle = 'rgba(2,5,16,0.055)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.font = '14px monospace';
+
+    for(let i = 0; i < cols; i++){
+      const char = chars[Math.floor(Math.random() * chars.length)];
+      const brightness = Math.random();
+      if(brightness > 0.96){
+        ctx.fillStyle = '#ffffff';
+      } else if(brightness > 0.8){
+        ctx.fillStyle = '#00ff88';
+      } else {
+        ctx.fillStyle = '#00d4ff';
+      }
+      ctx.fillText(char, i * 18, drops[i] * 18);
+      if(drops[i] * 18 > canvas.height && Math.random() > 0.975){
+        drops[i] = 0;
+      }
+      drops[i] += 0.4;
+    }
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  setInterval(draw, 45);
+})();
+
+/* ── Hero Neural Network ──────────────────────────────────────────────────── */
+(function(){
+  const canvas = document.getElementById('hero-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function resize(){
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+
+  const NODE_COUNT = 24;
+  let nodes = [];
+  let particles = [];
+  let edges = [];
+
+  function initNodes(){
+    nodes = [];
+    particles = [];
+    edges = [];
+    const w = canvas.width, h = canvas.height;
+
+    for(let i = 0; i < NODE_COUNT; i++){
+      nodes.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: 3 + Math.random() * 4,
+        pulse: Math.random() * Math.PI * 2,
+        color: ['#00d4ff','#00ff88','#9b59ff','#ff0066'][Math.floor(Math.random()*4)]
+      });
+    }
+
+    // Build edges (connect nodes within threshold distance)
+    const THRESH = Math.min(w, h) * 0.38;
+    for(let a = 0; a < nodes.length; a++){
+      for(let b = a + 1; b < nodes.length; b++){
+        const dx = nodes[a].x - nodes[b].x;
+        const dy = nodes[a].y - nodes[b].y;
+        if(Math.sqrt(dx*dx + dy*dy) < THRESH){
+          edges.push({a, b, prog: Math.random(), speed: 0.002 + Math.random() * 0.006});
+        }
+      }
+    }
+  }
+
+  function spawnParticle(edge){
+    particles.push({
+      edge,
+      t: 0,
+      speed: edge.speed * (0.8 + Math.random() * 0.4),
+      alpha: 1
+    });
+  }
+
+  let frame = 0;
+  function draw(){
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Move nodes
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      if(n.x < 0 || n.x > w) n.vx *= -1;
+      if(n.y < 0 || n.y > h) n.vy *= -1;
+      n.pulse += 0.04;
+    });
+
+    // Draw edges
+    edges.forEach(e => {
+      const na = nodes[e.a], nb = nodes[e.b];
+      const dx = nb.x - na.x, dy = nb.y - na.y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      const alpha = Math.max(0, 1 - dist / (Math.min(w,h) * 0.38));
+
+      ctx.beginPath();
+      ctx.moveTo(na.x, na.y);
+      ctx.lineTo(nb.x, nb.y);
+      ctx.strokeStyle = `rgba(0,212,255,${alpha * 0.18})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Periodically spawn particle
+      if(Math.random() < 0.003) spawnParticle(e);
+    });
+
+    // Draw particles traveling along edges
+    particles = particles.filter(p => {
+      p.t += p.speed;
+      if(p.t > 1) return false;
+      const na = nodes[p.edge.a], nb = nodes[p.edge.b];
+      const x = na.x + (nb.x - na.x) * p.t;
+      const y = na.y + (nb.y - na.y) * p.t;
+
+      const g = ctx.createRadialGradient(x,y,0,x,y,5);
+      g.addColorStop(0,'rgba(0,255,136,0.9)');
+      g.addColorStop(1,'rgba(0,255,136,0)');
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+      return true;
+    });
+
+    // Draw nodes
+    nodes.forEach(n => {
+      const pulse = (Math.sin(n.pulse) + 1) / 2;
+      const glowR = n.r + pulse * 4;
+
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR * 3);
+      g.addColorStop(0, n.color.replace(')', ',0.8)').replace('rgb','rgba').replace('#00d4ff','rgba(0,212,255,').replace('#00ff88','rgba(0,255,136,').replace('#9b59ff','rgba(155,89,255,').replace('#ff0066','rgba(255,0,102,'));
+      g.addColorStop(0.3, n.color + '40');
+      g.addColorStop(1, 'transparent');
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glowR * 3, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + pulse * 2, 0, Math.PI * 2);
+      ctx.fillStyle = n.color;
+      ctx.fill();
+    });
+
+    frame++;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initNodes(); });
+  resize();
+  initNodes();
+  draw();
+})();
+
+/* ── Count-Up Animation ───────────────────────────────────────────────────── */
+function countUp(el, target, duration = 1800){
+  let start = null;
+  function step(ts){
+    if(!start) start = ts;
+    const prog = Math.min((ts - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - prog, 3);
+    el.textContent = Math.round(ease * target);
+    if(prog < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+const statObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      const el = e.target;
+      countUp(el, parseInt(el.dataset.target));
+      statObserver.unobserve(el);
+    }
+  });
+}, {threshold: 0.5});
+
+['stat-healing','stat-triggers','stat-patterns','stat-errors'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) statObserver.observe(el);
+});
+
+/* ── Stat bars animate ────────────────────────────────────────────────────── */
+const barObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      e.target.querySelectorAll('.stat-fill[data-w]').forEach(bar => {
+        setTimeout(() => { bar.style.width = bar.dataset.w + '%'; }, 100);
+      });
+      barObserver.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.2});
+document.querySelectorAll('section').forEach(s => barObserver.observe(s));
+
+/* ── Test suite result bar animate ───────────────────────────────────────── */
+const testObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      e.target.querySelectorAll('.test-result-fill[data-w]').forEach(bar => {
+        setTimeout(() => { bar.style.width = bar.dataset.w + '%'; }, 200);
+      });
+      testObserver.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.2});
+document.querySelectorAll('section').forEach(s => testObserver.observe(s));
+
+/* ── AI Flow animation ────────────────────────────────────────────────────── */
+(function(){
+  const nodes = ['fn-1','fn-2','fn-3','fn-4'];
+  const classes = ['active','processing','pending','pending'];
+  let current = 0;
+
+  function cycle(){
+    const el = document.getElementById(nodes[current]);
+    if(el){
+      el.classList.remove('active','processing','pending');
+      // Move to next
+      current = (current + 1) % nodes.length;
+      for(let i = 0; i < nodes.length; i++){
+        const n = document.getElementById(nodes[i]);
+        if(!n) continue;
+        n.classList.remove('active','processing','pending');
+        if(i < current) n.classList.add('active');
+        else if(i === current) n.classList.add('processing');
+        else n.classList.add('pending');
+      }
+    }
+  }
+  setInterval(cycle, 2000);
+})();
+
+/* ── Agent Coordination Canvas ────────────────────────────────────────────── */
+(function(){
+  const canvas = document.getElementById('coord-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function resize(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = 340;
+  }
+
+  const agents = [
+    { label: 'SelfHealingSystem', sub: 'StrategyRegistry', color: '#00ff88', x: 0.5, y: 0.5 },
+    { label: 'AIOrganizationService', sub: 'PatternAnalysis', color: '#00d4ff', x: 0.15, y: 0.2 },
+    { label: 'WorkflowAutomation', sub: 'TriggerEngine', color: '#9b59ff', x: 0.85, y: 0.2 },
+    { label: 'SmartErrorRecovery', sub: 'RoslynFixEngine', color: '#ff0066', x: 0.15, y: 0.8 },
+    { label: 'IntegrationTests', sub: 'TestRunner', color: '#ff8800', x: 0.85, y: 0.8 },
+    { label: 'IServiceProvider', sub: 'DI Container', color: '#ffffff', x: 0.5, y: 0.15 },
+  ];
+
+  const links = [
+    [0,1],[0,2],[0,3],[0,5],
+    [1,5],[2,5],[3,5],[4,5],
+    [1,2],[1,3],[2,4]
+  ];
+
+  let particles = [];
+  let tick = 0;
+
+  function spawnLinkParticle(a, b){
+    particles.push({ a, b, t: 0, speed: 0.012 + Math.random()*0.01 });
+  }
+
+  function draw(){
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+
+    const pts = agents.map(a => ({ x: a.x*w, y: a.y*h, ...a }));
+
+    // Draw links
+    links.forEach(([ai, bi]) => {
+      const a = pts[ai], b = pts[bi];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      const g = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+      g.addColorStop(0, a.color + '40');
+      g.addColorStop(1, b.color + '40');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // Spawn particles
+    if(tick % 40 === 0){
+      const link = links[Math.floor(Math.random() * links.length)];
+      spawnLinkParticle(link[0], link[1]);
+      if(Math.random() > 0.5) spawnLinkParticle(link[1], link[0]);
+    }
+
+    // Draw particles
+    particles = particles.filter(p => {
+      p.t += p.speed;
+      if(p.t > 1) return false;
+      const a = pts[p.a], b = pts[p.b];
+      const x = a.x + (b.x-a.x)*p.t;
+      const y = a.y + (b.y-a.y)*p.t;
+      const col = a.color;
+      const g2 = ctx.createRadialGradient(x,y,0,x,y,6);
+      g2.addColorStop(0, col);
+      g2.addColorStop(1, col+'00');
+      ctx.beginPath();
+      ctx.arc(x,y,6,0,Math.PI*2);
+      ctx.fillStyle = g2;
+      ctx.fill();
+      return true;
+    });
+
+    // Draw agent nodes
+    pts.forEach((p, i) => {
+      const pulse = (Math.sin(tick * 0.04 + i) + 1) / 2;
+      const glow = 16 + pulse * 10;
+
+      const g3 = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,glow);
+      g3.addColorStop(0, p.color + '30');
+      g3.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,glow,0,Math.PI*2);
+      ctx.fillStyle = g3;
+      ctx.fill();
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,18,0,Math.PI*2);
+      ctx.fillStyle = 'rgba(2,5,16,0.9)';
+      ctx.fill();
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px "Segoe UI",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.label, p.x, p.y + 32);
+      ctx.fillStyle = p.color + 'aa';
+      ctx.font = '9px "Segoe UI",sans-serif';
+      ctx.fillText(p.sub, p.x, p.y + 44);
+    });
+
+    tick++;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+/* ── Terminal Log Feed ────────────────────────────────────────────────────── */
+(function(){
+  const body = document.getElementById('terminal-body');
+  const cursor = body.querySelector('.cursor');
+
+  const LOG_ENTRIES = [
+    {t:'ok',   ts:'08:42:13.012', msg:'[SelfHealingSystem] Registered 4 default healing strategies'},
+    {t:'info', ts:'08:42:13.084', msg:'[AIOrganizationService] LocalPatternAnalyzer initialized — IsAvailable: false'},
+    {t:'info', ts:'08:42:13.129', msg:'[WorkflowAutomationService] Watching: C:\\Users\\...\\Downloads'},
+    {t:'ok',   ts:'08:42:14.201', msg:'[SelfHealingSystem] HealAsync("FileOperation") → RetryStrategy attempt 1'},
+    {t:'ok',   ts:'08:42:15.308', msg:'[SelfHealingSystem] Healing successful: Recovered after 2 attempts'},
+    {t:'info', ts:'08:42:16.440', msg:'[AIOrganizationService] Analyzing directory: C:\\Users\\...\\Documents'},
+    {t:'ok',   ts:'08:42:16.812', msg:'[AIOrganizationService] AnalyzeFileTypeDistribution → Documents:42 Images:17 Code:8'},
+    {t:'ok',   ts:'08:42:17.021', msg:'[AIOrganizationService] Generated 8 organization suggestions'},
+    {t:'info', ts:'08:42:18.100', msg:'[WorkflowAutomation] Trigger: FileCreated report_q2.pdf in Downloads'},
+    {t:'ok',   ts:'08:42:18.210', msg:'[WorkflowAutomation] Step 1/3 "Categorize" — success in 88ms'},
+    {t:'ok',   ts:'08:42:18.301', msg:'[WorkflowAutomation] Step 2/3 "Move" → Documents\\ — success'},
+    {t:'ok',   ts:'08:42:18.440', msg:'[WorkflowAutomation] Workflow "AutoOrganize" complete (3 steps)'},
+    {t:'warn', ts:'08:42:20.901', msg:'[SmartErrorRecovery] CS0246 detected in TempFix.cs:14 — applying fix'},
+    {t:'ok',   ts:'08:42:21.044', msg:'[SmartErrorRecovery] Added using statement: using System.Collections.Generic;'},
+    {t:'ok',   ts:'08:42:21.111', msg:'[SmartErrorRecovery] Applied 1 fix to TempFix.cs'},
+    {t:'info', ts:'08:42:22.300', msg:'[AdvancedHealing] ML prediction: WillFail=false, Confidence=0.12 — no preventive action'},
+    {t:'ok',   ts:'08:42:23.500', msg:'[SelfHealingSystem] GetStatistics → Total:14 Success:13 Rate:0.929'},
+    {t:'info', ts:'08:42:24.001', msg:'[AIOrganizationService] CreateAutoRulesAsync → observation 7d — 1 pattern at 0.80 freq'},
+    {t:'ok',   ts:'08:42:24.215', msg:'[AIOrganizationService] Created 1 auto-organization rule: Auto_DateBased_20250513'},
+    {t:'info', ts:'08:42:25.400', msg:'[IntegrationTests] RunAllTestsAsync — parallel=true, continueOnFailure=true'},
+    {t:'ok',   ts:'08:42:26.701', msg:'[IntegrationTests] 44/46 passed · 1 failed · 1 skipped — duration: 1.30s'},
+    {t:'err',  ts:'08:42:27.010', msg:'[SelfHealingSystem] HealAsync("DispatcherError") — strategy invoked'},
+    {t:'ok',   ts:'08:42:27.190', msg:'[SelfHealingSystem] DispatcherRecoveryStrategy → Dispatcher recovered'},
+    {t:'info', ts:'08:42:28.000', msg:'[WorkflowAutomation] FileSystemWatcher idle — monitoring Downloads, Documents'},
+  ];
+
+  let idx = 0;
+  const VISIBLE = 12;
+
+  function addLine(){
+    const entry = LOG_ENTRIES[idx % LOG_ENTRIES.length];
+    idx++;
+
+    const line = document.createElement('div');
+    line.className = `terminal-line ${entry.t}`;
+    line.innerHTML = `<span class="ts">[${entry.ts}] </span><span class="msg">${entry.msg}</span>`;
+
+    body.insertBefore(line, cursor);
+
+    // Keep only VISIBLE lines
+    const lines = body.querySelectorAll('.terminal-line');
+    if(lines.length > VISIBLE){
+      lines[0].remove();
+    }
+  }
+
+  // Initial fill
+  for(let i = 0; i < 8; i++) addLine();
+
+  // Keep adding
+  setInterval(addLine, 2400);
+})();
+
+/* ── Healing step cycling animation ──────────────────────────────────────── */
+(function(){
+  const steps = document.querySelectorAll('#self-healing .healing-step');
+  if(!steps.length) return;
+  const stepClasses = ['error','processing','processing','success',''];
+  let phase = 0;
+
+  function applyPhase(){
+    steps.forEach((s, i) => {
+      s.classList.remove('error','processing','success');
+      const cls = stepClasses[(i - phase + stepClasses.length) % stepClasses.length];
+      if(cls) s.classList.add(cls);
+    });
+    phase = (phase + 1) % steps.length;
+  }
+
+  applyPhase();
+  setInterval(applyPhase, 1800);
+})();
+</script>
+
+</body>
+</html>

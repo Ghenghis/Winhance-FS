@@ -21,6 +21,7 @@ from typing import Any
 
 from nexus_ai.core.ai_providers import AIMessage, get_ai_manager
 from nexus_ai.core.logging_config import get_logger
+from nexus_ai.paths import repo_root
 
 logger = get_logger("doc_automation")
 
@@ -665,6 +666,6 @@ def get_doc_agent(project_path: Path | None = None) -> DocumentationAgent:
     """Get the global documentation agent."""
     global _doc_agent
     if _doc_agent is None:
-        project_path = project_path or Path("D:/Winhance-FS-Repo")
+        project_path = project_path or repo_root()
         _doc_agent = DocumentationAgent(project_path)
     return _doc_agent

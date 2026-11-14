@@ -111,9 +111,11 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 return;
             }
 
-            // Cancel previous search
+            // Cancel previous search (not disposed here: the previous search may still observe its token)
             _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
+            _cancellationTokenSource = cts;
+            var token = cts.Token;
 
             IsSearching = true;
             StatusText = "Searching...";
@@ -125,47 +127,63 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 // Add to search history
                 AddToSearchHistory(SearchQuery);
 
-                // Create search options
+                var searchRoot = System.IO.Path.GetFullPath(SearchPath);
+                var extensions = ParseFileTypes(FileTypes);
+
+                // Map the UI options onto the Core search options. The Core service filters on
+                // MinSize/MaxSize, ModifiedAfter/ModifiedBefore and Extensions.
                 var searchOptions = new SearchOptions
                 {
                     Query = SearchQuery,
-                    Path = SearchPath,
-                    IncludeSubfolders = SearchSubfolders,
-                    SearchFileNames = SearchFileNames,
+                    SearchPaths = new[] { searchRoot },
+                    Recursive = SearchSubfolders,
+                    IncludeSubdirectories = SearchSubfolders,
                     SearchContent = SearchFileContent,
                     CaseSensitive = CaseSensitive,
                     UseRegex = UseRegex,
                     IncludeHidden = IncludeHiddenFiles,
                     DateFrom = DateFrom,
                     DateTo = DateTo,
-                    SizeMin = SizeMin,
-                    SizeMax = SizeMax,
-                    FileTypes = ParseFileTypes(FileTypes)
+                    ModifiedAfter = DateFrom?.Date,
+                    ModifiedBefore = DateTo?.Date.AddDays(1).AddTicks(-1),
+                    MinSize = SizeMin,
+                    MaxSize = SizeMax,
+                    MinSizeBytes = SizeMin,
+                    MaxSizeBytes = SizeMax,
+                    Extensions = extensions,
+                    FileExtensions = extensions,
+                    SortBy = SearchSortMode.Relevance,
+                    SortDescending = true
                 };
 
                 // Execute search
-                await foreach (var result in _searchService.SearchAsync(searchOptions, _cancellationTokenSource.Token))
-                {
-                    if (_cancellationTokenSource.Token.IsCancellationRequested)
-                        break;
+                var results = await _searchService.SearchAsync(SearchQuery, searchOptions, token);
+                token.ThrowIfCancellationRequested();
 
-                    var resultViewModel = new SearchResultViewModel(result);
-                    
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        SearchResults.Add(resultViewModel);
-                        ResultCount++;
-                        StatusText = $"Found {ResultCount} item{(ResultCount != 1 ? "s" : "")}...";
-                    });
+                foreach (var result in results)
+                {
+                    var resultPath = string.IsNullOrEmpty(result.FullPath) ? result.Path : result.FullPath;
+
+                    // Indexed search is not scoped to SearchPaths and the file-system search always
+                    // recurses, so scope the results to the requested folder here.
+                    if (!SearchResultScope.IsWithinScope(resultPath, searchRoot, SearchSubfolders))
+                        continue;
+
+                    SearchResults.Add(new SearchResultViewModel(result));
                 }
 
-                StatusText = ResultCount == 0 
-                    ? "No results found" 
+                ResultCount = SearchResults.Count;
+                StatusText = ResultCount == 0
+                    ? "No results found"
                     : $"Found {ResultCount} item{(ResultCount != 1 ? "s" : "")}";
             }
             catch (OperationCanceledException)
             {
-                StatusText = "Search cancelled";
+                // A newer search owns the status/results when this one was superseded.
+                if (ReferenceEquals(cts, _cancellationTokenSource))
+                {
+                    StatusText = "Search cancelled";
+                }
             }
             catch (UnauthorizedAccessException)
             {
@@ -177,7 +195,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             }
             finally
             {
-                IsSearching = false;
+                if (ReferenceEquals(cts, _cancellationTokenSource))
+                {
+                    IsSearching = false;
+                }
             }
         }
 
@@ -319,16 +340,20 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [RelayCommand]
         public void BrowseSearchPath()
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            var dialog = new Microsoft.Win32.OpenFolderDialog
             {
-                SelectedPath = SearchPath,
-                Description = "Select folder to search in",
-                ShowNewFolderButton = false
+                Title = "Select folder to search in",
+                Multiselect = false
             };
 
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            if (Directory.Exists(SearchPath))
             {
-                SearchPath = dialog.SelectedPath;
+                dialog.InitialDirectory = SearchPath;
+            }
+
+            if (dialog.ShowDialog() == true)
+            {
+                SearchPath = dialog.FolderName;
             }
         }
 
@@ -354,12 +379,13 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 {
                     SearchHistory = new ObservableCollection<string>
                     {
-                    "*.txt",
-                    "*.pdf",
-                    "config",
-                    "readme",
-                    "test"
-                };
+                        "*.txt",
+                        "*.pdf",
+                        "config",
+                        "readme",
+                        "test"
+                    };
+                }
             }
             catch
             {
@@ -412,10 +438,18 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             if (string.IsNullOrWhiteSpace(fileTypes))
                 return Array.Empty<string>();
 
+            // Normalize "*.txt", "txt" and ".txt" to ".txt" (the Core service compares against FileInfo.Extension).
             return fileTypes.Split(new[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                           .Select(t => t.Trim())
-                           .Where(t => !string.IsNullOrEmpty(t))
+                           .Select(t => t.Trim().TrimStart('*').Trim())
+                           .Where(t => !string.IsNullOrEmpty(t) && t != ".")
+                           .Select(t => t.StartsWith('.') ? t : "." + t)
+                           .Distinct(StringComparer.OrdinalIgnoreCase)
                            .ToArray();
+        }
+
+        private static string EscapeCsv(string? value)
+        {
+            return "\"" + (value ?? string.Empty).Replace("\"", "\"\"") + "\"";
         }
 
         /// <summary>
@@ -423,20 +457,20 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         /// </summary>
         private async Task ExportToCsvAsync(string filePath)
         {
-            await Task.Run(() =>
+            // Snapshot on the UI thread; the collection must not be enumerated while it can change.
+            var results = SearchResults.ToList();
+
+            await using var writer = new StreamWriter(filePath, false, System.Text.Encoding.UTF8);
+
+            // Write header
+            await writer.WriteLineAsync("Name,Path,Size,Modified,Type,Match");
+
+            // Write results
+            foreach (var result in results)
             {
-                using var writer = new StreamWriter(filePath, false, System.Text.Encoding.UTF8);
-                
-                // Write header
-                await writer.WriteLineAsync("Name,Path,Size,Modified,Type,Match");
-                
-                // Write results
-                foreach (var result in SearchResults)
-                {
-                    var line = $"\"{result.Name}\",\"{result.FullPath}\",{result.Size},{result.DateModified:yyyy-MM-dd HH:mm:ss},\"{result.Type}\",\"{result.MatchedText}\"";
-                    await writer.WriteLineAsync(line);
-                }
-            });
+                var line = $"{EscapeCsv(result.Name)},{EscapeCsv(result.FullPath)},{result.Size},{result.DateModified:yyyy-MM-dd HH:mm:ss},{EscapeCsv(result.Type)},{EscapeCsv(result.MatchedText)}";
+                await writer.WriteLineAsync(line);
+            }
         }
 
         /// <summary>
@@ -444,29 +478,28 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         /// </summary>
         private async Task ExportToTextAsync(string filePath)
         {
-            await Task.Run(() =>
+            var results = SearchResults.ToList();
+
+            await using var writer = new StreamWriter(filePath, false, System.Text.Encoding.UTF8);
+
+            await writer.WriteLineAsync($"Search Results - {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            await writer.WriteLineAsync($"Query: {SearchQuery}");
+            await writer.WriteLineAsync($"Path: {SearchPath}");
+            await writer.WriteLineAsync($"Total Results: {ResultCount}");
+            await writer.WriteLineAsync(new string('-', 80));
+
+            foreach (var result in results)
             {
-                using var writer = new StreamWriter(filePath, false, System.Text.Encoding.UTF8);
-                
-                await writer.WriteLineAsync($"Search Results - {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                await writer.WriteLineAsync($"Query: {SearchQuery}");
-                await writer.WriteLineAsync($"Path: {SearchPath}");
-                await writer.WriteLineAsync($"Total Results: {ResultCount}");
-                await writer.WriteLineAsync(new string('-', 80));
-                
-                foreach (var result in SearchResults)
+                await writer.WriteLineAsync($"{result.Name}");
+                await writer.WriteLineAsync($"  Path: {result.FullPath}");
+                await writer.WriteLineAsync($"  Size: {result.SizeFormatted}");
+                await writer.WriteLineAsync($"  Modified: {result.DateModified:yyyy-MM-dd HH:mm:ss}");
+                if (!string.IsNullOrEmpty(result.MatchedText))
                 {
-                    await writer.WriteLineAsync($"{result.Name}");
-                    await writer.WriteLineAsync($"  Path: {result.FullPath}");
-                    await writer.WriteLineAsync($"  Size: {result.SizeFormatted}");
-                    await writer.WriteLineAsync($"  Modified: {result.DateModified:yyyy-MM-dd HH:mm:ss}");
-                    if (!string.IsNullOrEmpty(result.MatchedText))
-                    {
-                        await writer.WriteLineAsync($"  Match: {result.MatchedText}");
-                    }
-                    await writer.WriteLineAsync();
+                    await writer.WriteLineAsync($"  Match: {result.MatchedText}");
                 }
-            });
+                await writer.WriteLineAsync();
+            }
         }
 
         /// <summary>
@@ -522,19 +555,41 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [ObservableProperty]
         private int _matchColumn;
 
-        public string SizeFormatted => FormatSize(_size);
+        public string SizeFormatted => FormatSize(Size);
 
         public SearchResultViewModel(SearchResult result)
         {
-            Name = Path.GetFileName(result.Path);
-            FullPath = result.Path;
+            // The Core search service populates FullPath (Path is the legacy/optional field).
+            var fullPath = string.IsNullOrEmpty(result.FullPath) ? result.Path : result.FullPath;
+
+            Name = string.IsNullOrEmpty(result.Name) ? System.IO.Path.GetFileName(fullPath) : result.Name;
+            FullPath = fullPath;
             Size = result.Size;
-            DateModified = result.ModifiedDate;
+            DateModified = result.DateModified;
             IsDirectory = result.IsDirectory;
-            Type = IsDirectory ? "Folder" : GetFileType(Path.GetExtension(result.Path));
-            MatchedText = result.MatchedText ?? string.Empty;
-            MatchLine = result.MatchLine;
-            MatchColumn = result.MatchColumn;
+            Type = IsDirectory
+                ? "Folder"
+                : GetFileType(string.IsNullOrEmpty(result.Extension) ? System.IO.Path.GetExtension(fullPath) : result.Extension);
+            MatchedText = !string.IsNullOrEmpty(result.Snippet)
+                ? result.Snippet
+                : result.MatchHighlight ?? string.Empty;
+            MatchLine = GetMetadataInt(result, "MatchLine");
+            MatchColumn = GetMetadataInt(result, "MatchColumn");
+        }
+
+        private static int GetMetadataInt(SearchResult result, string key)
+        {
+            if (result.Metadata != null && result.Metadata.TryGetValue(key, out var value) && value != null)
+            {
+                return value switch
+                {
+                    int i => i,
+                    long l => (int)l,
+                    _ => int.TryParse(value.ToString(), out var parsed) ? parsed : 0
+                };
+            }
+
+            return 0;
         }
 
         private static string FormatSize(long bytes)

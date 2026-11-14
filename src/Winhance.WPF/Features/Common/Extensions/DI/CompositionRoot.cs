@@ -26,6 +26,7 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
                 services
                     .AddCoreServices() // Core abstractions and interfaces
                     .AddInfrastructureServices() // Infrastructure implementations
+                    .AddFileManagerServices() // File Manager backend services (Winhance.Infrastructure.Features.FileManager)
                     .AddDomainServices() // Domain services following DDD
                     .AddUIServices() // UI layer services (includes ConfigurationService)
                     .AddViewModels() // ViewModels with proper lifetimes

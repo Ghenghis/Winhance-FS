@@ -271,3 +271,33 @@ htmlcov/
 .nox/
 venv/
 .venv/
+
+# --- Local tool caches (never commit) ---
+.benchmarks/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.trunk/
+.ra-aid/
+.zencoder/
+.zenflow/
+__pycache__/
+
+# --- Build / packaging output kept out of the repo ---
+/publish/
+/build/
+/temp-*/
+/dl-*/
+/backups/
+/audit-reports/
+/build*.txt
+/build_*.log
+/build_*.txt
+/*warnings*.txt
+/errors*.txt
+/format-*.json
+/nul
+
+# --- Rust build output ---
+target/
+**/target/

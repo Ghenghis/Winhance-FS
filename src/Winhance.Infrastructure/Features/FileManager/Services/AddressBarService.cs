@@ -508,6 +508,86 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             BreadcrumbsChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <inheritdoc />
+        public Task<IEnumerable<FolderItem>> GetRecentLocationsAsync(
+            int maxResults = 20,
+            CancellationToken cancellationToken = default)
+        {
+            List<string> snapshot;
+            lock (_lock)
+            {
+                snapshot = _recentPaths.ToList();
+            }
+
+            IEnumerable<FolderItem> result = snapshot
+                .Where(Directory.Exists)
+                .Take(Math.Max(0, maxResults))
+                .Select(CreateLocationItem)
+                .ToList();
+            return Task.FromResult(result);
+        }
+
+        /// <inheritdoc />
+        public Task<IEnumerable<FolderItem>> GetFrequentLocationsAsync(
+            int maxResults = 20,
+            CancellationToken cancellationToken = default)
+        {
+            List<string> snapshot;
+            lock (_lock)
+            {
+                snapshot = _frequentPaths
+                    .OrderByDescending(kv => kv.Value)
+                    .ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(kv => kv.Key)
+                    .ToList();
+            }
+
+            IEnumerable<FolderItem> result = snapshot
+                .Where(Directory.Exists)
+                .Take(Math.Max(0, maxResults))
+                .Select(CreateLocationItem)
+                .ToList();
+            return Task.FromResult(result);
+        }
+
+        /// <inheritdoc />
+        public Task ClearRecentLocationsAsync()
+        {
+            lock (_lock)
+            {
+                _recentPaths.Clear();
+                _frequentPaths.Clear();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private static FolderItem CreateLocationItem(string path)
+        {
+            var trimmed = path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            var name = System.IO.Path.GetFileName(trimmed);
+            var attributes = FileAttributes.Normal;
+            try
+            {
+                attributes = File.GetAttributes(path);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+
+            return new FolderItem
+            {
+                Name = string.IsNullOrEmpty(name) ? path : name,
+                FullPath = path,
+                Icon = "Folder",
+                IsHidden = attributes.HasFlag(FileAttributes.Hidden),
+                IsSystem = attributes.HasFlag(FileAttributes.System),
+            };
+        }
+
         private void AddToRecent(string path)
         {
             lock (_lock)

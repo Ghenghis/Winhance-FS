@@ -280,135 +280,154 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             string driveLetter,
             CancellationToken cancellationToken = default)
         {
+            var driveRoot = NormalizeDriveRoot(driveLetter);
             var analysis = new SpaceRecoveryAnalysis
             {
                 DriveLetter = driveLetter,
             };
 
+            try
+            {
+                var drive = new DriveInfo(driveRoot);
+                if (drive.IsReady)
+                {
+                    analysis.TotalSpace = drive.TotalSize;
+                    analysis.FreeSpace = drive.AvailableFreeSpace;
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Debug.WriteLine($"Drive info unavailable for {driveLetter}: {ex.Message}");
+            }
+
             var opportunities = new List<RecoveryOpportunity>();
+            var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            // (display name, path, category, description, action, safe to clean automatically, minimum size)
+            var candidates = new (string Name, string Path, string Category, string Description, RecoveryAction Action, bool Safe, long MinSize)[]
+            {
+                ("LM Studio models", Path.Combine(profile, ".lmstudio", "models"), "AI Models", "AI model files that can be relocated to another drive", RecoveryAction.Relocate, false, 1),
+                ("Ollama models", Path.Combine(profile, ".ollama", "models"), "AI Models", "AI model files that can be relocated to another drive", RecoveryAction.Relocate, false, 1),
+                ("Hugging Face cache", Path.Combine(profile, ".cache", "huggingface", "hub"), "AI Models", "Downloaded model cache that can be relocated to another drive", RecoveryAction.Relocate, false, 1),
+                ("NuGet packages", Path.Combine(profile, ".nuget", "packages"), "Development Cache", "Package cache; packages are re-downloaded when needed", RecoveryAction.Review, false, 500L * 1024 * 1024),
+                ("Cargo registry", Path.Combine(profile, ".cargo", "registry"), "Development Cache", "Package cache; crates are re-downloaded when needed", RecoveryAction.Review, false, 500L * 1024 * 1024),
+                ("npm cache", Path.Combine(profile, ".npm"), "Development Cache", "Package cache; packages are re-downloaded when needed", RecoveryAction.Review, false, 500L * 1024 * 1024),
+                ("pip cache", Path.Combine(localAppData, "pip", "cache"), "Development Cache", "Package cache; packages are re-downloaded when needed", RecoveryAction.Review, false, 500L * 1024 * 1024),
+                ("Temporary files", Path.GetTempPath(), "System Cache", "Temporary files that can be safely cleaned (files in use are skipped)", RecoveryAction.Clean, true, 100L * 1024 * 1024),
+                ("Temporary files", Path.Combine(localAppData, "Temp"), "System Cache", "Temporary files that can be safely cleaned (files in use are skipped)", RecoveryAction.Clean, true, 100L * 1024 * 1024),
+            };
 
             await Task.Run(
                 () =>
-            {
-                // Check AI model caches
-                var aiModelPaths = new[]
                 {
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".lmstudio", "models"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ollama", "models"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "huggingface", "hub"),
-                };
-
-                foreach (var modelPath in aiModelPaths)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (Directory.Exists(modelPath))
+                    foreach (var c in candidates)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        string fullPath;
                         try
                         {
-                            var size = CalculateDirectorySize(modelPath);
-                            if (size > 0)
-                            {
-                                opportunities.Add(new RecoveryOpportunity
-                                {
-                                    Name = Path.GetFileName(Path.GetDirectoryName(modelPath)) + " Models",
-                                    Path = modelPath,
-                                    Size = size,
-                                    Category = "AI Models",
-                                    Description = "AI model files that can be relocated to another drive",
-                                    Action = RecoveryAction.Relocate,
-                                    Priority = size > 10L * 1024 * 1024 * 1024 ? "High" : "Medium",
-                                });
-                            }
+                            fullPath = Path.GetFullPath(c.Path).TrimEnd(Path.DirectorySeparatorChar);
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
                         {
-                            System.Diagnostics.Debug.WriteLine($"Skipped inaccessible item: {ex.Message}");
+                            continue;
                         }
+
+                        // Only report folders on the drive being analyzed, and each folder once
+                        // (GetTempPath() and %LocalAppData%\Temp are normally the same folder).
+                        if (!fullPath.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase) ||
+                            !seenPaths.Add(fullPath) ||
+                            !Directory.Exists(fullPath))
+                        {
+                            continue;
+                        }
+
+                        var (size, count) = MeasureDirectory(fullPath, cancellationToken);
+                        if (size < c.MinSize)
+                        {
+                            continue;
+                        }
+
+                        opportunities.Add(new RecoveryOpportunity
+                        {
+                            Name = c.Name,
+                            Path = fullPath,
+                            Size = size,
+                            ItemCount = count,
+                            Category = c.Category,
+                            Description = c.Description,
+                            Action = c.Action,
+                            RecommendedAction = c.Action,
+                            IsSafeToClean = c.Safe,
+                            Priority = size > 10L * 1024 * 1024 * 1024 ? "High" : size > 1024L * 1024 * 1024 ? "Medium" : "Low",
+                        });
                     }
-                }
-
-                // Check development caches
-                var devCachePaths = new[]
-                {
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cargo", "registry"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".npm"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "pip", "cache"),
-                };
-
-                foreach (var cachePath in devCachePaths)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (Directory.Exists(cachePath))
-                    {
-                        try
-                        {
-                            var size = CalculateDirectorySize(cachePath);
-                            if (size > 500 * 1024 * 1024) // > 500MB
-                            {
-                                opportunities.Add(new RecoveryOpportunity
-                                {
-                                    Name = Path.GetFileName(cachePath) + " Cache",
-                                    Path = cachePath,
-                                    Size = size,
-                                    Category = "Development Cache",
-                                    Description = "Development package cache that can be cleaned",
-                                    Action = RecoveryAction.Clean,
-                                    Priority = size > 5L * 1024 * 1024 * 1024 ? "High" : "Low",
-                                });
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Skipped inaccessible item: {ex.Message}");
-                        }
-                    }
-                }
-
-                // Check Windows temp folders
-                var tempPaths = new[]
-                {
-                    Path.GetTempPath(),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp"),
-                };
-
-                foreach (var tempPath in tempPaths)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (Directory.Exists(tempPath))
-                    {
-                        try
-                        {
-                            var size = CalculateDirectorySize(tempPath);
-                            if (size > 100 * 1024 * 1024) // > 100MB
-                            {
-                                opportunities.Add(new RecoveryOpportunity
-                                {
-                                    Name = "Temporary Files",
-                                    Path = tempPath,
-                                    Size = size,
-                                    Category = "System Cache",
-                                    Description = "Temporary files that can be safely cleaned",
-                                    Action = RecoveryAction.Clean,
-                                    Priority = "Low",
-                                });
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Skipped inaccessible item: {ex.Message}");
-                        }
-                    }
-                }
-            }, cancellationToken);
+                },
+                cancellationToken);
 
             analysis.Opportunities = opportunities.OrderByDescending(o => o.Size).ToList();
             analysis.TotalRecoverableSize = opportunities.Sum(o => o.Size);
-
+            analysis.RecoverableSpace = analysis.TotalRecoverableSize;
             return analysis;
+        }
+
+        private static string NormalizeDriveRoot(string driveLetter)
+        {
+            var d = (driveLetter ?? string.Empty).Trim();
+            if (d.Length == 0)
+            {
+                d = Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\";
+            }
+
+            if (d.Length == 1)
+            {
+                d += ":";
+            }
+
+            if (!d.EndsWith("\\", StringComparison.Ordinal))
+            {
+                d += "\\";
+            }
+
+            return d;
+        }
+
+        /// <summary>Total size and file count of a folder tree, skipping anything inaccessible and not following junctions.</summary>
+        private static (long Size, int Count) MeasureDirectory(string path, CancellationToken cancellationToken)
+        {
+            long size = 0;
+            var count = 0;
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.ReparsePoint,
+            };
+
+            try
+            {
+                foreach (var file in new DirectoryInfo(path).EnumerateFiles("*", options))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        size += file.Length;
+                        count++;
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                System.Diagnostics.Debug.WriteLine($"Skipped inaccessible item: {ex.Message}");
+            }
+
+            return (size, count);
         }
 
         public async Task<OrganizationResult> RelocateModelsAsync(

@@ -490,7 +490,7 @@ namespace Winhance.WPF.Features.Common.Services
                 return (index, null, guid, name);
             }
 
-            if (index == ComboBoxResolver.CUSTOM_STATE_INDEX)
+            if (index == ComboBoxResolver.CUSTOMSTATEINDEX)
             {
                 var customValues = new Dictionary<string, object>();
 

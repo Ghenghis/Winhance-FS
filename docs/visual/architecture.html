@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Winhance — Technical Architecture Reference</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:    #0d0d1a;
+    --bg-card:    #111124;
+    --bg-card2:   #161630;
+    --cyan:       #00d4ff;
+    --cyan-dim:   #0099bb;
+    --cyan-glow:  rgba(0, 212, 255, 0.18);
+    --amber:      #f59e0b;
+    --amber-dim:  #b37800;
+    --green:      #22c55e;
+    --red:        #ef4444;
+    --purple:     #a855f7;
+    --text:       #e2e8f0;
+    --text-dim:   #94a3b8;
+    --text-muted: #4a5568;
+    --border:     rgba(0, 212, 255, 0.12);
+    --font-mono:  'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --font-ui:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: var(--font-ui);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ===== CIRCUIT BOARD BACKGROUND ===== */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,212,255,0.04) 39px, rgba(0,212,255,0.04) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,212,255,0.04) 39px, rgba(0,212,255,0.04) 40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,212,255,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(168,85,247,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== NAV ===== */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(13,13,26,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 52px;
+  }
+
+  nav .logo {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--cyan);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  nav .nav-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+    flex: 1;
+    overflow-x: auto;
+  }
+
+  nav .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+
+  nav .nav-links a:hover { color: var(--cyan); }
+  nav .nav-links a.active { color: var(--cyan); }
+
+  .back-link {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .back-link:hover { color: var(--cyan); border-color: var(--cyan); }
+
+  /* ===== MAIN CONTENT ===== */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 80px 2rem 4rem;
+  }
+
+  /* ===== SECTION HELPERS ===== */
+  .section {
+    margin: 5rem 0;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+
+  .section-header .section-num {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--cyan);
+    background: var(--cyan-glow);
+    border: 1px solid rgba(0,212,255,0.25);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* ===== HERO ===== */
+  #hero {
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-badge {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 4px 16px;
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+    animation: fadeInDown 0.8s ease both;
+  }
+
+  .hero-title {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    animation: fadeInUp 0.8s 0.1s ease both;
+  }
+
+  .hero-title .line1 { color: var(--text); }
+  .hero-title .line2 {
+    background: linear-gradient(135deg, var(--cyan) 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    max-width: 600px;
+    margin-bottom: 3rem;
+    animation: fadeInUp 0.8s 0.2s ease both;
+  }
+
+  /* ===== HERO 3-LAYER DIAGRAM ===== */
+  .hero-arch-diagram {
+    position: relative;
+    width: 380px;
+    height: 380px;
+    margin: 0 auto 2rem;
+    animation: fadeInUp 0.8s 0.3s ease both;
+  }
+
+  .arch-ring {
+    position: absolute;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid;
+    transition: all 0.4s;
+  }
+
+  .arch-ring-outer {
+    inset: 0;
+    border-color: rgba(168,85,247,0.5);
+    background: radial-gradient(circle, transparent 60%, rgba(168,85,247,0.05) 100%);
+    animation: spin 30s linear infinite reverse;
+  }
+
+  .arch-ring-mid {
+    inset: 70px;
+    border-color: rgba(0,212,255,0.5);
+    background: radial-gradient(circle, transparent 50%, rgba(0,212,255,0.06) 100%);
+    animation: spin 20s linear infinite;
+  }
+
+  .arch-ring-inner {
+    inset: 140px;
+    border-color: rgba(34,197,94,0.6);
+    background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 80%);
+    animation: spin 12s linear infinite reverse;
+  }
+
+  .ring-label {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .ring-label-outer {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.72rem;
+    color: #a855f7;
+    text-shadow: 0 0 10px rgba(168,85,247,0.6);
+  }
+
+  .ring-label-mid {
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.68rem;
+    color: var(--cyan);
+    text-shadow: 0 0 8px rgba(0,212,255,0.6);
+  }
+
+  .ring-label-inner {
+    top: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.62rem;
+    color: var(--green);
+    text-shadow: 0 0 8px rgba(34,197,94,0.5);
+  }
+
+  .ring-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  /* Dots rotating on rings */
+  .outer-dot {
+    top: 0; left: 50%; margin-left: -3px; margin-top: -3px;
+    background: #a855f7;
+    box-shadow: 0 0 8px #a855f7;
+  }
+
+  .mid-dot {
+    top: 50%; right: -3px; margin-top: -3px;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .inner-dot {
+    bottom: -3px; left: 50%; margin-left: -3px;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  /* ===== 3D CUBE ===== */
+  .cube-container {
+    perspective: 600px;
+    width: 140px;
+    height: 140px;
+    position: absolute;
+    right: -60px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: fadeIn 1s 0.5s ease both;
+  }
+
+  .cube {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    animation: cubeRotate 16s linear infinite;
+    position: relative;
+  }
+
+  .cube-face {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border: 1px solid rgba(0,212,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    background: rgba(13,13,26,0.85);
+    backdrop-filter: blur(4px);
+  }
+
+  .face-front  { transform: rotateY(0deg)   translateZ(70px); border-color: rgba(34,197,94,0.5); color: var(--green); }
+  .face-back   { transform: rotateY(180deg) translateZ(70px); border-color: rgba(0,212,255,0.5); color: var(--cyan); }
+  .face-right  { transform: rotateY(90deg)  translateZ(70px); border-color: rgba(168,85,247,0.5); color: #a855f7; }
+  .face-left   { transform: rotateY(-90deg) translateZ(70px); border-color: rgba(245,158,11,0.4); color: var(--amber); }
+  .face-top    { transform: rotateX(90deg)  translateZ(70px); border-color: rgba(0,212,255,0.3); color: var(--cyan); background: rgba(0,212,255,0.04); }
+  .face-bottom { transform: rotateX(-90deg) translateZ(70px); border-color: rgba(0,212,255,0.2); color: var(--text-muted); }
+
+  @keyframes cubeRotate {
+    0%   { transform: rotateX(15deg) rotateY(0deg); }
+    100% { transform: rotateX(15deg) rotateY(360deg); }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* ===== HERO STATS ROW ===== */
+  .hero-stats {
+    display: flex;
+    gap: 2rem;
+    animation: fadeInUp 0.8s 0.4s ease both;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hero-stat {
+    text-align: center;
+  }
+
+  .hero-stat-num {
+    font-family: var(--font-mono);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--cyan);
+    display: block;
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+
+  .hero-stat-label {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ===== INTERACTIVE ARCHITECTURE DIAGRAM ===== */
+  .arch-diagram-interactive {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .arch-layer {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+    background: var(--bg-card);
+    margin: 0 0 0 0;
+    overflow: hidden;
+  }
+
+  .arch-layer::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 12px 0 0 12px;
+    transition: opacity 0.3s;
+  }
+
+  .arch-layer-wpf { margin: 0; }
+  .arch-layer-wpf::before { background: linear-gradient(180deg, #a855f7, #7c3aed); }
+
+  .arch-layer-infra { margin: 0 40px; }
+  .arch-layer-infra::before { background: linear-gradient(180deg, var(--cyan), var(--cyan-dim)); }
+
+  .arch-layer-core { margin: 0 80px; }
+  .arch-layer-core::before { background: linear-gradient(180deg, var(--green), #16a34a); }
+
+  .arch-layer:hover, .arch-layer.expanded {
+    border-color: rgba(0,212,255,0.3);
+    transform: none;
+    box-shadow: 0 0 30px rgba(0,212,255,0.08);
+  }
+
+  .arch-layer-wpf:hover, .arch-layer-wpf.expanded { border-color: rgba(168,85,247,0.4); box-shadow: 0 0 30px rgba(168,85,247,0.1); }
+  .arch-layer-core:hover, .arch-layer-core.expanded { border-color: rgba(34,197,94,0.4); box-shadow: 0 0 30px rgba(34,197,94,0.1); }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .layer-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .layer-icon-wpf   { background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); }
+  .layer-icon-infra { background: rgba(0,212,255,0.1);   border: 1px solid rgba(0,212,255,0.25); }
+  .layer-icon-core  { background: rgba(34,197,94,0.1);   border: 1px solid rgba(34,197,94,0.25); }
+
+  .layer-name {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .layer-name-wpf   { color: #a855f7; }
+  .layer-name-infra { color: var(--cyan); }
+  .layer-name-core  { color: var(--green); }
+
+  .layer-tagline {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-left: auto;
+    font-style: italic;
+  }
+
+  .layer-expand-icon {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-left: 0.5rem;
+    transition: transform 0.3s;
+  }
+
+  .arch-layer.expanded .layer-expand-icon { transform: rotate(180deg); }
+
+  .layer-details {
+    display: none;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .arch-layer.expanded .layer-details { display: grid; }
+
+  .detail-chip {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    transition: all 0.2s;
+  }
+
+  .detail-chip:hover {
+    border-color: rgba(0,212,255,0.3);
+    color: var(--text);
+    background: rgba(0,212,255,0.05);
+  }
+
+  .detail-chip .chip-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Dependency arrows */
+  .dep-arrows {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .dep-arrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .arrow-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan-dim) 0%, transparent 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -20px;
+    width: 20px; height: 2px;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    animation: electronTravel 2.5s linear infinite;
+  }
+
+  @keyframes electronTravel {
+    from { left: -20px; }
+    to   { left: 100%; }
+  }
+
+  /* ===== TECHNOLOGY STACK GRID ===== */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .tech-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+  }
+
+  .tech-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--cyan));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .tech-card:hover { border-color: rgba(0,212,255,0.3); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .tech-card:hover::before { opacity: 1; }
+
+  .tech-icon {
+    font-size: 1.6rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .tech-name {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .tech-version {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: rgba(0,212,255,0.1);
+    color: var(--cyan);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 1px 7px;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+  }
+
+  .tech-card:hover .tech-version {
+    background: rgba(0,212,255,0.18);
+    border-color: rgba(0,212,255,0.4);
+  }
+
+  .tech-desc {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .tech-category {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+  }
+
+  /* Category color coding */
+  .cat-ui     { --card-accent: #a855f7; }
+  .cat-mvvm   { --card-accent: var(--cyan); }
+  .cat-data   { --card-accent: var(--amber); }
+  .cat-chart  { --card-accent: var(--green); }
+  .cat-log    { --card-accent: #f97316; }
+  .cat-test   { --card-accent: #ec4899; }
+  .cat-resil  { --card-accent: #06b6d4; }
+  .cat-sys    { --card-accent: #64748b; }
+  .cat-ai     { --card-accent: #8b5cf6; }
+  .cat-anal   { --card-accent: #10b981; }
+
+  /* ===== DI FLOW SVG ===== */
+  .di-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    overflow: hidden;
+  }
+
+  .di-svg {
+    width: 100%;
+    height: 400px;
+    overflow: visible;
+  }
+
+  .di-node {
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .di-node:hover { opacity: 0.85; }
+
+  .di-node rect {
+    rx: 6; ry: 6;
+    transition: all 0.2s;
+  }
+
+  .di-node:hover rect { filter: brightness(1.3); }
+
+  .di-path {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    stroke-dashoffset: 100;
+    animation: dashFlow 3s linear infinite;
+  }
+
+  @keyframes dashFlow {
+    from { stroke-dashoffset: 100; }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  /* ===== BUILD PIPELINE ===== */
+  .pipeline-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    overflow-x: auto;
+  }
+
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: 900px;
+  }
+
+  .pipeline-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+  }
+
+  .pipeline-stage::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan-dim), transparent);
+    overflow: hidden;
+  }
+
+  .pipeline-stage:last-child::after { display: none; }
+
+  .pipeline-node {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    border: 1px solid;
+    position: relative;
+    animation: pipelinePulse 3s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .pipeline-stage:nth-child(1) .pipeline-node { animation-delay: 0s; }
+  .pipeline-stage:nth-child(2) .pipeline-node { animation-delay: 0.4s; }
+  .pipeline-stage:nth-child(3) .pipeline-node { animation-delay: 0.8s; }
+  .pipeline-stage:nth-child(4) .pipeline-node { animation-delay: 1.2s; }
+  .pipeline-stage:nth-child(5) .pipeline-node { animation-delay: 1.6s; }
+  .pipeline-stage:nth-child(6) .pipeline-node { animation-delay: 2.0s; }
+
+  @keyframes pipelinePulse {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    50% { box-shadow: 0 0 15px 2px var(--node-glow, rgba(0,212,255,0.25)); }
+  }
+
+  .stage-src   { background: rgba(100,116,139,0.15); border-color: rgba(100,116,139,0.4); --node-glow: rgba(100,116,139,0.4); }
+  .stage-msbuild { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.3); --node-glow: rgba(0,212,255,0.4); }
+  .stage-stylecop { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); --node-glow: rgba(245,158,11,0.3); }
+  .stage-roslyn { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); --node-glow: rgba(168,85,247,0.3); }
+  .stage-roslynator { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); --node-glow: rgba(16,185,129,0.3); }
+  .stage-out  { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.35); --node-glow: rgba(34,197,94,0.4); }
+
+  .pipeline-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .pipeline-sublabel {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 90px;
+  }
+
+  .pipeline-arrow {
+    width: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pipeline-arrow::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan-dim), transparent);
+    position: relative;
+  }
+
+  .pipeline-arrow::after {
+    content: '';
+    position: absolute;
+    left: -8px;
+    width: 8px; height: 2px;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    animation: pipeArrow 1.5s linear infinite;
+  }
+
+  @keyframes pipeArrow {
+    from { left: -8px; }
+    to   { left: 40px; }
+  }
+
+  /* ===== NOWARN TABLE ===== */
+  .nowarn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.5rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0.25rem;
+  }
+
+  .nowarn-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .warn-sa   { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .warn-cs   { background: rgba(100,116,139,0.12); color: #94a3b8;    border: 1px solid rgba(100,116,139,0.2); }
+  .warn-ca   { background: rgba(168,85,247,0.12); color: #a855f7;     border: 1px solid rgba(168,85,247,0.2); }
+  .warn-mvvm { background: rgba(0,212,255,0.1);   color: var(--cyan); border: 1px solid rgba(0,212,255,0.2); }
+  .warn-sys  { background: rgba(16,185,129,0.1);  color: #10b981;     border: 1px solid rgba(16,185,129,0.2); }
+
+  /* ===== TEST COVERAGE MAP ===== */
+  .coverage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.6rem;
+  }
+
+  .cov-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    border: 1px solid;
+    transition: all 0.2s;
+  }
+
+  .cov-cell:hover { transform: translateY(-1px); }
+
+  .cov-green {
+    background: rgba(34,197,94,0.08);
+    border-color: rgba(34,197,94,0.25);
+    color: var(--text);
+  }
+
+  .cov-grey {
+    background: rgba(71,85,105,0.1);
+    border-color: rgba(71,85,105,0.2);
+    color: var(--text-muted);
+  }
+
+  .cov-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .cov-dot-green { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+  .cov-dot-grey  { background: #475569; }
+
+  /* ===== PACKAGE TABLE ===== */
+  .pkg-table-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .pkg-filter-bar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .pkg-filter-bar input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+  }
+
+  .pkg-filter-bar input:focus { border-color: var(--cyan); }
+  .pkg-filter-bar input::placeholder { color: var(--text-muted); }
+
+  .filter-tag {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-dim);
+    background: transparent;
+    font-family: var(--font-ui);
+  }
+
+  .filter-tag:hover, .filter-tag.active {
+    background: rgba(0,212,255,0.1);
+    border-color: rgba(0,212,255,0.3);
+    color: var(--cyan);
+  }
+
+  .pkg-count {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .pkg-table-scroll {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  th {
+    background: var(--bg-card2);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  th:hover { color: var(--cyan); }
+
+  th.sort-asc::after  { content: ' ↑'; color: var(--cyan); }
+  th.sort-desc::after { content: ' ↓'; color: var(--cyan); }
+
+  td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid rgba(0,212,255,0.05);
+    vertical-align: middle;
+  }
+
+  tr:hover td { background: rgba(0,212,255,0.03); }
+  tr:last-child td { border-bottom: none; }
+
+  .pkg-name {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .pkg-ver {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--cyan);
+    background: rgba(0,212,255,0.08);
+    padding: 1px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  .pkg-cat {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .cat-runtime { background: rgba(0,212,255,0.1); color: var(--cyan); }
+  .cat-testing { background: rgba(236,72,153,0.12); color: #ec4899; }
+  .cat-analyzer { background: rgba(245,158,11,0.1); color: var(--amber); }
+  .cat-wpf-ui  { background: rgba(168,85,247,0.1); color: #a855f7; }
+  .cat-logging { background: rgba(249,115,22,0.1); color: #f97316; }
+  .cat-resilience { background: rgba(6,182,212,0.1); color: #06b6d4; }
+  .cat-charting { background: rgba(34,197,94,0.1); color: var(--green); }
+  .cat-ai-ml   { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+  .cat-windows { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+  .pkg-used-by {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+
+  .proj-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-family: var(--font-mono);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 3px;
+  }
+
+  .proj-core  { background: rgba(34,197,94,0.12); color: var(--green); }
+  .proj-infra { background: rgba(0,212,255,0.1); color: var(--cyan); }
+  .proj-wpf   { background: rgba(168,85,247,0.1); color: #a855f7; }
+
+  /* ===== METRICS BOXES ===== */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .metric-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .metric-box::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--metric-color, var(--cyan));
+    opacity: 0.5;
+  }
+
+  .metric-box:hover { border-color: var(--metric-color, var(--cyan)); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+
+  .metric-icon { font-size: 1.4rem; margin-bottom: 0.75rem; }
+
+  .metric-value {
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--metric-color, var(--cyan));
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    text-shadow: 0 0 20px var(--metric-color, rgba(0,212,255,0.4));
+  }
+
+  .metric-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .metric-sub {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    line-height: 1.4;
+  }
+
+  /* Counting animation */
+  .count-up { animation: countIn 0.1s ease both; }
+
+  /* ===== CSPROJ SNIPPET ===== */
+  .code-block {
+    background: #0a0a16;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  .code-block .xml-tag   { color: #569cd6; }
+  .code-block .xml-attr  { color: #9cdcfe; }
+  .code-block .xml-val   { color: #ce9178; }
+  .code-block .xml-cmt   { color: #6a9955; }
+  .code-block .xml-text  { color: var(--text-dim); }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.4); }
+
+  /* ===== MISC UTILITIES ===== */
+  .label-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-dot {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .dot-green { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .dot-grey  { width: 8px; height: 8px; border-radius: 50%; background: #475569; }
+
+  .hidden { display: none !important; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .two-col { grid-template-columns: 1fr; }
+    .arch-layer-infra { margin: 0 20px; }
+    .arch-layer-core  { margin: 0 40px; }
+    .cube-container { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== NAVIGATION ===== -->
+<nav>
+  <a href="index.html" class="logo">⬡ WINHANCE DOCS</a>
+  <ul class="nav-links">
+    <li><a href="#hero">Overview</a></li>
+    <li><a href="#arch-diagram">Architecture</a></li>
+    <li><a href="#tech-stack">Tech Stack</a></li>
+    <li><a href="#di-flow">DI Flow</a></li>
+    <li><a href="#build">Build</a></li>
+    <li><a href="#coverage">Coverage</a></li>
+    <li><a href="#packages">Packages</a></li>
+    <li><a href="#metrics">Metrics</a></li>
+  </ul>
+  <a href="index.html" class="back-link">← Back to Index</a>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+  <!-- ===== 1. HERO ===== -->
+  <section id="hero">
+    <div class="hero-badge">Technical Architecture Reference · v25.12.12</div>
+    <h1 class="hero-title">
+      <span class="line1">Clean Architecture.</span><br>
+      <span class="line2">Zero Compromises.</span>
+    </h1>
+    <p class="hero-sub">
+      Winhance is a three-layer .NET 9 Windows application built on strict dependency inversion,
+      CommunityToolkit.Mvvm, and enterprise-grade analyzers — so every abstraction earns its place.
+    </p>
+
+    <div style="position:relative; display:inline-block;">
+      <!-- Concentric rings diagram -->
+      <div class="hero-arch-diagram">
+        <div class="arch-ring arch-ring-outer">
+          <div class="ring-dot outer-dot"></div>
+          <span class="ring-label ring-label-outer">Winhance.WPF</span>
+        </div>
+        <div class="arch-ring arch-ring-mid">
+          <div class="ring-dot mid-dot"></div>
+          <span class="ring-label ring-label-mid">Winhance.Infrastructure</span>
+        </div>
+        <div class="arch-ring arch-ring-inner">
+          <div class="ring-dot inner-dot"></div>
+          <span class="ring-label ring-label-inner">Winhance.Core</span>
+        </div>
+      </div>
+
+      <!-- 3D Rotating Cube -->
+      <div class="cube-container" style="right:-80px; top:50%; transform:translateY(-50%);">
+        <div class="cube">
+          <div class="cube-face face-front">Winhance<br>.Core</div>
+          <div class="cube-face face-back">Infrastructure</div>
+          <div class="cube-face face-right">WPF Layer</div>
+          <div class="cube-face face-left">net9.0<br>-windows</div>
+          <div class="cube-face face-top">v25.12.12</div>
+          <div class="cube-face face-bottom">Clean Arch</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-num" data-target="121">0</span>
+        <span class="hero-stat-label">Interfaces</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num" data-target="112">0</span>
+        <span class="hero-stat-label">Services</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num" data-target="85">0</span>
+        <span class="hero-stat-label">ViewModels</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num" data-target="47">0</span>
+        <span class="hero-stat-label">NuGet Packages</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num" data-target="140">0</span>
+        <span class="hero-stat-label">Tests Passing</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2. INTERACTIVE ARCHITECTURE DIAGRAM ===== -->
+  <section id="arch-diagram" class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2>Interactive Architecture Layers</h2>
+    </div>
+    <p style="color:var(--text-dim); font-size:0.85rem; margin-bottom:1.5rem;">
+      Click any layer to expand its contents. Dependency flow is strictly inward — WPF depends on Infrastructure and Core; Infrastructure depends on Core only. Core has zero outward dependencies.
+    </p>
+
+    <div class="arch-diagram-interactive">
+
+      <!-- WPF Layer -->
+      <div class="arch-layer arch-layer-wpf" id="layer-wpf" onclick="toggleLayer('wpf')">
+        <div class="layer-header">
+          <div class="layer-icon layer-icon-wpf">🖥</div>
+          <div>
+            <div class="layer-name layer-name-wpf">Winhance.WPF</div>
+            <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">OutputType: WinExe · net9.0-windows</div>
+          </div>
+          <div class="layer-tagline">Presentation &amp; Interaction</div>
+          <div class="layer-expand-icon">▾</div>
+        </div>
+        <div class="layer-details" id="details-wpf">
+          <div class="detail-chip"><span class="chip-label">ViewModels (85)</span>MainViewModel, OptimizeViewModel, CustomizeViewModel…</div>
+          <div class="detail-chip"><span class="chip-label">Feature Areas</span>Optimize · Customize · SoftwareApps · FileManager · AdvancedTools</div>
+          <div class="detail-chip"><span class="chip-label">Base Classes</span>BaseViewModel · BaseFeatureViewModel · BaseCategoryViewModel</div>
+          <div class="detail-chip"><span class="chip-label">XAML Views (95)</span>Includes XAML feature view hierarchy</div>
+          <div class="detail-chip"><span class="chip-label">Entry Point</span>App.xaml.cs · Host builder + DI wiring</div>
+          <div class="detail-chip"><span class="chip-label">Resources</span>winhance-rocket.ico · Recommended Config · autounattend XML</div>
+          <div class="detail-chip"><span class="chip-label">Localization</span>JSON locale files (PreserveNewest)</div>
+          <div class="detail-chip"><span class="chip-label">Assembly</span>Winhance.exe · v25.12.12</div>
+          <div class="detail-chip"><span class="chip-label">CommunityToolkit</span>ObservableObject · RelayCommand · [ObservableProperty]</div>
+          <div class="detail-chip"><span class="chip-label">MahApps Icons</span>Material · MaterialDesign · Lucide icon packs</div>
+          <div class="detail-chip"><span class="chip-label">Charts</span>LiveChartsCore.SkiaSharpView.WPF 2.0.0-rc2</div>
+          <div class="detail-chip"><span class="chip-label">References</span>→ Winhance.Infrastructure → Winhance.Core</div>
+        </div>
+      </div>
+
+      <!-- Arrow WPF → Infra -->
+      <div class="dep-arrows">
+        <div class="dep-arrow">
+          <span style="color:var(--text-muted)">depends on</span>
+          <div class="arrow-line"></div>
+          <span style="color:#a855f7">WPF</span>
+          <span style="color:var(--text-muted)">→</span>
+          <span style="color:var(--cyan)">Infrastructure</span>
+        </div>
+      </div>
+
+      <!-- Infrastructure Layer -->
+      <div class="arch-layer arch-layer-infra" id="layer-infra" onclick="toggleLayer('infra')">
+        <div class="layer-header">
+          <div class="layer-icon layer-icon-infra">⚙</div>
+          <div>
+            <div class="layer-name layer-name-infra">Winhance.Infrastructure</div>
+            <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">SDK: Microsoft.NET.Sdk · net9.0-windows · UseWPF=true</div>
+          </div>
+          <div class="layer-tagline">Service Implementations &amp; Handlers</div>
+          <div class="layer-expand-icon">▾</div>
+        </div>
+        <div class="layer-details" id="details-infra">
+          <div class="detail-chip"><span class="chip-label">Services (112)</span>LogService · ConfigurationService · EventBusService…</div>
+          <div class="detail-chip"><span class="chip-label">Feature Areas</span>Common · FileManager · Optimize · Customize · SoftwareApps · AdvancedTools · Agents · UI</div>
+          <div class="detail-chip"><span class="chip-label">DI Extension</span>ServiceCollectionExtensions.AddWinhanceServices()</div>
+          <div class="detail-chip"><span class="chip-label">Service Groups</span>AddCommonServices · AddFileManagerServices · AddAdvancedServices · AddSecurityServices · AddAnalyticsServices · AddWorkflowServices</div>
+          <div class="detail-chip"><span class="chip-label">Handlers</span>SevenZipArchiveHandler · TooltipRefreshEventHandler</div>
+          <div class="detail-chip"><span class="chip-label">Event Bus</span>EventBus · EventBusService (pub/sub pattern)</div>
+          <div class="detail-chip"><span class="chip-label">Validation</span>PathValidator · InputValidator</div>
+          <div class="detail-chip"><span class="chip-label">PowerShell</span>PowerShellExecutionService · Microsoft.PowerShell.SDK 7.4.6</div>
+          <div class="detail-chip"><span class="chip-label">Registry</span>WindowsRegistryService · Microsoft.Win32.Registry 5.0.0</div>
+          <div class="detail-chip"><span class="chip-label">Resilience</span>Polly 8.4.2 · retry + circuit breaker policies</div>
+          <div class="detail-chip"><span class="chip-label">ML</span>Microsoft.ML 3.0.1 · AIProviderManager</div>
+          <div class="detail-chip"><span class="chip-label">References</span>→ Winhance.Core only</div>
+        </div>
+      </div>
+
+      <!-- Arrow Infra → Core -->
+      <div class="dep-arrows">
+        <div class="dep-arrow">
+          <span style="color:var(--text-muted)">depends on</span>
+          <div class="arrow-line"></div>
+          <span style="color:var(--cyan)">Infrastructure</span>
+          <span style="color:var(--text-muted)">→</span>
+          <span style="color:var(--green)">Core</span>
+        </div>
+      </div>
+
+      <!-- Core Layer -->
+      <div class="arch-layer arch-layer-core" id="layer-core" onclick="toggleLayer('core')">
+        <div class="layer-header">
+          <div class="layer-icon layer-icon-core">◎</div>
+          <div>
+            <div class="layer-name layer-name-core">Winhance.Core</div>
+            <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">SDK: Microsoft.NET.Sdk · net9.0-windows · NO project refs</div>
+          </div>
+          <div class="layer-tagline">Domain Contracts &amp; Models</div>
+          <div class="layer-expand-icon">▾</div>
+        </div>
+        <div class="layer-details" id="details-core">
+          <div class="detail-chip"><span class="chip-label">Interfaces (121)</span>ILogService · IConfigurationService · IEventBusService · IWindowsRegistryService…</div>
+          <div class="detail-chip"><span class="chip-label">Feature Areas</span>Common · FileManager · Optimize · Customize · SoftwareApps · AdvancedTools · Agents · UI</div>
+          <div class="detail-chip"><span class="chip-label">Models (97)</span>FeatureDefinition · ConfigurationItem · CommandSetting · BackupModels…</div>
+          <div class="detail-chip"><span class="chip-label">Enums</span>InputType · CancellationReason · DialogType · ImportOption · PowerShellStreamType · WindowState</div>
+          <div class="detail-chip"><span class="chip-label">Events</span>IDomainEvent · IEventBus · SettingAppliedEvent · LogEvent · TaskProgressEvent</div>
+          <div class="detail-chip"><span class="chip-label">Constants</span>FeatureIds · FeatureDefinitions · ScriptPaths · UserPreferenceKeys · CustomPropertyKeys</div>
+          <div class="detail-chip"><span class="chip-label">Exceptions</span>AppLoadingException · InstallationStatusException · InsufficientDiskSpaceException</div>
+          <div class="detail-chip"><span class="chip-label">Helpers</span>ValidationHelper</div>
+          <div class="detail-chip"><span class="chip-label">Nullable</span>Nullable enabled · Implicit usings enabled</div>
+          <div class="detail-chip"><span class="chip-label">Zero Deps</span>No ProjectReference entries — pure domain layer</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- csproj snippet -->
+    <div style="margin-top:2rem;">
+      <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:0.5rem;">// ServiceCollectionExtensions.cs — DI bootstrap</div>
+      <div class="code-block">
+<span class="xml-tag">public static</span> <span class="xml-attr">IServiceCollection</span> <span class="xml-val">AddWinhanceServices</span>(<span class="xml-attr">this</span> IServiceCollection services)
+{
+    <span class="xml-tag">return</span> services
+        .<span class="xml-val">AddCommonServices</span>()        <span class="xml-cmt">// ILogService, IConfigurationService, IEventBusService</span>
+        .<span class="xml-val">AddFileManagerServices</span>()   <span class="xml-cmt">// IFileManagerService, ISearchService, INexusIndexerService…</span>
+        .<span class="xml-val">AddAdvancedServices</span>()      <span class="xml-cmt">// WIM utils, autounattend generator</span>
+        .<span class="xml-val">AddSecurityServices</span>()      <span class="xml-cmt">// backup, protection services</span>
+        .<span class="xml-val">AddAnalyticsServices</span>()     <span class="xml-cmt">// file analytics, space analyzer</span>
+        .<span class="xml-val">AddWorkflowServices</span>();     <span class="xml-cmt">// agents, orchestration</span>
+}
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3. TECHNOLOGY STACK ===== -->
+  <section id="tech-stack" class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2>Technology Stack</h2>
+    </div>
+
+    <div class="tech-grid">
+      <!-- Runtime -->
+      <div class="tech-card cat-sys">
+        <span class="tech-icon">🪟</span>
+        <div class="tech-name">.NET 9.0 Windows</div>
+        <div class="tech-version">net9.0-windows</div>
+        <div class="tech-desc">Target framework with Windows-specific APIs, WPF, and P/Invoke support.</div>
+        <div class="tech-category">Runtime</div>
+      </div>
+
+      <div class="tech-card cat-mvvm">
+        <span class="tech-icon">⚡</span>
+        <div class="tech-name">CommunityToolkit.Mvvm</div>
+        <div class="tech-version">8.4.0</div>
+        <div class="tech-desc">Source-generated MVVM: ObservableObject, RelayCommand, [ObservableProperty] — zero boilerplate.</div>
+        <div class="tech-category">MVVM</div>
+      </div>
+
+      <div class="tech-card cat-ui">
+        <span class="tech-icon">🎨</span>
+        <div class="tech-name">MahApps.Metro IconPacks</div>
+        <div class="tech-version">6.1.0</div>
+        <div class="tech-desc">Material, MaterialDesign, and Lucide vector icon packs for WPF controls.</div>
+        <div class="tech-category">WPF UI</div>
+      </div>
+
+      <div class="tech-card cat-chart">
+        <span class="tech-icon">📊</span>
+        <div class="tech-name">LiveChartsCore SkiaSharpView</div>
+        <div class="tech-version">2.0.0-rc2</div>
+        <div class="tech-desc">GPU-accelerated interactive charts powered by SkiaSharp for WPF data visualisation.</div>
+        <div class="tech-category">Charting</div>
+      </div>
+
+      <div class="tech-card cat-chart">
+        <span class="tech-icon">🖼</span>
+        <div class="tech-name">SkiaSharp</div>
+        <div class="tech-version">2.88.8</div>
+        <div class="tech-desc">2D graphics library — rendering backend for LiveCharts and custom canvas drawing.</div>
+        <div class="tech-category">Graphics</div>
+      </div>
+
+      <div class="tech-card cat-log">
+        <span class="tech-icon">📝</span>
+        <div class="tech-name">Serilog</div>
+        <div class="tech-version">4.2.0</div>
+        <div class="tech-desc">Structured logging with file sink and hosting integration. Log files + console output.</div>
+        <div class="tech-category">Logging</div>
+      </div>
+
+      <div class="tech-card cat-resil">
+        <span class="tech-icon">🛡</span>
+        <div class="tech-name">Polly</div>
+        <div class="tech-version">8.4.2</div>
+        <div class="tech-desc">Resilience and transient-fault handling: retry, circuit breaker, timeout, bulkhead policies.</div>
+        <div class="tech-category">Resilience</div>
+      </div>
+
+      <div class="tech-card cat-ai">
+        <span class="tech-icon">🤖</span>
+        <div class="tech-name">Microsoft.ML</div>
+        <div class="tech-version">3.0.1</div>
+        <div class="tech-desc">ML.NET for intelligent file analytics, pattern detection, and AI-assisted operations.</div>
+        <div class="tech-category">AI / ML</div>
+      </div>
+
+      <div class="tech-card cat-ai">
+        <span class="tech-icon">🔬</span>
+        <div class="tech-name">Microsoft.CodeAnalysis.CSharp</div>
+        <div class="tech-version">4.12.0</div>
+        <div class="tech-desc">Roslyn compiler APIs for runtime C# scripting and code analysis features.</div>
+        <div class="tech-category">Analysis</div>
+      </div>
+
+      <div class="tech-card cat-sys">
+        <span class="tech-icon">💻</span>
+        <div class="tech-name">Microsoft.PowerShell.SDK</div>
+        <div class="tech-version">7.4.6</div>
+        <div class="tech-desc">In-process PowerShell 7 runspace for script execution and system automation.</div>
+        <div class="tech-category">Windows</div>
+      </div>
+
+      <div class="tech-card cat-sys">
+        <span class="tech-icon">🗂</span>
+        <div class="tech-name">Microsoft.Win32.Registry</div>
+        <div class="tech-version">5.0.0</div>
+        <div class="tech-desc">Cross-platform-safe Windows Registry access — read/write optimizations and settings.</div>
+        <div class="tech-category">Windows</div>
+      </div>
+
+      <div class="tech-card cat-sys">
+        <span class="tech-icon">📦</span>
+        <div class="tech-name">System.Management</div>
+        <div class="tech-version">9.0.0</div>
+        <div class="tech-desc">WMI queries for hardware detection, system info, and driver enumeration.</div>
+        <div class="tech-category">Windows</div>
+      </div>
+
+      <div class="tech-card cat-data">
+        <span class="tech-icon">📋</span>
+        <div class="tech-name">System.Text.Json</div>
+        <div class="tech-version">9.0.2</div>
+        <div class="tech-desc">High-performance JSON serialisation for configuration files and API payloads.</div>
+        <div class="tech-category">Data</div>
+      </div>
+
+      <div class="tech-card cat-data">
+        <span class="tech-icon">{ }</span>
+        <div class="tech-name">Newtonsoft.Json</div>
+        <div class="tech-version">13.0.3</div>
+        <div class="tech-desc">JSON.NET — flexible serialisation for complex/dynamic configuration scenarios.</div>
+        <div class="tech-category">Data</div>
+      </div>
+
+      <div class="tech-card cat-sys">
+        <span class="tech-icon">🔧</span>
+        <div class="tech-name">Microsoft.Extensions.Hosting</div>
+        <div class="tech-version">9.0.0</div>
+        <div class="tech-desc">Generic host with DI, configuration, and lifetime management for the WPF app.</div>
+        <div class="tech-category">Infrastructure</div>
+      </div>
+
+      <div class="tech-card cat-test">
+        <span class="tech-icon">✅</span>
+        <div class="tech-name">xUnit</div>
+        <div class="tech-version">2.9.2</div>
+        <div class="tech-desc">Test framework for 140 passing unit and integration tests across the solution.</div>
+        <div class="tech-category">Testing</div>
+      </div>
+
+      <div class="tech-card cat-test">
+        <span class="tech-icon">🎭</span>
+        <div class="tech-name">Moq</div>
+        <div class="tech-version">4.20.72</div>
+        <div class="tech-desc">Mocking framework — isolates service dependencies in unit tests via interface mocks.</div>
+        <div class="tech-category">Testing</div>
+      </div>
+
+      <div class="tech-card cat-test">
+        <span class="tech-icon">💎</span>
+        <div class="tech-name">FluentAssertions</div>
+        <div class="tech-version">6.12.2</div>
+        <div class="tech-desc">Natural language test assertions for readable, maintainable test expectations.</div>
+        <div class="tech-category">Testing</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. DI FLOW DIAGRAM ===== -->
+  <section id="di-flow" class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2>Dependency Injection Runtime Graph</h2>
+    </div>
+    <p style="color:var(--text-dim); font-size:0.85rem; margin-bottom:1.5rem;">
+      The Generic Host wires all services at startup via <code style="font-family:var(--font-mono); color:var(--cyan); font-size:0.78rem;">AddWinhanceServices()</code>. Animated lines show service resolution flow at runtime.
+    </p>
+    <div class="di-container">
+      <svg class="di-svg" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arr-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00d4ff" opacity="0.7"/>
+          </marker>
+          <marker id="arr-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#a855f7" opacity="0.7"/>
+          </marker>
+          <marker id="arr-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#22c55e" opacity="0.7"/>
+          </marker>
+          <filter id="glow-c">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- HOST node -->
+        <g class="di-node" transform="translate(380,20)">
+          <rect width="140" height="44" rx="6" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+          <text x="70" y="17" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="11" font-weight="bold">Generic Host</text>
+          <text x="70" y="33" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="9">IHost.StartAsync()</text>
+        </g>
+
+        <!-- ServiceCollection node -->
+        <g class="di-node" transform="translate(370,100)">
+          <rect width="160" height="44" rx="6" fill="rgba(168,85,247,0.1)" stroke="rgba(168,85,247,0.35)" stroke-width="1.5"/>
+          <text x="80" y="17" text-anchor="middle" fill="#a855f7" font-family="monospace" font-size="11" font-weight="bold">IServiceCollection</text>
+          <text x="80" y="33" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="9">AddWinhanceServices()</text>
+        </g>
+
+        <!-- Singleton group -->
+        <g class="di-node" transform="translate(40,200)">
+          <rect width="150" height="44" rx="6" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)" stroke-width="1.5"/>
+          <text x="75" y="17" text-anchor="middle" fill="#22c55e" font-family="monospace" font-size="10" font-weight="bold">Singletons</text>
+          <text x="75" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">ILogService · IEventBus</text>
+        </g>
+
+        <!-- Scoped group -->
+        <g class="di-node" transform="translate(220,200)">
+          <rect width="150" height="44" rx="6" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.3)" stroke-width="1.5"/>
+          <text x="75" y="17" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="10" font-weight="bold">Scoped</text>
+          <text x="75" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">IFileManagerService…</text>
+        </g>
+
+        <!-- Transient group -->
+        <g class="di-node" transform="translate(400,200)">
+          <rect width="150" height="44" rx="6" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1.5"/>
+          <text x="75" y="17" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="10" font-weight="bold">Transient</text>
+          <text x="75" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">ViewModels · Dialogs</text>
+        </g>
+
+        <!-- ViewModels -->
+        <g class="di-node" transform="translate(580,200)">
+          <rect width="150" height="44" rx="6" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.3)" stroke-width="1.5"/>
+          <text x="75" y="17" text-anchor="middle" fill="#a855f7" font-family="monospace" font-size="10" font-weight="bold">ViewModels (85)</text>
+          <text x="75" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">MainViewModel + features</text>
+        </g>
+
+        <!-- WPF Views -->
+        <g class="di-node" transform="translate(760,200)">
+          <rect width="120" height="44" rx="6" fill="rgba(96,165,250,0.08)" stroke="rgba(96,165,250,0.3)" stroke-width="1.5"/>
+          <text x="60" y="17" text-anchor="middle" fill="#60a5fa" font-family="monospace" font-size="10" font-weight="bold">WPF Views</text>
+          <text x="60" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">XAML + code-behind</text>
+        </g>
+
+        <!-- Core contracts row -->
+        <g class="di-node" transform="translate(100,320)">
+          <rect width="140" height="44" rx="6" fill="rgba(34,197,94,0.06)" stroke="rgba(34,197,94,0.25)" stroke-width="1.5"/>
+          <text x="70" y="17" text-anchor="middle" fill="#22c55e" font-family="monospace" font-size="10" font-weight="bold">Core Interfaces</text>
+          <text x="70" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">121 contracts</text>
+        </g>
+
+        <g class="di-node" transform="translate(380,320)">
+          <rect width="140" height="44" rx="6" fill="rgba(0,212,255,0.06)" stroke="rgba(0,212,255,0.25)" stroke-width="1.5"/>
+          <text x="70" y="17" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="10" font-weight="bold">Infra Services</text>
+          <text x="70" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">112 implementations</text>
+        </g>
+
+        <g class="di-node" transform="translate(660,320)">
+          <rect width="140" height="44" rx="6" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.25)" stroke-width="1.5"/>
+          <text x="70" y="17" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="10" font-weight="bold">Core Models</text>
+          <text x="70" y="32" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">97 domain types</text>
+        </g>
+
+        <!-- ===== EDGES ===== -->
+        <!-- Host → ServiceCollection -->
+        <path class="di-path" d="M450,64 L450,100" stroke="#00d4ff" marker-end="url(#arr-cyan)" opacity="0.6"/>
+
+        <!-- ServiceCollection → groups -->
+        <path class="di-path" d="M450,144 Q300,170 115,200" stroke="#22c55e" marker-end="url(#arr-green)" opacity="0.5" style="animation-delay:-0.5s"/>
+        <path class="di-path" d="M450,144 Q410,170 295,200" stroke="#00d4ff" marker-end="url(#arr-cyan)" opacity="0.5" style="animation-delay:-1s"/>
+        <path class="di-path" d="M450,144 L475,200" stroke="#f59e0b" marker-end="url(#arr-cyan)" opacity="0.4" style="animation-delay:-1.5s"/>
+        <path class="di-path" d="M450,144 Q530,170 655,200" stroke="#a855f7" marker-end="url(#arr-purple)" opacity="0.5" style="animation-delay:-2s"/>
+
+        <!-- ViewModels → Views -->
+        <path class="di-path" d="M730,222 L760,222" stroke="#a855f7" marker-end="url(#arr-purple)" opacity="0.5"/>
+
+        <!-- ServiceCollection → Core Interfaces -->
+        <path class="di-path" d="M450,144 Q350,230 170,320" stroke="#22c55e" marker-end="url(#arr-green)" opacity="0.3" style="animation-delay:-0.8s"/>
+
+        <!-- ServiceCollection → Infra Services -->
+        <path class="di-path" d="M450,144 L450,320" stroke="#00d4ff" marker-end="url(#arr-cyan)" opacity="0.3" style="animation-delay:-1.2s"/>
+
+        <!-- Infra → Core Interfaces (implements) -->
+        <path d="M450,320 L240,320" stroke="rgba(34,197,94,0.25)" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="340" y="315" fill="#64748b" font-family="monospace" font-size="8" text-anchor="middle">implements</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ===== 5. BUILD SYSTEM ===== -->
+  <section id="build" class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2>Build System &amp; Analyzer Pipeline</h2>
+    </div>
+
+    <div class="pipeline-container">
+      <div class="pipeline">
+        <div class="pipeline-stage">
+          <div class="pipeline-node stage-src">📁</div>
+          <div class="pipeline-label">.cs / .xaml</div>
+          <div class="pipeline-sublabel">Source files with nullable enabled</div>
+        </div>
+        <div class="pipeline-arrow"></div>
+
+        <div class="pipeline-stage">
+          <div class="pipeline-node stage-msbuild">🔨</div>
+          <div class="pipeline-label">MSBuild</div>
+          <div class="pipeline-sublabel">Central Package Management Directory.Packages.props</div>
+        </div>
+        <div class="pipeline-arrow"></div>
+
+        <div class="pipeline-stage">
+          <div class="pipeline-node stage-stylecop">⚠</div>
+          <div class="pipeline-label">StyleCop</div>
+          <div class="pipeline-sublabel">1.2.0-beta.556 formatting rules</div>
+        </div>
+        <div class="pipeline-arrow"></div>
+
+        <div class="pipeline-stage">
+          <div class="pipeline-node stage-roslyn">🔬</div>
+          <div class="pipeline-label">Roslyn Analyzers</div>
+          <div class="pipeline-sublabel">NetAnalyzers 9.0.0 + Meziantou 2.0.169</div>
+        </div>
+        <div class="pipeline-arrow"></div>
+
+        <div class="pipeline-stage">
+          <div class="pipeline-node stage-roslynator">🧪</div>
+          <div class="pipeline-label">Roslynator</div>
+          <div class="pipeline-sublabel">4.12.7 correctness &amp; refactor rules</div>
+        </div>
+        <div class="pipeline-arrow"></div>
+
+        <div class="pipeline-stage">
+          <div class="pipeline-node stage-out">✅</div>
+          <div class="pipeline-label">Output</div>
+          <div class="pipeline-sublabel">Winhance.exe net9.0-windows</div>
+        </div>
+      </div>
+
+      <!-- NoWarn categories -->
+      <div style="margin-top:2rem; border-top:1px solid var(--border); padding-top:1.5rem;">
+        <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem; font-weight:500;">
+          Suppressed warning categories in <code style="font-family:var(--font-mono); color:var(--cyan); font-size:0.75rem;">Directory.Build.props</code>:
+        </div>
+
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+          <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.72rem;">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(245,158,11,0.4);"></div>
+            <span style="color:var(--text-dim);">SA#### — StyleCop cosmetic/formatting (SA0001–SA1520)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.72rem;">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(100,116,139,0.4);"></div>
+            <span style="color:var(--text-dim);">CS#### — Compiler noise (unused fields, obsolete, duplicate using)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.72rem;">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(168,85,247,0.35);"></div>
+            <span style="color:var(--text-dim);">CA#### — Code analysis (CA5350, CA5351, CA2022…)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.72rem;">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(0,212,255,0.35);"></div>
+            <span style="color:var(--text-dim);">MVVMTK#### — CommunityToolkit source-gen warnings</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.72rem;">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(16,185,129,0.35);"></div>
+            <span style="color:var(--text-dim);">SYSLIB#### — BCL obsolete API shims</span>
+          </div>
+        </div>
+
+        <div class="nowarn-grid">
+          <span class="nowarn-badge warn-mvvm">MVVMTK0034</span>
+          <span class="nowarn-badge warn-mvvm">MVVMTK0039</span>
+          <span class="nowarn-badge warn-cs">CS0169 unused field</span>
+          <span class="nowarn-badge warn-cs">CS0414 field assigned</span>
+          <span class="nowarn-badge warn-cs">CS0168 declared unused</span>
+          <span class="nowarn-badge warn-cs">CS0067 event unused</span>
+          <span class="nowarn-badge warn-cs">CS0105 dup using</span>
+          <span class="nowarn-badge warn-cs">CS9113 param unused</span>
+          <span class="nowarn-badge warn-cs">CS0618 obsolete</span>
+          <span class="nowarn-badge warn-cs">CS8601–CS8625 nullable</span>
+          <span class="nowarn-badge warn-cs">CS4014 not awaited</span>
+          <span class="nowarn-badge warn-ca">CA5350 weak hash</span>
+          <span class="nowarn-badge warn-ca">CA5351 broken crypto</span>
+          <span class="nowarn-badge warn-ca">CA2022 read discarded</span>
+          <span class="nowarn-badge warn-ca">CA1310 string compare</span>
+          <span class="nowarn-badge warn-sys">SYSLIB0051</span>
+          <span class="nowarn-badge warn-sys">SYSLIB0053</span>
+          <span class="nowarn-badge warn-sys">SYSLIB0045</span>
+          <span class="nowarn-badge warn-sa">SA0001–SA1520</span>
+          <span class="nowarn-badge warn-sa">SA1200 using order</span>
+          <span class="nowarn-badge warn-sa">SA1400 access mods</span>
+          <span class="nowarn-badge warn-sa">SA1500–SA1520 layout</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 6. TEST COVERAGE MAP ===== -->
+  <section id="coverage" class="section">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2>Test Coverage Map</h2>
+    </div>
+
+    <div class="label-row">
+      <div class="legend-dot"><div class="dot-green"></div> Has tests / covered</div>
+      <div class="legend-dot"><div class="dot-grey"></div> No dedicated test file yet</div>
+    </div>
+
+    <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:1.5rem;">
+      140 tests passing across xUnit + MSTest. Infrastructure integration test at
+      <code style="font-family:var(--font-mono); color:var(--cyan); font-size:0.75rem;">src/Winhance.Infrastructure/Tests/Integration/DITest.cs</code>.
+    </div>
+
+    <div class="coverage-grid">
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>DITest (Integration)</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>LogService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>ConfigurationService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>EventBusService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>WindowsRegistryService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>FileManagerService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>SearchService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>FileOperationsService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>PathValidator</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>InputValidator</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>ValidationHelper</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>PowerShellExecutionService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>VersionService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>TaskProgressService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>HardwareDetectionService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>InternetConnectivityService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>SystemBackupService</div>
+      <div class="cov-cell cov-green"><div class="cov-dot cov-dot-green"></div>ScheduledTaskService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>AIProviderManager</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>AgentOrchestrationService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>WimUtilService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>ThemeStudioService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>GamingPerformanceService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>WinhanceNotificationService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>WallpaperService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>DirectDownloadService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>StoreDownloadService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>BloatRemovalService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>SpaceAnalyzerService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>FileAnalyticsService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>NexusIndexerService</div>
+      <div class="cov-cell cov-grey"><div class="cov-dot cov-dot-grey"></div>BatchRenameService</div>
+    </div>
+  </section>
+
+  <!-- ===== 7. PACKAGE INVENTORY TABLE ===== -->
+  <section id="packages" class="section">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2>NuGet Package Inventory</h2>
+    </div>
+
+    <div class="pkg-table-wrapper">
+      <div class="pkg-filter-bar">
+        <input type="text" id="pkgSearch" placeholder="Filter packages…" oninput="filterPkgs()">
+        <button class="filter-tag active" onclick="filterCat(this,'all')">All</button>
+        <button class="filter-tag" onclick="filterCat(this,'Runtime')">Runtime</button>
+        <button class="filter-tag" onclick="filterCat(this,'Testing')">Testing</button>
+        <button class="filter-tag" onclick="filterCat(this,'Analyzer')">Analyzers</button>
+        <button class="filter-tag" onclick="filterCat(this,'WPF UI')">WPF UI</button>
+        <button class="filter-tag" onclick="filterCat(this,'Logging')">Logging</button>
+        <span class="pkg-count" id="pkgCount">47 packages</span>
+      </div>
+
+      <div class="pkg-table-scroll">
+        <table id="pkgTable">
+          <thead>
+            <tr>
+              <th onclick="sortPkgs(0)">Package</th>
+              <th onclick="sortPkgs(1)">Version</th>
+              <th onclick="sortPkgs(2)">Category</th>
+              <th onclick="sortPkgs(3)">Used In</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody id="pkgBody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 8. PROJECT METRICS ===== -->
+  <section id="metrics" class="section">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2>Project Metrics</h2>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-box" style="--metric-color:#22c55e;">
+        <div class="metric-icon">◎</div>
+        <div class="metric-value" data-target="121">0</div>
+        <div class="metric-label">Core Interfaces</div>
+        <div class="metric-sub">ILogService · IConfigurationService · IWindowsRegistryService · 118 more</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#10b981;">
+        <div class="metric-icon">📦</div>
+        <div class="metric-value" data-target="97">0</div>
+        <div class="metric-label">Domain Models</div>
+        <div class="metric-sub">FeatureDefinition · ConfigurationItem · BackupModels · AgentTask + 93 more</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#00d4ff;">
+        <div class="metric-icon">⚙</div>
+        <div class="metric-value" data-target="112">0</div>
+        <div class="metric-label">Infrastructure Services</div>
+        <div class="metric-sub">FileManager · Common · Optimize · Customize · SoftwareApps · AdvancedTools</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#a855f7;">
+        <div class="metric-icon">🖥</div>
+        <div class="metric-value" data-target="85">0</div>
+        <div class="metric-label">WPF ViewModels</div>
+        <div class="metric-sub">MainViewModel + 6 feature areas: Optimize · Customize · SoftwareApps · FileManager · AdvancedTools · Common</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#7c3aed;">
+        <div class="metric-icon">🗃</div>
+        <div class="metric-value" data-target="95">0</div>
+        <div class="metric-label">XAML Views</div>
+        <div class="metric-sub">Feature views · Dialog views · Control templates and resources</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#ec4899;">
+        <div class="metric-icon">✅</div>
+        <div class="metric-value" data-target="140">0</div>
+        <div class="metric-label">Tests Passing</div>
+        <div class="metric-sub">xUnit + MSTest · 18 services covered · 1 integration test suite</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#f59e0b;">
+        <div class="metric-icon">📚</div>
+        <div class="metric-value" data-target="47">0</div>
+        <div class="metric-label">NuGet Packages</div>
+        <div class="metric-sub">Central Package Management · Directory.Packages.props · 4 analyzer packages</div>
+      </div>
+
+      <div class="metric-box" style="--metric-color:#06b6d4;">
+        <div class="metric-icon">🏗</div>
+        <div class="metric-value" data-target="3">0</div>
+        <div class="metric-label">Projects</div>
+        <div class="metric-sub">Core · Infrastructure · WPF — all targeting net9.0-windows</div>
+      </div>
+    </div>
+
+    <!-- Solution structure snippet -->
+    <div style="margin-top:2rem;">
+      <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:0.5rem;">// Winhance.sln — solution structure</div>
+      <div class="code-block">
+<span class="xml-tag">Solution</span> <span class="xml-val">"Winhance"</span>  <span class="xml-cmt">// {3ADFA064-2AE8-4C1F-AAC1-8C1CD523119C}</span>
+ └─ <span class="xml-attr">src/</span>
+     ├─ <span class="xml-val">Winhance.Core</span>          <span class="xml-cmt">// {435BD57D} · pure domain layer · net9.0-windows</span>
+     ├─ <span class="xml-val">Winhance.Infrastructure</span> <span class="xml-cmt">// {605AD60B} · service impls · refs Core</span>
+     └─ <span class="xml-val">Winhance.WPF</span>           <span class="xml-cmt">// {BF6B3923} · WinExe · refs Core + Infrastructure</span>
+
+<span class="xml-tag">Configurations:</span> Debug|Any CPU, Release|Any CPU
+<span class="xml-tag">VisualStudio:</span>  17.5.2.0  <span class="xml-cmt">// Format 12.00</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer style="border-top:1px solid var(--border); padding:2rem 0; margin-top:4rem; text-align:center;">
+    <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-bottom:0.5rem;">
+      Winhance v25.12.12 · net9.0-windows · Clean Architecture · 2026
+    </div>
+    <div style="font-size:0.72rem; color:var(--text-muted);">
+      <a href="index.html" style="color:var(--text-dim); text-decoration:none; margin: 0 1rem;">← Back to Index</a>
+    </div>
+  </footer>
+
+</main>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+// ===== PACKAGES DATA =====
+const packages = [
+  // Analyzers
+  { name: 'Microsoft.CodeAnalysis.NetAnalyzers', version: '9.0.0',       cat: 'Analyzer',    used: ['Core','Infra','WPF'], purpose: 'Roslyn .NET analysis rules (CA####)' },
+  { name: 'StyleCop.Analyzers',                  version: '1.2.0-beta.556', cat: 'Analyzer', used: ['Core','Infra','WPF'], purpose: 'Style and formatting enforcement (SA####)' },
+  { name: 'Meziantou.Analyzer',                  version: '2.0.169',       cat: 'Analyzer',  used: ['Core','Infra','WPF'], purpose: 'Additional Roslyn correctness rules' },
+  { name: 'Roslynator.Analyzers',                version: '4.12.7',        cat: 'Analyzer',  used: ['Core','Infra','WPF'], purpose: 'Refactoring and correctness hints' },
+  // Runtime / WPF
+  { name: 'CommunityToolkit.Mvvm',               version: '8.4.0',         cat: 'MVVM',       used: ['Core','Infra','WPF'], purpose: 'Source-generated MVVM: ObservableObject, RelayCommand' },
+  { name: 'MahApps.Metro.IconPacks.Material',    version: '6.1.0',         cat: 'WPF UI',     used: ['WPF'],               purpose: 'Material Design icon vector pack for WPF' },
+  { name: 'MahApps.Metro.IconPacks.MaterialDesign', version: '6.1.0',      cat: 'WPF UI',     used: ['WPF'],               purpose: 'Extended Material Design icon pack' },
+  { name: 'MahApps.Metro.IconPacks.Lucide',      version: '6.1.0',         cat: 'WPF UI',     used: ['WPF'],               purpose: 'Lucide icon pack for WPF controls' },
+  { name: 'Microsoft.Extensions.DependencyInjection', version: '9.0.0',   cat: 'Runtime',    used: ['Infra','WPF'],        purpose: 'MS DI container and service collection' },
+  { name: 'Microsoft.Extensions.Hosting',        version: '9.0.0',         cat: 'Runtime',    used: ['Core','WPF'],         purpose: 'Generic host lifecycle, DI, configuration' },
+  { name: 'Microsoft.Extensions.Logging',        version: '9.0.0',         cat: 'Logging',    used: ['WPF'],                purpose: 'Logging abstractions and providers' },
+  { name: 'Microsoft.Extensions.Logging.Console', version: '9.0.0',        cat: 'Logging',    used: ['WPF'],                purpose: 'Console logging sink' },
+  { name: 'Microsoft.Win32.Registry',            version: '5.0.0',          cat: 'Windows',    used: ['Core','Infra','WPF'], purpose: 'Windows Registry read/write access' },
+  { name: 'System.Data.SqlClient',               version: '4.8.6',          cat: 'Data',       used: ['Core','Infra','WPF'], purpose: 'SQL client for local data storage' },
+  { name: 'System.DirectoryServices.Protocols',  version: '9.0.0',          cat: 'Windows',    used: ['Core','Infra','WPF'], purpose: 'LDAP and directory protocol access' },
+  { name: 'System.Formats.Asn1',                 version: '9.0.0',          cat: 'Runtime',    used: ['Core','Infra','WPF'], purpose: 'ASN.1 format support (crypto, certs)' },
+  { name: 'System.IO.Packaging',                 version: '9.0.1',          cat: 'Runtime',    used: ['Core','Infra','WPF'], purpose: 'ZIP/OPC package manipulation' },
+  { name: 'Microsoft.Windows.Compatibility',     version: '9.0.0',          cat: 'Windows',    used: ['Core','Infra','WPF'], purpose: 'Broad Windows API compatibility shim pack' },
+  { name: 'System.Text.Json',                    version: '9.0.2',          cat: 'Data',       used: ['Core','Infra','WPF'], purpose: 'High-performance JSON serialisation' },
+  { name: 'Newtonsoft.Json',                     version: '13.0.3',         cat: 'Data',       used: ['Core','Infra','WPF'], purpose: 'JSON.NET — flexible serialisation' },
+  { name: 'System.Management',                   version: '9.0.0',          cat: 'Windows',    used: ['Infra','WPF'],        purpose: 'WMI queries, hardware info, drivers' },
+  { name: 'Microsoft.Xaml.Behaviors.Wpf',        version: '1.1.122',        cat: 'WPF UI',     used: ['Infra'],              purpose: 'Attached behaviors and triggers in XAML' },
+  { name: 'Microsoft.PowerShell.SDK',            version: '7.4.6',          cat: 'Windows',    used: ['Infra'],              purpose: 'In-process PowerShell 7 runspace execution' },
+  { name: 'System.Drawing.Common',               version: '9.0.0',          cat: 'Runtime',    used: ['Core'],               purpose: 'GDI+ image and drawing primitives' },
+  { name: 'Serilog',                             version: '4.2.0',           cat: 'Logging',    used: ['WPF'],                purpose: 'Structured event logging framework' },
+  { name: 'Serilog.Extensions.Hosting',          version: '9.0.0',          cat: 'Logging',    used: ['WPF'],                purpose: 'Generic host integration for Serilog' },
+  { name: 'Serilog.Sinks.File',                  version: '6.0.0',          cat: 'Logging',    used: ['WPF'],                purpose: 'Serilog rolling file sink output' },
+  { name: 'LiveChartsCore.SkiaSharpView.WPF',    version: '2.0.0-rc2',      cat: 'Charting',   used: ['WPF'],                purpose: 'GPU-accelerated charts via SkiaSharp for WPF' },
+  { name: 'SkiaSharp',                           version: '2.88.8',          cat: 'Graphics',   used: ['WPF'],                purpose: '2D rendering backend for LiveCharts' },
+  { name: 'Polly',                               version: '8.4.2',           cat: 'Resilience', used: ['WPF'],                purpose: 'Retry, circuit-breaker, timeout policies' },
+  { name: 'Polly.Extensions.Http',               version: '3.0.0',           cat: 'Resilience', used: ['WPF'],                purpose: 'HTTP-specific Polly resilience helpers' },
+  { name: 'Microsoft.ML',                        version: '3.0.1',           cat: 'AI / ML',    used: ['WPF'],                purpose: 'ML.NET for intelligent file analytics' },
+  { name: 'Microsoft.CodeAnalysis.CSharp',       version: '4.12.0',          cat: 'AI / ML',    used: ['WPF'],                purpose: 'Roslyn C# compiler APIs (scripting)' },
+  { name: 'Microsoft.CodeAnalysis.CSharp.Scripting', version: '4.12.0',     cat: 'AI / ML',    used: ['WPF'],                purpose: 'C# scripting engine for runtime evaluation' },
+  // Testing
+  { name: 'Microsoft.NET.Test.Sdk',              version: '17.12.0',         cat: 'Testing',    used: ['Tests'],              purpose: 'MSBuild integration for test projects' },
+  { name: 'MSTest.TestAdapter',                  version: '3.1.1',           cat: 'Testing',    used: ['Infra'],              purpose: 'MSTest adapter for test runner' },
+  { name: 'MSTest.TestFramework',                version: '3.1.1',           cat: 'Testing',    used: ['Infra'],              purpose: 'MSTest v3 framework attributes' },
+  { name: 'xunit',                               version: '2.9.2',           cat: 'Testing',    used: ['Tests'],              purpose: 'Primary xUnit test framework' },
+  { name: 'xunit.runner.visualstudio',           version: '2.8.2',           cat: 'Testing',    used: ['Tests'],              purpose: 'VS Test Explorer adapter for xUnit' },
+  { name: 'coverlet.collector',                  version: '6.0.2',           cat: 'Testing',    used: ['Tests'],              purpose: 'Code coverage collection for .NET' },
+  { name: 'Microsoft.Playwright',                version: '1.49.0',          cat: 'Testing',    used: ['Tests'],              purpose: 'End-to-end browser automation testing' },
+  { name: 'FluentAssertions',                    version: '6.12.2',          cat: 'Testing',    used: ['Tests'],              purpose: 'Natural-language fluent test assertions' },
+  { name: 'Moq',                                 version: '4.20.72',         cat: 'Testing',    used: ['Tests'],              purpose: 'Mock objects via interface substitution' },
+  // Additional
+  { name: 'System.IO.Compression',               version: 'BCL built-in',    cat: 'Runtime',    used: ['Infra'],              purpose: 'ZIP archive create/extract operations' },
+  { name: 'Polly.Extensions.Http',               version: '3.0.0',           cat: 'Resilience', used: ['WPF'],                purpose: 'HTTP-specific Polly helpers (dedup excluded)' },
+  { name: 'Microsoft.Extensions.DependencyInjection.Abstractions', version: '9.0.0', cat: 'Runtime', used: ['Core','Infra','WPF'], purpose: 'DI container abstractions (IServiceProvider)' },
+  { name: 'Microsoft.Extensions.Configuration',  version: '9.0.0',           cat: 'Runtime',    used: ['WPF'],                purpose: 'Configuration provider abstraction' },
+];
+
+// Deduplicate by name
+const seenPkgs = new Set();
+const uniquePkgs = packages.filter(p => { if(seenPkgs.has(p.name)) return false; seenPkgs.add(p.name); return true; });
+
+const catClasses = {
+  'Analyzer': 'cat-analyzer', 'MVVM': 'cat-runtime', 'WPF UI': 'cat-wpf-ui',
+  'Runtime': 'cat-runtime', 'Logging': 'cat-logging', 'Windows': 'cat-windows',
+  'Data': 'cat-runtime', 'Resilience': 'cat-resilience', 'Testing': 'cat-testing',
+  'Charting': 'cat-charting', 'Graphics': 'cat-charting', 'AI / ML': 'cat-ai-ml',
+};
+
+let activeCat = 'all';
+let activeSearch = '';
+let sortCol = 0;
+let sortDir = 1;
+
+function projBadge(p) {
+  return p.map(x => {
+    const cls = x==='Core'?'proj-core':x==='Infra'?'proj-infra':x==='WPF'?'proj-wpf':'proj-infra';
+    return `<span class="proj-badge ${cls}">${x}</span>`;
+  }).join('');
+}
+
+function renderTable() {
+  let data = uniquePkgs.filter(p => {
+    const matchCat = activeCat === 'all' || p.cat.toLowerCase().includes(activeCat.toLowerCase());
+    const matchSearch = !activeSearch || p.name.toLowerCase().includes(activeSearch) || p.purpose.toLowerCase().includes(activeSearch);
+    return matchCat && matchSearch;
+  });
+
+  data.sort((a, b) => {
+    const vals = [
+      [a.name, b.name],
+      [a.version, b.version],
+      [a.cat, b.cat],
+      [a.used.join(), b.used.join()],
+    ];
+    const [av, bv] = vals[sortCol];
+    return sortDir * av.localeCompare(bv);
+  });
+
+  const tbody = document.getElementById('pkgBody');
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td><span class="pkg-name">${p.name}</span></td>
+      <td><span class="pkg-ver">${p.version}</span></td>
+      <td><span class="pkg-cat ${catClasses[p.cat]||'cat-runtime'}">${p.cat}</span></td>
+      <td class="pkg-used-by">${projBadge(p.used)}</td>
+      <td style="color:var(--text-dim); font-size:0.78rem;">${p.purpose}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pkgCount').textContent = `${data.length} packages`;
+}
+
+function filterPkgs() {
+  activeSearch = document.getElementById('pkgSearch').value.toLowerCase();
+  renderTable();
+}
+
+function filterCat(btn, cat) {
+  document.querySelectorAll('.filter-tag').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCat = cat;
+  renderTable();
+}
+
+function sortPkgs(col) {
+  if (sortCol === col) { sortDir *= -1; } else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('th').forEach((th, i) => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (i === col) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
+  renderTable();
+}
+
+// ===== LAYER TOGGLE =====
+function toggleLayer(id) {
+  const layer = document.getElementById('layer-' + id);
+  layer.classList.toggle('expanded');
+}
+
+// ===== COUNT-UP ANIMATION =====
+function countUp(el, target, duration) {
+  const start = performance.now();
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target);
+    if (progress < 1) requestAnimationFrame(update);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(update);
+}
+
+// Intersection Observer for count-up
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      const target = parseInt(el.dataset.target);
+      if (target) countUp(el, target, 1200);
+      observer.unobserve(el);
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('[data-target]').forEach(el => observer.observe(el));
+
+// ===== INIT =====
+renderTable();
+
+// Active nav link tracking
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+}, { passive: true });
+</script>
+</body>
+</html>

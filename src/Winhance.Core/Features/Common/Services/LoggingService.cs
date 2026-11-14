@@ -77,6 +77,11 @@ namespace Winhance.Core.Features.Common.Services
             return _logService.GetLogPath();
         }
 
+        public Task LogPerformanceAsync(string operation, TimeSpan duration, string? source = null)
+        {
+            return _logService.LogPerformanceAsync(operation, duration, source);
+        }
+
         public void Dispose()
         {
             if (_logService is IDisposable disposable)

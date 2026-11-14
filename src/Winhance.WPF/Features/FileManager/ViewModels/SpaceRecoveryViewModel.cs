@@ -137,7 +137,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 {
                     RecoveryOpportunities.Add(new RecoveryOpportunityViewModel
                     {
-                        Category = opportunity.Category,
+                        Category = string.IsNullOrWhiteSpace(opportunity.Name) ? opportunity.Category : opportunity.Name,
                         Path = opportunity.Path,
                         Size = opportunity.Size,
                         ItemCount = opportunity.ItemCount,
@@ -148,8 +148,19 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                     });
                 }
 
-                RecoverableSpace = analysis.RecoverableSpace;
-                StatusMessage = $"Found {FormatSize(RecoverableSpace)} recoverable space in {RecoveryOpportunities.Count} categories";
+                RecoverableSpace = analysis.RecoverableSpace > 0 ? analysis.RecoverableSpace : analysis.TotalRecoverableSize;
+                TreeMapItems = new ObservableCollection<TreeMapItem>(analysis.Opportunities.Select(o => new TreeMapItem
+                {
+                    Name = string.IsNullOrWhiteSpace(o.Name) ? o.Category : o.Name,
+                    Path = o.Path,
+                    Size = o.Size,
+                    ItemCount = o.ItemCount,
+                    Category = o.Category,
+                    IsDirectory = true,
+                }));
+                StatusMessage = RecoveryOpportunities.Count == 0
+                    ? $"No recovery opportunities found on {SelectedDrive}"
+                    : $"Found {FormatSize(RecoverableSpace)} in {RecoveryOpportunities.Count} location(s); temporary files are pre-selected for cleaning";
             }
             catch (Exception ex)
             {
@@ -253,7 +264,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                                 thumbSize += new System.IO.FileInfo(file).Length;
                                 thumbCount++;
                             }
-                            catch { }
+                            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                            {
+                                // Skip items that cannot be read (locked or access denied); the scan continues.
+                            }
                         }
                     }
                     if (thumbSize > 1024 * 1024) // Only show if > 1MB
@@ -392,7 +406,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                                     size += file.Length;
                                     count++;
                                 }
-                                catch { }
+                                catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                                {
+                                    // Skip items that cannot be read (locked or access denied); the scan continues.
+                                }
                             }
 
                             // Add subdirectory count
@@ -423,10 +440,16 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                                 });
                             }
                         }
-                        catch { }
+                        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                        {
+                            // Skip items that cannot be read (locked or access denied); the scan continues.
+                        }
                     }
                 }
-                catch { }
+                catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                {
+                    // Skip items that cannot be read (locked or access denied); the scan continues.
+                }
             });
         }
 
@@ -447,7 +470,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                             totalSize += file.Length;
                             fileCount++;
                         }
-                        catch { }
+                        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                        {
+                            // Skip items that cannot be read (locked or access denied); the scan continues.
+                        }
                     }
 
                     return (totalSize, fileCount);
@@ -486,52 +512,44 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 return;
             }
 
+            // Only temporary-file locations are cleaned automatically. Model folders and package
+            // caches are reported for review/relocation and are never deleted from here.
+            var cleanable = selectedItems.Where(o => o.RecommendedAction == RecoveryAction.Clean && o.IsSafeToClean && IsKnownTempFolder(o.Path)).ToList();
+            var skipped = selectedItems.Except(cleanable).ToList();
+            if (cleanable.Count == 0)
+            {
+                StatusMessage = "None of the selected items can be cleaned automatically (only temporary files are cleaned; relocate or review the others manually)";
+                return;
+            }
+
+            var message = "Delete temporary files from:\n\n" +
+                string.Join("\n", cleanable.Select(o => $"  {o.Path}  ({o.SizeDisplay})")) +
+                "\n\nFiles changed in the last 24 hours and files in use are kept. This cannot be undone." +
+                (skipped.Count > 0 ? $"\n\n{skipped.Count} selected item(s) are not temporary files and will be skipped." : string.Empty);
+            if (System.Windows.MessageBox.Show(message, "Confirm Clean", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning) != System.Windows.MessageBoxResult.Yes)
+            {
+                StatusMessage = "Clean cancelled";
+                return;
+            }
+
             IsLoading = true;
             long totalRecovered = 0;
+            var filesDeleted = 0;
+            var filesKept = 0;
 
             try
             {
-                foreach (var item in selectedItems)
+                foreach (var item in cleanable)
                 {
-                    StatusMessage = $"Processing {item.Category}...";
-
-                    if (item.RecommendedAction == RecoveryAction.Clean && item.IsSafeToClean)
-                    {
-                        // For temp files, try to clean
-                        if (System.IO.Directory.Exists(item.Path) && item.Path.Contains("Temp", StringComparison.OrdinalIgnoreCase))
-                        {
-                            try
-                            {
-                                var files = System.IO.Directory.GetFiles(item.Path);
-                                foreach (var file in files)
-                                {
-                                    try
-                                    {
-                                        var fileInfo = new System.IO.FileInfo(file);
-                                        var size = fileInfo.Length;
-                                        fileInfo.Delete();
-                                        totalRecovered += size;
-                                    }
-                                    catch
-                                    {
-                                        // Skip files in use
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                // Skip inaccessible directories
-                            }
-                        }
-                    }
+                    StatusMessage = $"Cleaning {item.Path}...";
+                    var (bytes, deleted, kept) = await Task.Run(() => CleanTempFolder(item.Path, TimeSpan.FromHours(24)));
+                    totalRecovered += bytes;
+                    filesDeleted += deleted;
+                    filesKept += kept;
                 }
 
-                StatusMessage = totalRecovered > 0
-                    ? $"Recovered {FormatSize(totalRecovered)}"
-                    : "Recovery complete - some files may be in use";
-
-                // Refresh analysis
                 await AnalyzeAsync();
+                StatusMessage = $"Recovered {FormatSize(totalRecovered)} ({filesDeleted} files deleted, {filesKept} kept because recent or in use)";
             }
             catch (Exception ex)
             {
@@ -541,6 +559,89 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             {
                 IsLoading = false;
             }
+        }
+
+        private static bool IsKnownTempFolder(string path)
+        {
+            static string Norm(string p) => System.IO.Path.GetFullPath(p).TrimEnd(System.IO.Path.DirectorySeparatorChar);
+            try
+            {
+                var target = Norm(path);
+                var temps = new[]
+                {
+                    System.IO.Path.GetTempPath(),
+                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp"),
+                };
+                return temps.Any(tp => string.Equals(Norm(tp), target, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Deletes files older than <paramref name="minAge"/> under a temp folder (recursively, without
+        /// following junctions), then removes folders left empty. Files in use are skipped.
+        /// </summary>
+        private static (long Bytes, int Deleted, int Kept) CleanTempFolder(string root, TimeSpan minAge)
+        {
+            long bytes = 0;
+            int deleted = 0, kept = 0;
+            var cutoff = DateTime.Now - minAge;
+            var options = new System.IO.EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                AttributesToSkip = System.IO.FileAttributes.ReparsePoint,
+            };
+
+            foreach (var file in new System.IO.DirectoryInfo(root).EnumerateFiles("*", options))
+            {
+                try
+                {
+                    if (file.LastWriteTime > cutoff)
+                    {
+                        kept++;
+                        continue;
+                    }
+
+                    var length = file.Length;
+                    if (file.IsReadOnly)
+                    {
+                        file.IsReadOnly = false;
+                    }
+
+                    file.Delete();
+                    bytes += length;
+                    deleted++;
+                }
+                catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+                {
+                    kept++;
+                }
+            }
+
+            // Remove empty subfolders, deepest first; never the temp root itself.
+            var dirs = new System.IO.DirectoryInfo(root).EnumerateDirectories("*", options)
+                .Select(d => d.FullName)
+                .OrderByDescending(p => p.Length)
+                .ToList();
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    if (!System.IO.Directory.EnumerateFileSystemEntries(dir).Any())
+                    {
+                        System.IO.Directory.Delete(dir);
+                    }
+                }
+                catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+                {
+                }
+            }
+
+            return (bytes, deleted, kept);
         }
 
         private static string FormatSize(long bytes)

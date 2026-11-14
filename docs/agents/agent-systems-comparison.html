@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Winhance-FS — Agent Systems Comparison &amp; Recommendation</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1a1a2e; --bg-card: #16213e; --bg-deeper: #0f0e17;
+    --border: #2a2a4a; --text: #e0e0e0; --text-muted: #8888aa;
+    --accent: #00d4ff; --accent-dim: #007a99;
+    --accent-2: #e94560; --accent-3: #533483;
+    --green: #2ecc71; --red: #e74c3c; --yellow: #f39c12; --blue: #3498db;
+    --code-bg: #0d0d1a; --sidebar-w: 270px;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); display: flex; min-height: 100vh;
+    font-size: 15px; line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: #66e7ff; text-decoration: underline; }
+
+  nav.sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+    background: var(--bg-deeper); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 100; padding-bottom: 2rem;
+  }
+  .sidebar-header { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+  .sidebar-header .logo { color: var(--accent); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.04em; }
+  .sidebar-header .subtitle { color: var(--text-muted); font-size: 0.74rem; margin-top: 0.2rem; }
+  nav.sidebar ul { list-style: none; padding: 0.5rem 0; }
+  nav.sidebar ul li a { display: block; padding: 0.4rem 1.1rem; color: var(--text-muted);
+    text-decoration: none; font-size: 0.83rem; transition: color 0.15s, background 0.15s, border-color 0.15s;
+    border-left: 2px solid transparent;
+  }
+  nav.sidebar ul li a:hover { color: var(--accent); background: rgba(0,212,255,0.05); border-left-color: var(--accent); }
+  nav.sidebar .nav-section { padding: 0.85rem 1rem 0.25rem; color: var(--accent);
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  }
+  nav.sidebar .related-docs { padding: 0.75rem 1rem; border-top: 1px solid var(--border); margin-top: 0.5rem; }
+  nav.sidebar .related-docs p { color: var(--text-muted); font-size: 0.7rem;
+    margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  nav.sidebar .related-docs a { display: block; color: var(--accent-dim); font-size: 0.8rem;
+    text-decoration: none; padding: 0.2rem 0;
+  }
+  nav.sidebar .related-docs a:hover { color: var(--accent); }
+
+  main { margin-left: var(--sidebar-w); flex: 1; padding: 2.2rem 2.5rem 4rem; max-width: 1180px; }
+
+  .page-header { border-bottom: 2px solid var(--border); padding-bottom: 1.3rem; margin-bottom: 2rem; }
+  .page-header .doc-id { color: var(--accent); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .page-header h1 { font-size: 2.05rem; font-weight: 800; color: #fff; margin: 0.35rem 0 0.6rem; }
+  .page-header .meta { color: var(--text-muted); font-size: 0.85rem; }
+  .page-header .meta span { margin-right: 1.4rem; }
+
+  .section { margin-bottom: 2.6rem; }
+  .section h2 { font-size: 1.3rem; font-weight: 600; color: var(--accent);
+    border-bottom: 1px solid var(--border); padding-bottom: 0.45rem; margin-bottom: 1.1rem;
+  }
+  .section h3 { font-size: 1.02rem; font-weight: 600; color: #c8d8f0; margin: 1.3rem 0 0.6rem; }
+
+  .callout { padding: 0.85rem 1.1rem; border-radius: 6px; border-left: 3px solid; margin: 1rem 0; font-size: 0.9rem; }
+  .callout-info  { background: rgba(52,152,219,0.08);  border-color: var(--blue);   }
+  .callout-warn  { background: rgba(243,156,18,0.08);  border-color: var(--yellow); }
+  .callout-error { background: rgba(231,76,60,0.08);   border-color: var(--red);    }
+  .callout-ok    { background: rgba(46,204,113,0.08);  border-color: var(--green);  }
+  .callout strong { color: #fff; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 0.7rem 0; }
+  table.data-table thead th { background: var(--bg-deeper); color: var(--accent);
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 0.6rem 0.85rem; text-align: left;
+    border-bottom: 2px solid var(--border);
+  }
+  table.data-table tbody tr:nth-child(odd) { background: rgba(255,255,255,0.015); }
+  table.data-table tbody td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.data-table tbody tr:hover { background: rgba(0,212,255,0.04); }
+  table.data-table td.num { font-family: 'Cascadia Code', Consolas, monospace; text-align: center; font-weight: 600; }
+
+  .badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .badge-pass { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .badge-fail { background: rgba(231,76,60,0.15);  color: var(--red);   border: 1px solid rgba(231,76,60,0.3);  }
+  .badge-warn { background: rgba(243,156,18,0.15); color: var(--yellow); border: 1px solid rgba(243,156,18,0.3); }
+  .badge-info { background: rgba(52,152,219,0.15); color: var(--blue);  border: 1px solid rgba(52,152,219,0.3); }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.95rem 1.15rem; overflow-x: auto; margin: 0.7rem 0; font-size: 0.8rem;
+    font-family: 'Cascadia Code', Consolas, monospace;
+  }
+  code { font-family: 'Cascadia Code', Consolas, monospace; font-size: 0.85em;
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 3px;
+    padding: 0.1em 0.4em; color: #a8d8ea;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+
+  /* ===== Score card grid ===== */
+  .agent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .agent-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.1rem 1.15rem 1rem; position: relative; overflow: hidden;
+    transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+  }
+  .agent-card::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
+  .agent-card:hover { transform: translateY(-3px); border-color: rgba(0,212,255,0.4);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+  .agent-card h3 { margin: 0 0 0.2rem; font-size: 1.05rem; color: #fff; }
+  .agent-card .subtitle { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 0.6rem; }
+  .agent-card .score-row { display: flex; align-items: baseline; gap: 0.6rem; margin: 0.5rem 0; }
+  .agent-card .score { font-size: 2rem; font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    line-height: 1;
+  }
+  .agent-card .score-tag { color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .agent-card .verdict { font-size: 0.83rem; color: var(--text-muted); margin: 0.5rem 0 0.5rem; }
+  .agent-card .verdict strong { color: var(--text); }
+  .agent-card .pill-row { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+  .agent-card .pill { background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 10px;
+  }
+  .agent-card .pill.win    { color: var(--green); border-color: rgba(46,204,113,0.4); }
+  .agent-card .pill.warn   { color: var(--yellow); border-color: rgba(243,156,18,0.4); }
+  .agent-card .pill.fail   { color: var(--red);   border-color: rgba(231,76,60,0.4); }
+
+  /* ===== Verdict box ===== */
+  .verdict-box {
+    background: linear-gradient(135deg, rgba(0,212,255,0.07), rgba(233,69,96,0.06));
+    border: 1px solid rgba(0,212,255,0.4);
+    border-radius: 10px;
+    padding: 1.3rem 1.5rem;
+    margin: 1.2rem 0;
+  }
+  .verdict-box h3 { margin-top: 0; color: var(--accent); font-size: 1.1rem; }
+
+  footer { margin-left: var(--sidebar-w); padding: 1.5rem 2.5rem; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-muted); font-size: 0.8rem;
+  }
+  footer a { color: var(--accent-dim); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+  p { margin: 0.5rem 0 0.9rem; }
+  ul.disc { padding-left: 1.4rem; }
+  ul.disc li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">Winhance Research</div>
+    <div class="subtitle">Agent Systems · Doc 01 of 03</div>
+  </div>
+  <ul>
+    <li class="nav-section">Overview</li>
+    <li><a href="#tldr">TL;DR &amp; Verdict</a></li>
+    <li><a href="#criteria">Project Criteria</a></li>
+    <li><a href="#contenders">All Contenders</a></li>
+
+    <li class="nav-section">The Leak</li>
+    <li><a href="#leak">Claude Code Source Leak</a></li>
+    <li><a href="#leak-forks">OSS Forks &amp; Mirrors</a></li>
+    <li><a href="#analysis-repos">Analysis Repos</a></li>
+
+    <li class="nav-section">Deep Dive</li>
+    <li><a href="#hermes">Hermes Agent</a></li>
+    <li><a href="#opencode">OpenCode ⭐</a></li>
+    <li><a href="#claw">Claw Code</a></li>
+    <li><a href="#crush">Crush (Charm)</a></li>
+    <li><a href="#cline">Cline</a></li>
+    <li><a href="#openhands">OpenHands CLI</a></li>
+    <li><a href="#goose">Goose</a></li>
+    <li><a href="#kilo">Kilo Code</a></li>
+    <li><a href="#claude-code">Claude Code (proprietary)</a></li>
+    <li><a href="#codex">Codex CLI</a></li>
+    <li><a href="#aider">Aider</a></li>
+    <li><a href="#cursor">Cursor / Gemini CLI</a></li>
+
+    <li class="nav-section">Decision</li>
+    <li><a href="#scoreboard">Scoreboard</a></li>
+    <li><a href="#why-cli">Why CLI Wins</a></li>
+    <li><a href="#top5">Top 5 OSS Stack</a></li>
+    <li><a href="#recommendation">Final Recommendation</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ul>
+  <div class="related-docs">
+    <p>Series</p>
+    <a href="agent-systems-comparison.html">01 — Comparison (this doc)</a>
+    <a href="cli-integration-guide.html">02 — CLI Integration Guide</a>
+    <a href="deployment-isolation-strategy.html">03 — Deployment / Isolation</a>
+    <a href="../index.html">← Master Hub</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="page-header">
+  <div class="doc-id">Research Document 01 of 03</div>
+  <h1>Agent Systems — Comparison &amp; Recommendation</h1>
+  <div class="meta">
+    <span><strong>Date:</strong> 2026-05-13</span>
+    <span><strong>Scope:</strong> Hermes vs CLI agents for Winhance-FS</span>
+    <span><strong>Project:</strong> Windows · .NET 8 · WPF · Rust · Python</span>
+  </div>
+</header>
+
+<!-- ============ TL;DR ============ -->
+<section class="section" id="tldr">
+  <h2>TL;DR &amp; Verdict</h2>
+
+  <div class="verdict-box">
+    <h3>⚡ Recommendation (updated post-leak, May 2026)</h3>
+    <p>
+      Go with the <strong>open-source CLI route, not Hermes, not proprietary Claude Code</strong>.
+      Hermes Agent has <strong>no native Windows support</strong> (WSL2 only) — a deal-breaker for a
+      Win32 / WPF / .NET 8 codebase. Proprietary Claude Code is still excellent quality, but the
+      <strong>March 31 2026 source leak</strong> spawned a generation of MIT-licensed forks that
+      give you the same architecture without the vendor lock or the Anthropic-only OAuth.
+    </p>
+    <p>
+      Build a <strong>backend-switchable OSS CLI stack</strong> — each runnable inside its own
+      Docker Sandbox (microVM):
+    </p>
+    <ol style="padding-left: 1.4rem; margin: 0.6rem 0;">
+      <li><strong>OpenCode</strong> — primary driver, MIT, ~120k★, multi-provider, replaces proprietary Claude Code</li>
+      <li><strong>Crush</strong> — Go-based TUI from Charm; fastest interactive feel</li>
+      <li><strong>Goose</strong> — free open-source, BYO-model, 25+ provider support (Block, Apache 2.0)</li>
+      <li><strong>OpenHands CLI</strong> — open multi-step autonomy (68k★, model-agnostic)</li>
+      <li><strong>Kilo Code</strong> — multi-mode orchestrator with worktree-isolated parallel agents</li>
+    </ol>
+    <p style="margin: 0.7rem 0;">
+      <strong>Bench reserves:</strong> Claw Code (Python port of leaked source, useful as reference),
+      Cline (VS Code companion), Aider (architect-mode surgical edits), Codex CLI (if OpenAI quota
+      is sunk cost), proprietary Claude Code (only when peak quality is worth the lock-in).
+    </p>
+    <p style="margin-bottom: 0;">
+      Isolation: <strong>Docker Sandboxes</strong> (microVM, ~125 ms boot) — supports all of them.
+      Switching is a launcher flag, not a rebuild.
+    </p>
+  </div>
+
+  <table class="data-table">
+    <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+    <tbody>
+      <tr><td>Is Hermes a good fit for this project?</td><td><span class="badge badge-fail">NO</span> — no native Windows; WSL2 friction on a Win32-debug workload.</td></tr>
+      <tr><td>Is the CLI route better?</td><td><span class="badge badge-pass">YES</span> — native Windows, multi-LLM, container-isolated per agent.</td></tr>
+      <tr><td>How many CLI backends should be wired in?</td><td><span class="badge badge-info">5</span> — covers cost / quality / autonomy / orchestration / open-source axes.</td></tr>
+      <tr><td>Where does each agent run?</td><td>Docker Sandbox microVM per agent. Switching is a single command.</td></tr>
+      <tr><td>Will the agents see the project state?</td><td><span class="badge badge-pass">YES</span> — bind-mount the worktree into the sandbox; CLAUDE.md / AGENTS.md / project-mcp share context across them.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ CRITERIA ============ -->
+<section class="section" id="criteria">
+  <h2>Project Criteria — What Winhance-FS Actually Needs</h2>
+  <table class="data-table">
+    <thead><tr><th>Requirement</th><th>Why It Matters</th><th>Weight</th></tr></thead>
+    <tbody>
+      <tr><td>Native Windows support</td><td>WPF / Win32 / Registry / WIM tooling cannot be debugged from a Linux container alone.</td><td><span class="badge badge-fail">P0</span></td></tr>
+      <tr><td>Multi-LLM (BYOK)</td><td>Claude for refactors, GPT-5 for tests, Gemini for spec drafting, local for cheap bulk.</td><td><span class="badge badge-fail">P0</span></td></tr>
+      <tr><td>MCP support</td><td>The project already uses MCP servers (filesystem, sequential-thinking, etc.); agents must reuse them.</td><td><span class="badge badge-fail">P0</span></td></tr>
+      <tr><td>Multi-agent parallelism</td><td>Audit work this shift used 5 parallel agents; the production workflow needs 20-agent fan-out.</td><td><span class="badge badge-warn">P1</span></td></tr>
+      <tr><td>Container / VM isolation</td><td>Agents touching the registry should not have host-root access. MicroVM &gt; container &gt; bare.</td><td><span class="badge badge-warn">P1</span></td></tr>
+      <tr><td>Project context (CLAUDE.md / AGENTS.md)</td><td>Agents need to read project rules without being re-briefed each session.</td><td><span class="badge badge-warn">P1</span></td></tr>
+      <tr><td>Open-source / no vendor lock</td><td>The project will outlive any single SaaS subscription.</td><td><span class="badge badge-info">P2</span></td></tr>
+      <tr><td>Cost ceiling</td><td>A $200/mo per-engineer cap should not block any agent in the stack.</td><td><span class="badge badge-info">P2</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ CONTENDERS ============ -->
+<section class="section" id="contenders">
+  <h2>All Contenders — At a Glance</h2>
+  <div class="agent-grid">
+
+    <div class="agent-card" id="hermes">
+      <h3>🪶 Hermes Agent</h3>
+      <div class="subtitle">Nous Research · v0.13+ · Open-source · MIT-style</div>
+      <div class="score-row">
+        <div class="score">6.2 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        <strong>Persistent memory + self-improving skills</strong> are excellent for long-lived ops automation,
+        but no native Windows is fatal for a WPF project. Best in class for Linux ops, not for Win32 dev.
+      </div>
+      <div class="pill-row">
+        <span class="pill fail">No native Windows</span>
+        <span class="pill win">MCP</span>
+        <span class="pill win">Persistent memory</span>
+        <span class="pill win">Self-hosted</span>
+        <span class="pill warn">CLI: WSL2 only</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="openhands">
+      <h3>✋ OpenHands CLI</h3>
+      <div class="subtitle">OpenHands · v1.x · Apache 2.0 · 68k★</div>
+      <div class="score-row">
+        <div class="score">8.4 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        Model-agnostic, autonomous multi-step execution, Python 3.12+ via uv, Docker isolation. Strong open-source
+        alternative; pairs well with Claude/GPT/Gemini APIs. SWE-Bench-Verified harness in tree.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">Native Win/Linux/macOS</span>
+        <span class="pill win">Model-agnostic</span>
+        <span class="pill win">Docker sandboxes</span>
+        <span class="pill win">68k★ active</span>
+        <span class="pill warn">Python install</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="goose">
+      <h3>🦢 Goose</h3>
+      <div class="subtitle">Block (Square / Cash App) · Apache 2.0 · 29k★</div>
+      <div class="score-row">
+        <div class="score">8.7 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        Free, open, 25+ providers (Claude, GPT, Gemini, Mistral, xAI, Ollama, Docker Model Runner). 70+ MCP
+        extensions out of the box. Block runs it in production. Lowest TCO of the bunch.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">All OSes</span>
+        <span class="pill win">25+ LLMs</span>
+        <span class="pill win">70+ MCP ext</span>
+        <span class="pill win">Free / Apache 2.0</span>
+        <span class="pill win">Local-models OK</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="kilo">
+      <h3>🪁 Kilo Code</h3>
+      <div class="subtitle">Kilo-Org · CLI + VS Code + JetBrains</div>
+      <div class="score-row">
+        <div class="score">8.6 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        Built-in five-mode orchestrator (Orchestrator / Architect / Coder / Debugger / Ask) + multi-session
+        panel with git-worktree isolation. The "20 agents" framing comes from Kilo's roadmap. 500+ models.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">All OSes</span>
+        <span class="pill win">500+ models</span>
+        <span class="pill win">Worktree isolation</span>
+        <span class="pill win">5-mode orchestrator</span>
+        <span class="pill warn">IDE-first</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="claude-code">
+      <h3>👑 Claude Code</h3>
+      <div class="subtitle">Anthropic · proprietary CLI</div>
+      <div class="score-row">
+        <div class="score">9.4 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        SWE-bench Verified 80.9% with Opus 4.5 / Opus 4.7 — currently the highest-quality production agent.
+        CLAUDE.md durable instructions, Agent Teams, MCP, hooks, native Windows. Default backend.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">Native Win</span>
+        <span class="pill win">SWE-bench 80.9%</span>
+        <span class="pill win">CLAUDE.md</span>
+        <span class="pill win">Agent Teams</span>
+        <span class="pill warn">Subscription</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="codex">
+      <h3>⚙️ Codex CLI</h3>
+      <div class="subtitle">OpenAI · Rust binary · ChatGPT Plus/Pro</div>
+      <div class="score-row">
+        <div class="score">8.2 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        Rust performance, low-token execution, OpenAI-only models. Best for autonomous batch tasks
+        you can fire-and-forget. No CLAUDE.md equivalent; project-context discipline is weaker.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">Rust speed</span>
+        <span class="pill win">Cloud sandbox</span>
+        <span class="pill win">Low tokens</span>
+        <span class="pill warn">OpenAI lock</span>
+        <span class="pill warn">No Agent Teams</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="aider">
+      <h3>📝 Aider</h3>
+      <div class="subtitle">paul-gauthier · Apache 2.0 · Python</div>
+      <div class="score-row">
+        <div class="score">7.8 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        Git-first pair programmer. Architect mode = two-model pipeline (proposer + editor). BYO-model.
+        Excellent for surgical edits, weaker for autonomous loops. Honorable mention — keep in toolbelt.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">Git-native</span>
+        <span class="pill win">BYO-model</span>
+        <span class="pill win">Architect mode</span>
+        <span class="pill warn">Not autonomous</span>
+      </div>
+    </div>
+
+    <div class="agent-card" id="cursor">
+      <h3>🌪️ Cursor / Gemini CLI</h3>
+      <div class="subtitle">Cursor (IDE) · Google (CLI)</div>
+      <div class="score-row">
+        <div class="score">7.5 / 10</div>
+        <div class="score-tag">Overall fit</div>
+      </div>
+      <div class="verdict">
+        Cursor: 8-agent parallel via git worktrees, IDE-first. Gemini CLI: terminal-first, Google models only.
+        Both worth knowing about; neither is the right primary for a non-VS-Code .NET workflow.
+      </div>
+      <div class="pill-row">
+        <span class="pill win">8 parallel agents</span>
+        <span class="pill warn">IDE-coupled</span>
+        <span class="pill warn">Single provider</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ SCOREBOARD ============ -->
+<section class="section" id="scoreboard">
+  <h2>Scoreboard — Rated Against Project Criteria</h2>
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    Each criterion scored 0–10. Higher is better. Weighted columns counted twice in "Total".
+  </p>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Agent</th>
+        <th>Win Native<br><small>×2</small></th>
+        <th>Multi-LLM<br><small>×2</small></th>
+        <th>MCP</th>
+        <th>Multi-Agent</th>
+        <th>Isolation</th>
+        <th>Project Ctx</th>
+        <th>Open / Cost</th>
+        <th>Quality</th>
+        <th>Total / 100</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Claude Code</strong></td>
+        <td class="num">10</td><td class="num">7</td><td class="num">10</td>
+        <td class="num">9</td><td class="num">8</td><td class="num">10</td>
+        <td class="num">5</td><td class="num">10</td>
+        <td class="num" style="color:var(--green);">94</td>
+      </tr>
+      <tr>
+        <td><strong>Goose</strong></td>
+        <td class="num">9</td><td class="num">10</td><td class="num">10</td>
+        <td class="num">7</td><td class="num">7</td><td class="num">7</td>
+        <td class="num">10</td><td class="num">7</td>
+        <td class="num" style="color:var(--green);">87</td>
+      </tr>
+      <tr>
+        <td><strong>Kilo Code</strong></td>
+        <td class="num">9</td><td class="num">9</td><td class="num">9</td>
+        <td class="num">9</td><td class="num">8</td><td class="num">7</td>
+        <td class="num">8</td><td class="num">8</td>
+        <td class="num" style="color:var(--green);">86</td>
+      </tr>
+      <tr>
+        <td><strong>OpenHands CLI</strong></td>
+        <td class="num">8</td><td class="num">9</td><td class="num">8</td>
+        <td class="num">8</td><td class="num">8</td><td class="num">7</td>
+        <td class="num">9</td><td class="num">7</td>
+        <td class="num" style="color:var(--green);">84</td>
+      </tr>
+      <tr>
+        <td><strong>Codex CLI</strong></td>
+        <td class="num">9</td><td class="num">5</td><td class="num">7</td>
+        <td class="num">6</td><td class="num">8</td><td class="num">6</td>
+        <td class="num">5</td><td class="num">9</td>
+        <td class="num" style="color:var(--yellow);">82</td>
+      </tr>
+      <tr>
+        <td><strong>Aider</strong></td>
+        <td class="num">9</td><td class="num">10</td><td class="num">7</td>
+        <td class="num">5</td><td class="num">6</td><td class="num">6</td>
+        <td class="num">10</td><td class="num">7</td>
+        <td class="num" style="color:var(--yellow);">78</td>
+      </tr>
+      <tr>
+        <td><strong>Cursor (parallel CLI)</strong></td>
+        <td class="num">9</td><td class="num">7</td><td class="num">6</td>
+        <td class="num">8</td><td class="num">7</td><td class="num">6</td>
+        <td class="num">5</td><td class="num">8</td>
+        <td class="num" style="color:var(--yellow);">75</td>
+      </tr>
+      <tr>
+        <td><strong>Hermes Agent</strong></td>
+        <td class="num" style="color:var(--red);">3</td><td class="num">10</td><td class="num">10</td>
+        <td class="num">7</td><td class="num">8</td><td class="num">8</td>
+        <td class="num">10</td><td class="num">6</td>
+        <td class="num" style="color:var(--red);">62</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout callout-warn">
+    <strong>Why Hermes scores 62:</strong> the native-Windows column is weighted ×2 and Hermes loses
+    almost the entire 20 points there. Everywhere else it is competitive — but a Windows project
+    cannot accept "WSL2 only" as the answer to "where does the agent live?"
+  </div>
+</section>
+
+<!-- ============ WHY CLI WINS ============ -->
+<section class="section" id="why-cli">
+  <h2>Why the CLI Route Wins for This Project</h2>
+  <ul class="disc">
+    <li><strong>Native Win32 access.</strong> Registry tweaks, WPF bring-up, WIM mount, PowerShell — all need Windows. Hermes loses here by design.</li>
+    <li><strong>Backend interchangeability.</strong> Each CLI exposes the same conceptual surface (read file, run command, edit file, commit). Behind a launcher, they become drop-in interchangeable.</li>
+    <li><strong>Cost shaping.</strong> Free local-model runs (Goose + Ollama) for bulk reading; premium Claude/GPT for hard reasoning. Same project, different backend per task.</li>
+    <li><strong>Failure recovery.</strong> When provider A is rate-limited, the launcher rotates to B. Hermes binds you to a single agent loop.</li>
+    <li><strong>Already proven here.</strong> This shift's 5-agent parallel audit used the same pattern — independent CLI agents, one shared worktree, divergent prompts.</li>
+  </ul>
+  <p>The CLI stack is not a downgrade from Hermes — it is a <em>superset</em>. Run Hermes inside one of the CLI sandboxes if you want its memory + skills, but don't force the whole project to live inside Hermes.</p>
+</section>
+
+<!-- ============ TOP 5 STACK ============ -->
+<section class="section" id="top5">
+  <h2>Top 5 CLI Stack — The Backend-Switchable Set</h2>
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Agent</th><th>Best For</th><th>Provider</th><th>Cost Model</th><th>Switch Tag</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><strong>Claude Code</strong></td><td>Complex refactors, audits, multi-file reasoning</td><td>Anthropic</td><td>Subscription</td><td><code>--backend=claude</code></td></tr>
+      <tr><td>2</td><td><strong>Codex CLI</strong></td><td>Autonomous batch jobs, GPT-5 specialties</td><td>OpenAI</td><td>ChatGPT Plus/Pro</td><td><code>--backend=codex</code></td></tr>
+      <tr><td>3</td><td><strong>Goose</strong></td><td>Free/local bulk work, MCP-heavy automation</td><td>BYO (Claude/GPT/Gemini/Ollama)</td><td>API only or $0 with Ollama</td><td><code>--backend=goose</code></td></tr>
+      <tr><td>4</td><td><strong>OpenHands CLI</strong></td><td>Open multi-step autonomy, ticket-to-PR loops</td><td>BYO</td><td>API only</td><td><code>--backend=openhands</code></td></tr>
+      <tr><td>5</td><td><strong>Kilo Code</strong></td><td>20-agent fan-out, mode orchestration (Architect / Coder / Debugger)</td><td>500+ models</td><td>Free CLI + API</td><td><code>--backend=kilo</code></td></tr>
+    </tbody>
+  </table>
+  <p style="color: var(--text-muted); font-size: 0.86rem;">
+    Honorable mentions kept on the bench: <strong>Aider</strong> (architect-mode surgical edits), <strong>Cursor</strong> (8-agent parallel via worktrees, IDE-coupled), <strong>Gemini CLI</strong> (Google models),
+    <strong>Claude Squad</strong> (terminal-side multiplexer over the above).
+  </p>
+</section>
+
+<!-- ============ FINAL ============ -->
+<section class="section" id="recommendation">
+  <h2>Final Recommendation</h2>
+  <div class="callout callout-ok">
+    <strong>Adopt the 5-CLI backend-switchable stack with Docker Sandbox microVMs.</strong><br><br>
+    Keep Claude Code as the daily driver. Wire the other four as alternate backends behind a single
+    launcher. Each launches into its own microVM with the worktree bind-mounted read-write and the
+    project's MCP servers reachable on the host. Switching backends is one flag — the agent never
+    sees the other backends, but you do.
+    <br><br>
+    Hermes Agent stays on the shelf. Re-evaluate if Nous ships native Windows support or if the
+    project ever sprouts a Linux-side ops component (server-side WSL/SaaS, etc.).
+  </div>
+  <p>See <a href="cli-integration-guide.html">Doc 02 — CLI Integration Guide</a> for the install &amp;
+  config of each CLI on Windows, and <a href="deployment-isolation-strategy.html">Doc 03 — Deployment / Isolation</a>
+  for the microVM switcher.</p>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section class="section" id="sources">
+  <h2>Sources (May 2026)</h2>
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Source</th><th>Citation</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Hermes Agent (Nous Research)</td><td><a href="https://github.com/nousresearch/hermes-agent">github.com/NousResearch/hermes-agent</a></td></tr>
+      <tr><td>2</td><td>Hermes Agent Docs</td><td><a href="https://hermes-agent.nousresearch.com/docs/">hermes-agent.nousresearch.com/docs</a></td></tr>
+      <tr><td>3</td><td>Hermes 2026 Guide (Petronella)</td><td><a href="https://petronellatech.com/blog/hermes-agent-ai-guide-2026">petronellatech.com — Hermes Agent 2026 Release Tracker</a></td></tr>
+      <tr><td>4</td><td>OpenHands</td><td><a href="https://www.openhands.dev/">openhands.dev</a> · <a href="https://github.com/OpenHands/OpenHands-CLI">github.com/OpenHands/OpenHands-CLI</a></td></tr>
+      <tr><td>5</td><td>OpenHands SWE-bench harness</td><td><a href="https://github.com/OpenHands/OpenHands/blob/main/evaluation/benchmarks/swe_bench/SWE-Gym.md">OpenHands/benchmarks SWE-Gym</a></td></tr>
+      <tr><td>6</td><td>Goose (Block)</td><td><a href="https://goose-docs.ai/">goose-docs.ai</a> · GitHub block/goose (29k★)</td></tr>
+      <tr><td>7</td><td>Goose review 2026</td><td><a href="https://aitoolanalysis.com/goose-ai-review/">aitoolanalysis.com — Goose AI Review 2026</a></td></tr>
+      <tr><td>8</td><td>Kilo Code</td><td><a href="https://kilo.ai/">kilo.ai</a> · <a href="https://github.com/kilo-org/kilocode">github.com/Kilo-Org/kilocode</a></td></tr>
+      <tr><td>9</td><td>2026 CLI tools guide</td><td><a href="https://www.tembo.io/blog/coding-cli-tools-comparison">Tembo — 15 AI Coding CLI Agents Compared</a></td></tr>
+      <tr><td>10</td><td>Multi-agent orchestrators 2026</td><td><a href="https://amux.io/blog/best-multi-agent-orchestrators-2026/">amux.io — Best Multi-Agent Orchestrators 2026</a></td></tr>
+      <tr><td>11</td><td>AI Coding Harnesses</td><td><a href="https://thoughts.jock.pl/p/ai-coding-harness-agents-2026">thoughts.jock.pl — Coding Harness 2026</a></td></tr>
+      <tr><td>12</td><td>Docker Sandboxes (microVM)</td><td><a href="https://www.docker.com/blog/why-microvms-the-architecture-behind-docker-sandboxes/">docker.com — Docker Sandboxes microVM</a></td></tr>
+      <tr><td>13</td><td>Northflank sandbox guide</td><td><a href="https://northflank.com/blog/how-to-sandbox-ai-agents">northflank.com — How to sandbox AI agents in 2026</a></td></tr>
+      <tr><td>14</td><td>SWE-bench leaderboard</td><td><a href="https://www.codeant.ai/blogs/swe-bench-scores">codeant.ai — SWE-bench 2026 Rankings</a></td></tr>
+      <tr><td>15</td><td>.NET Custom Agents</td><td><a href="https://devblogs.microsoft.com/dotnet/introducing-custom-agents-for-dotnet-developers-csharp-expert-winforms-expert/">.NET Blog — Custom Agents for .NET Developers</a></td></tr>
+      <tr><td>16</td><td>Code Agent Orchestra</td><td><a href="https://addyosmani.com/blog/code-agent-orchestra/">addyosmani.com — Code Agent Orchestra</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  <div>Winhance-FS Research · Doc 01 — Agent Systems Comparison · 2026-05-13</div>
+  <div><a href="cli-integration-guide.html">02 — CLI Integration →</a> &nbsp;|&nbsp; <a href="../index.html">Master Hub</a></div>
+</footer>
+
+</body>
+</html>
