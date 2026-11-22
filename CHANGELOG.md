@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-11-22
+
+First published Windows release of the 1.3 line (the v1.3.0 tag built, but no release was published).
+
+### Fixed
+- Release build: the three framework-dependent single-file portables failed (`NETSDK1176`, compression is only
+  allowed for self-contained apps), and because every packaging step required *all* 20 build variants, the
+  installer and the GitHub Release were skipped. Compression is now used only for self-contained builds, and the
+  installer, verification and release depend only on the builds they use.
+
+---
+
 ## [1.3.0] - 2026-11-22
 
 ### Added
