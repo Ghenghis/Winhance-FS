@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Winhance.exe`), and it installed as "Winhance" without an AppId, colliding with stock Winhance. It is now
   `Winhance-FS-Setup-vX.Y.Z.exe` with its own AppId, install folder and Start Menu entry.
 - Release notes list only files that were actually built, and the change list starts from the previous tag.
+- Branding: the title bar reads **Winhance-FS by Ghenghis** in all 21 languages, and the exe's file properties
+  (Company, Product, Copyright) name Ghenghis, crediting Winhance by memstechtips.
+- `nexus_cli ls` could not load at all (syntax error in its icon table), and `ls -r` never reversed the sort.
+- Python lint (ruff/black) is clean again, so the CI Python job can pass.
 
 ### Removed
 - README quick-install command for `get.winhance-fs.net`, which does not exist.

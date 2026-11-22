@@ -28,7 +28,7 @@ import orjson
 from loguru import logger
 
 
-class TransactionStatus(str, Enum):
+class TransactionStatus(str, Enum):  # noqa: UP042 - keep str-mixin serialization of saved logs
     """Transaction status."""
 
     PENDING = "pending"
@@ -38,7 +38,7 @@ class TransactionStatus(str, Enum):
     ROLLED_BACK = "rolled_back"
 
 
-class OperationType(str, Enum):
+class OperationType(str, Enum):  # noqa: UP042 - keep str-mixin serialization of saved logs
     """File operation type."""
 
     MOVE = "move"

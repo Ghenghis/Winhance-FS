@@ -7,7 +7,6 @@ import pytest
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SRC_ROOT = REPO_ROOT / "src"
 
@@ -92,7 +91,9 @@ async def test_nexus_rollback_contract() -> None:
     payload = await call_tool("nexus_rollback", {})
 
     assert "error" in payload
-    assert payload["error"] == "Specify transaction_id or hours" or "not available" in payload["error"]
+    assert (
+        payload["error"] == "Specify transaction_id or hours" or "not available" in payload["error"]
+    )
 
 
 @pytest.mark.anyio

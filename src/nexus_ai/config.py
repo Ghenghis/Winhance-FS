@@ -10,6 +10,7 @@ from pathlib import Path
 import toml
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from nexus_ai.paths import nexus_home
 
 # Default paths
