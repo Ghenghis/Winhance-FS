@@ -112,6 +112,8 @@ public sealed partial class EnvironmentDoctorService : IEnvironmentDoctorService
 
     public IReadOnlyList<string> WatchedCommands => Watched;
 
+    public string SourceDescription => _store.Description;
+
     public EnvSnapshot TakeSnapshot() =>
         new(DateTime.UtcNow, _store.Read(EnvScope.Machine).Concat(_store.Read(EnvScope.User)).ToList());
 

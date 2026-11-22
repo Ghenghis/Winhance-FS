@@ -290,6 +290,9 @@ public interface IEnvironmentStore
     void BroadcastChange();
 
     bool CanWrite(EnvScope scope);
+
+    /// <summary>Where the variables come from, shown in the UI (e.g. "This PC" or a snapshot file).</summary>
+    string Description => "This PC";
 }
 
 /// <summary>
@@ -300,6 +303,9 @@ public interface IEnvironmentDoctorService
 {
     /// <summary>Commands checked for conflicts (python, node, java, git, ...).</summary>
     IReadOnlyList<string> WatchedCommands { get; }
+
+    /// <summary>Where the scanned variables come from ("This PC", or a snapshot being analyzed read-only).</summary>
+    string SourceDescription { get; }
 
     EnvSnapshot TakeSnapshot();
 

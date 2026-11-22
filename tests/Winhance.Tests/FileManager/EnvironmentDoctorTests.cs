@@ -370,6 +370,33 @@ public class EnvironmentDoctorTests : IDisposable
         real.TakeSnapshot().Variables.Should().BeEquivalentTo(before.Variables);
     }
 
+    [Fact]
+    [Trait("Category", "Backend")]
+    public async Task SnapshotStore_LoadsDemoEnvironment_FindsProblems_AndNeverWrites()
+    {
+        var demo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "e2e", "demo-environment.json"));
+        File.Exists(demo).Should().BeTrue(demo);
+        var store = new SnapshotEnvironmentStore(demo);
+        var doctor = new EnvironmentDoctorService(store, Mock.Of<ILogService>(), Path.Combine(_root, "snap-backups"));
+
+        store.Description.Should().Contain("demo-environment.json");
+        var d = doctor.Diagnose(doctor.TakeSnapshot());
+
+        var codes = d.Issues.Select(i => i.Code).ToHashSet();
+        codes.Should().Contain(new[]
+        {
+            EnvIssueCode.PathEntryMissing, EnvIssueCode.PathEntryDuplicate, EnvIssueCode.PathEntryQuoted, EnvIssueCode.PathEntryEmpty,
+            EnvIssueCode.PathExtMissingStandardExtensions, EnvIssueCode.TlsKeyLogEnabled, EnvIssueCode.SecretInEnvironment,
+            EnvIssueCode.GlobalNodeEnv, EnvIssueCode.GlobalPythonHomeOrPath, EnvIssueCode.CondaBaseOnPath, EnvIssueCode.RedundantUserCopy,
+        });
+        d.Issues.Should().NotContain(i => i.Detail.Contains("sk-demo-0000") || i.Detail.Contains("demo-password"));
+
+        var plan = doctor.BuildPlan(d.Snapshot, d.Issues.Where(i => i.Fix != null).Take(3).Select(i => i.Fix!));
+        var result = await doctor.ApplyAsync(plan);
+        result.Success.Should().BeFalse("a snapshot is read-only");
+        result.Backup.Should().BeNull();
+    }
+
     private sealed class InMemoryStore : IEnvironmentStore
     {
         private readonly Dictionary<(EnvScope, string), (string Value, EnvValueKind Kind)> _values = new();

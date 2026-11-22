@@ -175,6 +175,7 @@ def browser():
     ui('menu', Value='Delete'); time.sleep(1)
     msg = ps('msgbox.ps1', '-Title', 'Confirm Delete')
     check('delete asks for confirmation (Recycle Bin wording)', 'Recycle Bin' in msg, msg)
+    shot('dialog-delete-confirm')
     ps('msgbox.ps1', '-Title', 'Confirm Delete', '-Button', 'No'); time.sleep(0.8)
     check('delete No keeps the file', 'alpha.txt' in ls(R))
     ui('select', Index=1, Value='alpha.txt'); ui('keys', Value='{DELETE}'); time.sleep(1)
@@ -287,6 +288,7 @@ def space_recovery():
     time.sleep(3)
     msg = ps('msgbox.ps1', '-Title', 'Confirm Clean')
     check('clean asks for confirmation naming the folder', 'Temp' in msg and 'cannot be undone' in msg, msg[:120])
+    shot('dialog-clean-confirm')
     ps('msgbox.ps1', '-Title', 'Confirm Clean', '-Button', 'No'); time.sleep(1)
     check('clean No cancels', 'cancel' in ui('texts', Value='cancel').lower())
 

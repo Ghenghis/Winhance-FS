@@ -1,0 +1,36 @@
+{
+  "Id": "demo",
+  "Reason": "Demo environment for documentation screenshots and E2E (fictional user 'Demo'; no real values)",
+  "Variables": [
+    { "Scope": "Machine", "Name": "Path", "Kind": "ExpandString", "RawValue": "C:\\Program Files\\Git\\usr\\bin;%SystemRoot%\\system32;%SystemRoot%;%SystemRoot%\\System32\\Wbem;%SYSTEMROOT%\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\nodejs\\;C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.9.9-hotspot\\bin;C:\\Program Files\\OldVendor\\Tools\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\dotnet\\" },
+    { "Scope": "Machine", "Name": "PATHEXT", "Kind": "String", "RawValue": ".EXE;.BAT;.CMD;.VBS;.JS;.PY" },
+    { "Scope": "Machine", "Name": "ComSpec", "Kind": "ExpandString", "RawValue": "%SystemRoot%\\system32\\cmd.exe" },
+    { "Scope": "Machine", "Name": "windir", "Kind": "ExpandString", "RawValue": "%SystemRoot%" },
+    { "Scope": "Machine", "Name": "OS", "Kind": "String", "RawValue": "Windows_NT" },
+    { "Scope": "Machine", "Name": "PSModulePath", "Kind": "ExpandString", "RawValue": "%ProgramFiles%\\WindowsPowerShell\\Modules;%SystemRoot%\\system32\\WindowsPowerShell\\v1.0\\Modules" },
+    { "Scope": "Machine", "Name": "TEMP", "Kind": "ExpandString", "RawValue": "%SystemRoot%\\TEMP" },
+    { "Scope": "Machine", "Name": "TMP", "Kind": "ExpandString", "RawValue": "%SystemRoot%\\TEMP" },
+    { "Scope": "Machine", "Name": "NUMBER_OF_PROCESSORS", "Kind": "String", "RawValue": "16" },
+    { "Scope": "Machine", "Name": "PROCESSOR_ARCHITECTURE", "Kind": "String", "RawValue": "AMD64" },
+    { "Scope": "Machine", "Name": "NODE_ENV", "Kind": "String", "RawValue": "production" },
+    { "Scope": "Machine", "Name": "JAVA_HOME", "Kind": "String", "RawValue": "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.9.9-hotspot\\bin" },
+    { "Scope": "Machine", "Name": "CUDA_PATH", "Kind": "String", "RawValue": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0" },
+    { "Scope": "Machine", "Name": "VS140COMNTOOLS", "Kind": "String", "RawValue": "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\Common7\\Tools\\" },
+    { "Scope": "Machine", "Name": "OLLAMA_HOST", "Kind": "String", "RawValue": "127.0.0.1:11434" },
+
+    { "Scope": "User", "Name": "Path", "Kind": "String", "RawValue": "C:\\Users\\Demo\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\Demo\\AppData\\Local\\Programs\\Python\\Python312\\;\"C:\\Tools\\bin\";C:\\Program Files\\nodejs\\;;C:\\Users\\Demo\\.dotnet\\tools; C:\\Users\\Demo\\scoop\\shims ;C:\\Users\\Demo\\miniconda3\\Library\\usr\\bin;C:\\Users\\Demo\\.dotnet\\tools" },
+    { "Scope": "User", "Name": "TEMP", "Kind": "ExpandString", "RawValue": "%USERPROFILE%\\AppData\\Local\\Temp" },
+    { "Scope": "User", "Name": "TMP", "Kind": "ExpandString", "RawValue": "%USERPROFILE%\\AppData\\Local\\Temp" },
+    { "Scope": "User", "Name": "OneDrive", "Kind": "ExpandString", "RawValue": "%USERPROFILE%\\OneDrive" },
+    { "Scope": "User", "Name": "PYTHONPATH", "Kind": "String", "RawValue": "C:\\Users\\Demo\\libs" },
+    { "Scope": "User", "Name": "PY_PYTHON", "Kind": "String", "RawValue": "3.14" },
+    { "Scope": "User", "Name": "SSLKEYLOGFILE", "Kind": "String", "RawValue": "C:\\Users\\Demo\\sslkeys.log" },
+    { "Scope": "User", "Name": "OPENAI_API_KEY", "Kind": "String", "RawValue": "sk-demo-0000-not-a-real-key" },
+    { "Scope": "User", "Name": "DB_PASSWORD", "Kind": "String", "RawValue": "demo-password" },
+    { "Scope": "User", "Name": "CUDA_PATH", "Kind": "String", "RawValue": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8" },
+    { "Scope": "User", "Name": "PATH_BACKUP", "Kind": "String", "RawValue": "C:\\Users\\Demo\\old-path-copy" },
+    { "Scope": "User", "Name": "PROJECTS_PATH", "Kind": "String", "RawValue": "/projects" },
+    { "Scope": "User", "Name": "_JAVA_OPTIONS", "Kind": "String", "RawValue": "-Xmx2g" },
+    { "Scope": "User", "Name": "OLLAMA_HOST", "Kind": "String", "RawValue": "127.0.0.1:11434" }
+  ]
+}

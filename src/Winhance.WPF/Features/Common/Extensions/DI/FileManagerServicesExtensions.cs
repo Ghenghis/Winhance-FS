@@ -24,7 +24,7 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
             services.TryAddSingleton<IDuplicateFinderService, DuplicateFinderService>();
 
             // Environment & PATH Doctor (registry-backed store; factory because the service has a test constructor)
-            services.TryAddSingleton<IEnvironmentStore, RegistryEnvironmentStore>();
+            services.TryAddSingleton<IEnvironmentStore>(_ => SnapshotEnvironmentStore.CreateDefault()); // registry, or WINHANCE_ENV_SNAPSHOT file
             services.TryAddSingleton<IEnvironmentDoctorService>(sp => new EnvironmentDoctorService(
                 sp.GetRequiredService<IEnvironmentStore>(),
                 sp.GetRequiredService<Winhance.Core.Features.Common.Interfaces.ILogService>(),

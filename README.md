@@ -29,13 +29,41 @@ batch rename, a folder organizer and space recovery, all with previews, confirma
 
 ## Screenshots
 
-| File Browser | Batch Rename |
-|:---:|:---:|
-| ![Dual-pane File Browser](docs/images/file-browser.png) | ![Batch Rename with live preview](docs/images/batch-rename.png) |
-| **Smart Organizer** | **Space Recovery** |
-| ![Smart Organizer preview](docs/images/smart-organizer.png) | ![Space Recovery with treemap](docs/images/space-recovery.png) |
+All screenshots come from the automated end-to-end test sweep (`tests/e2e/`) running the real app. File
+operations use a throwaway sandbox folder; the Environment Doctor runs on a **demo environment snapshot**
+(`tests/e2e/demo-environment.json`, a fictional `C:\Users\Demo` machine) so no real variables are shown.
 
-Screenshots are taken by the end-to-end test sweep (`tests/e2e/`) against a sandbox folder.
+### Stock Winhance pages (kept, rebranded "Winhance-FS by Ghenghis")
+
+| Software & Apps | Optimize |
+|:---:|:---:|
+| ![Software & Apps](docs/images/stock-software-apps.png) | ![Optimize](docs/images/stock-optimize.png) |
+| **Customize** | **Settings** |
+| ![Customize](docs/images/stock-customize.png) | ![Settings](docs/images/stock-settings.png) |
+
+### New: File Manager
+
+| File Browser — dual pane, copy/move between panes | Right-click menu |
+|:---:|:---:|
+| ![File Browser](docs/images/file-browser.png) | ![Context menu](docs/images/file-browser-context-menu.png) |
+| **Rename validation (invalid names rejected)** | **Delete asks first and uses the Recycle Bin** |
+| ![Rename validation](docs/images/file-browser-rename-validation.png) | ![Delete confirmation](docs/images/file-browser-delete-confirm.png) |
+| **Batch Rename — live preview** | **Batch Rename — regex rule** |
+| ![Batch Rename preview](docs/images/batch-rename.png) | ![Batch Rename regex](docs/images/batch-rename-regex.png) |
+| **Smart Organizer — preview before moving** | **Smart Organizer — strategies** |
+| ![Smart Organizer preview](docs/images/smart-organizer.png) | ![Smart Organizer strategies](docs/images/smart-organizer-strategies.png) |
+| **Space Recovery — treemap, clean temp files, relocate AI models** | |
+| ![Space Recovery](docs/images/space-recovery.png) | |
+
+### New: Environment Doctor (environment variables and PATH)
+
+| Problems — severity, scope, proposed fix | Repair preview — backed up, verified, auto-rollback |
+|:---:|:---:|
+| ![Environment Doctor problems](docs/images/env-problems.png) | ![Repair preview](docs/images/env-repair-preview.png) |
+| **PATH — every entry with status** | **Command conflicts — which copy runs** |
+| ![PATH entries](docs/images/env-path.png) | ![Command conflicts](docs/images/env-commands.png) |
+| **All variables — secrets always hidden** | **Backups — restore any point** |
+| ![All variables](docs/images/env-variables.png) | ![Backups](docs/images/env-backups.png) |
 
 ---
 

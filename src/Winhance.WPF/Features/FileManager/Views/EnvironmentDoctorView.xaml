@@ -22,12 +22,15 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="RadioButton">
-              <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" CornerRadius="4" Padding="12,6">
-                <ContentPresenter VerticalAlignment="Center" />
-              </Border>
+              <Grid>
+                <Border x:Name="Hover" Background="{DynamicResource ButtonHoverBackground}" CornerRadius="4" Opacity="0" />
+                <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" CornerRadius="4" Padding="12,6">
+                  <ContentPresenter VerticalAlignment="Center" />
+                </Border>
+              </Grid>
               <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                  <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBackground}" />
+                  <Setter TargetName="Hover" Property="Opacity" Value="0.35" />
                 </Trigger>
                 <Trigger Property="IsChecked" Value="True">
                   <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -70,7 +73,10 @@
         </WrapPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
           <iconPacks:PackIconMaterial Kind="Stethoscope" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-          <TextBlock Text="{Binding Summary}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" />
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="{Binding Summary}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
+            <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{DynamicResource SubTextColor}" HorizontalAlignment="Right" />
+          </StackPanel>
         </StackPanel>
       </Grid>
     </Border>
@@ -171,9 +177,9 @@
         <ListView Visibility="{Binding IsPathSection, Converter={StaticResource BooleanToVisibilityConverter}}" ItemsSource="{Binding PathEntries}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" AutomationProperties.Name="PATH entries">
           <ListView.View>
             <GridView>
-              <GridViewColumn Header="Scope" Width="70" DisplayMemberBinding="{Binding Scope}" />
+              <GridViewColumn Header="Scope" Width="80" DisplayMemberBinding="{Binding Scope}" />
               <GridViewColumn Header="#" Width="40" DisplayMemberBinding="{Binding Position}" />
-              <GridViewColumn Header="Status" Width="150" DisplayMemberBinding="{Binding Status}" />
+              <GridViewColumn Header="Status" Width="180" DisplayMemberBinding="{Binding Status}" />
               <GridViewColumn Header="Programs" Width="80" DisplayMemberBinding="{Binding ExecutableCount}" />
               <GridViewColumn Header="Entry" Width="420">
                 <GridViewColumn.CellTemplate>
@@ -232,9 +238,9 @@
         <ListView Visibility="{Binding IsVariablesSection, Converter={StaticResource BooleanToVisibilityConverter}}" ItemsSource="{Binding Variables}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" AutomationProperties.Name="All variables">
           <ListView.View>
             <GridView>
-              <GridViewColumn Header="Scope" Width="70" DisplayMemberBinding="{Binding Scope}" />
+              <GridViewColumn Header="Scope" Width="80" DisplayMemberBinding="{Binding Scope}" />
               <GridViewColumn Header="Name" Width="260" DisplayMemberBinding="{Binding Name}" />
-              <GridViewColumn Header="Type" Width="120" DisplayMemberBinding="{Binding Kind}" />
+              <GridViewColumn Header="Type" Width="140" DisplayMemberBinding="{Binding Kind}" />
               <GridViewColumn Header="Value (secrets hidden)" Width="760">
                 <GridViewColumn.CellTemplate>
                   <DataTemplate>

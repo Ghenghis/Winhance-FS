@@ -17,13 +17,16 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" CornerRadius="5" Padding="15,8">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
+            <Grid>
+                <Border x:Name="Hover" Background="{DynamicResource ButtonHoverBackground}" CornerRadius="5" Opacity="0" />
+                <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" CornerRadius="5" Padding="15,8">
+                  <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+              </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBackground}" />
-              </Trigger>
+                  <Setter TargetName="Hover" Property="Opacity" Value="0.35" />
+                </Trigger>
               <Trigger Property="IsChecked" Value="True">
                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBackground}" />
                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />

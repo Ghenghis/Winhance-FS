@@ -69,6 +69,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [ObservableProperty]
         private string _summary = string.Empty;
 
+        /// <summary>"This PC", or the snapshot file being analyzed read-only.</summary>
+        [ObservableProperty]
+        private string _source = string.Empty;
+
         [ObservableProperty]
         private bool _isProblemsSection = true;
 
@@ -111,6 +115,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 var warnings = d.Issues.Count(i => i.Severity == EnvSeverity.Warning);
                 var info = d.Issues.Count(i => i.Severity == EnvSeverity.Info);
                 Summary = $"{errors} error(s) · {warnings} warning(s) · {info} note(s)";
+                Source = _doctor.SourceDescription;
                 StatusMessage = d.Issues.Count == 0
                     ? "No problems found."
                     : $"Found {d.Issues.Count} item(s); {SelectedCount} safe fix(es) pre-selected. Review, then click Fix Selected.";

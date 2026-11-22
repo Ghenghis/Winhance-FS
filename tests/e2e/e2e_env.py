@@ -56,7 +56,8 @@ def install(e2e):
                 check('PATH section lists entries', len(ui('rows', Index=0).splitlines()) > 0)
             if section == 'All variables':
                 rows = ui('rows', Index=0)
-                check('variables list shows values with secrets masked', 'Path' in rows and not re.search(r'(?i)(password|token|secret)[^|]*\|[^|]*\|[^|]*\|\s*[^•\s]', rows), '')
+                leaked = [ln for ln in rows.splitlines() if re.search(r'(?i)password|token|secret|api_key', ln.split(' | ')[1] if ln.count(' | ') >= 3 else '') and '•' not in ln]
+                check('variables list shows values with secrets masked', 'Path' in rows and not leaked, '; '.join(leaked)[:200])
 
         ui('tab', Value='Problems'); time.sleep(0.8)
         subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f'{W}/uia2.ps1', '-Action', 'btnname', '-Value', 'Fix Selected...'])
@@ -67,6 +68,7 @@ def install(e2e):
             check('Fix Selected with nothing safe selected explains why', bool(status.strip()), msg)
         else:
             check('repair shows a preview naming the variables and the backup', 'will change' in msg and 'backup' in msg.lower(), msg[:160])
+            shot('env-dialog-repair-preview')
             ps('msgbox.ps1', '-Title', 'Repair environment', '-Button', 'No'); time.sleep(1)
             check('answering No cancels', 'nothing changed' in ui('texts', Value='cancelled').lower())
 
