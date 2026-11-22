@@ -68,3 +68,16 @@ Created full search service with:
 - **Advanced filtering** - Size, date, extension, path filters
 - **Multiple sort options** - Relevance, name, size, date, extension, path
 - **Recent search history** - Tracks and provides recent queries
+
+---
+
+## 2026-11-22 — Release 1.3.0 polish (user-authorized UI edits)
+
+- OrganizerService.RelocateModelsAsync: cross-volume copy/verify/delete, stop on first failure, refuse non-empty
+  destination / linked source, report junction failure. Tests: ModelRelocationTests (5, incl. SUBST cross-drive).
+- FileOperationsService / OperationQueueService: non-permanent deletes now use the Recycle Bin.
+- WPF (authorized by the user for release polish): Space Recovery "Relocate Selected..." command and button;
+  File Manager tabs converted to keyboard-accessible RadioButtons (TwoWay to Is*TabSelected); removed unbound
+  hard-coded OrganizerViewModel.ExecuteRecoveryAsync.
+- nexus_ai config: Pydantic V2 SettingsConfigDict. Dev version 25.12.12 -> 1.3.0.
+- README/CHANGELOG/RELEASE-NOTES updated for 1.3.0.

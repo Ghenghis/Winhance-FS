@@ -20,54 +20,77 @@
 
 ---
 
-**Winhance-FS** is a high-performance storage intelligence module that integrates with [Winhance](https://github.com/memstechtips/Winhance), adding advanced file system forensics, AI-powered organization, and ultra-fast search capabilities to your Windows enhancement toolkit.
+**Winhance-FS** is a fork of [Winhance](https://github.com/memstechtips/Winhance) by memstechtips. It keeps
+everything stock Winhance does (software install/removal, Optimize, Customize, Advanced Tools) and adds a
+**File Manager** section for answering *"Where did my disk space go?"* and getting it back: a dual-pane browser,
+batch rename, a folder organizer and space recovery, all with previews, confirmations and undo.
 
-Built with **Rust** for blazing-fast performance and **C#/.NET 9** for seamless Windows integration, Winhance-FS answers the question: *"Where did my disk space go?"*
+---
+
+## Screenshots
+
+| File Browser | Batch Rename |
+|:---:|:---:|
+| ![Dual-pane File Browser](docs/images/file-browser.png) | ![Batch Rename with live preview](docs/images/batch-rename.png) |
+| **Smart Organizer** | **Space Recovery** |
+| ![Smart Organizer preview](docs/images/smart-organizer.png) | ![Space Recovery with treemap](docs/images/space-recovery.png) |
+
+Screenshots are taken by the end-to-end test sweep (`tests/e2e/`) against a sandbox folder.
+
+---
+
+## What's different from stock Winhance
+
+| Area | Stock Winhance | Winhance-FS |
+|------|----------------|-------------|
+| **File Manager section** | — | New: File Browser, Batch Rename, Smart Organizer, Space Recovery |
+| Dual-pane browser | — | F5/F6 copy/move between panes, Explorer-compatible cut/copy/paste, F2 rename with validation, Recycle Bin delete, right-click menu |
+| Batch rename | — | 8 rule types, live preview, conflict detection, undo of the last batch |
+| Folder organizer | — | By type / date / project / size / AI category, preview before moving, undo |
+| Space recovery | — | Finds temp files, AI model folders (LM Studio, Ollama, Hugging Face) and package caches; cleans old temp files; **relocates model folders to another drive** and leaves a link so the apps keep working |
+| Updates | Checks memstechtips/Winhance | Checks this repository's releases; version history and rollback |
+| Native and AI tooling | — | Rust `nexus_core` (MFT/USN indexing), Python MCP server, CLI and AI agents (separate components, not used by the app UI yet) |
+| Software & Apps, Optimize, Customize, Advanced Tools | ✔ | Unchanged from upstream apart from small fixes |
 
 ---
 
 ## Requirements
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  SYSTEM REQUIREMENTS                                          │
-├──────────────────────────────────────────────────────────────┤
-│  • Windows 10/11 (x64)                                        │
-│  • .NET 9.0 Runtime                                           │
-│  • 4GB RAM minimum (8GB recommended)                          │
-│  • Administrator privileges for deep scan features            │
-├──────────────────────────────────────────────────────────────┤
-│  TESTED ON: Windows 11 23H2, 24H2, 25H2                       │
-└──────────────────────────────────────────────────────────────┘
-```
+- Windows 10 or 11, x64
+- [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0) for the framework-dependent
+  portable zip (the self-contained builds include it)
+- Administrator rights (Winhance asks on start, as stock Winhance does)
 
 ---
 
 ## Installation
 
-### Quick Install via PowerShell
+Download from [GitHub Releases](https://github.com/Ghenghis/Winhance-FS/releases):
+
+| File | What it is |
+|------|------------|
+| `Winhance-Setup-vX.Y.Z.exe` | Installer with Start Menu entry and uninstaller |
+| `Winhance-x64-Portable-vX.Y.Z.zip` | Self-contained portable — unzip and run `Winhance.exe` |
+| `Winhance-x64-FrameworkDependent-Portable-vX.Y.Z.zip` | Smaller portable; needs the .NET 9 Desktop Runtime |
+
+Each file has a `.sha256` next to it. Check a download with:
+
 ```powershell
-irm "https://get.winhance-fs.net" | iex
+(Get-FileHash .\Winhance-x64-Portable-vX.Y.Z.zip -Algorithm SHA256).Hash
 ```
 
-### Download the Installer
+To build it yourself: `dotnet build Winhance.sln`, or `scripts/release.ps1 -Version X.Y.Z` for a portable zip
+in `artifacts/release/`.
 
-[![Download from GitHub Releases](https://img.shields.io/badge/Download-GitHub%20Releases-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Ghenghis/Winhance-FS/releases)
-
-The `Winhance-FS.Installer.exe` includes both **Installable** and **Portable** versions during setup.
-
-| Edition | Description |
-|---------|-------------|
-| **x64 Installer** | Full installation with Start Menu integration |
-| **x64 Portable** | No installation required, run from any folder |
-
-> **Note:** This project is in active development. Features are being added regularly.
+> **Note:** This project is in active development. See [CHANGELOG.md](CHANGELOG.md) for what changed in each
+> release.
 
 ---
 
-## Support the Developer
+## Credits and support
 
-Your support makes a big difference and is very much appreciated!
+Winhance-FS is built on [Winhance](https://github.com/memstechtips/Winhance) by **memstechtips**. If stock
+Winhance is useful to you, please support its developer:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/memstechtips)
 [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/memstech)
@@ -90,7 +113,7 @@ Your support makes a big difference and is very much appreciated!
 | [Space Recovery](#space-recovery--available) | ✅ Available |
 | [Undo / transaction log](#undo-and-safety) | ✅ Available (rename and organize) |
 | Duplicate Finder | ⚠️ Backend only (`IDuplicateFinderService`) |
-| AI model relocation | ⚠️ Backend and scripts (`scripts/relocation/`) |
+| [AI model relocation](#space-recovery--available) | ✅ Available (Space Recovery → Relocate Selected) |
 | Rust deep-scan engine (MFT reader, USN journal, Tantivy search) | ⚠️ Backend only (`src/nexus_core`) |
 | MCP server for AI assistants | ⚠️ Separate Python component (`src/nexus_mcp`) |
 | Forensics tools (ADS, shadow copies, entropy, undelete) | 🚧 Planned |
@@ -158,7 +181,7 @@ Finds space you can get back on a drive:
 | Location | Action |
 |----------|--------|
 | Windows temporary files | **Clean** — files older than 24 hours, skipping files in use, after confirmation |
-| LM Studio, Ollama and Hugging Face model folders | **Relocate** to another drive (see `scripts/relocation/`) |
+| LM Studio, Ollama and Hugging Face model folders | **Relocate Selected** — moves one folder to a drive you pick (checks free space, copies and verifies before removing the original) and leaves a link at the old path |
 | NuGet, Cargo, npm and pip package caches | **Review** — reported only, never deleted by the app |
 
 Results show size and file count for each location, plus a treemap.

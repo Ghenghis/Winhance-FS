@@ -561,6 +561,99 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             }
         }
 
+        /// <summary>
+        /// Moves one selected model folder (LM Studio, Ollama, Hugging Face) to another drive and leaves a
+        /// junction at the old path so the app that owns it keeps working.
+        /// </summary>
+        [RelayCommand]
+        private async Task RelocateSelectedAsync()
+        {
+            if (_organizerService == null)
+            {
+                StatusMessage = "Relocation is not available (organizer service missing)";
+                return;
+            }
+
+            var relocatable = RecoveryOpportunities
+                .Where(o => o.IsSelected && o.RecommendedAction == RecoveryAction.Relocate && System.IO.Directory.Exists(o.Path))
+                .ToList();
+            if (relocatable.Count != 1)
+            {
+                StatusMessage = relocatable.Count == 0
+                    ? "Select one model folder (Action: Relocate) to move it to another drive"
+                    : "Select only one model folder at a time to relocate";
+                return;
+            }
+
+            var item = relocatable[0];
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = $"Choose where to move {item.Category} ({item.SizeDisplay})",
+            };
+            if (dialog.ShowDialog() != true)
+            {
+                StatusMessage = "Relocation cancelled";
+                return;
+            }
+
+            var destination = System.IO.Path.Combine(dialog.FolderName, new System.IO.DirectoryInfo(item.Path).Name);
+            try
+            {
+                var root = System.IO.Path.GetPathRoot(System.IO.Path.GetFullPath(destination));
+                if (!string.IsNullOrEmpty(root)
+                    && !string.Equals(root, System.IO.Path.GetPathRoot(item.Path), StringComparison.OrdinalIgnoreCase))
+                {
+                    var free = new System.IO.DriveInfo(root).AvailableFreeSpace;
+                    if (free < item.Size)
+                    {
+                        StatusMessage = $"Not enough space on {root}: {FormatSize(free)} free, {item.SizeDisplay} needed";
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException or System.IO.IOException or UnauthorizedAccessException)
+            {
+                // Network or unusual paths: let the copy itself report any problem.
+            }
+
+            var message = $"Move {item.Category} ({item.SizeDisplay})\n\n  from  {item.Path}\n  to    {destination}\n\n" +
+                "A link is left at the old location, so the app that uses these files keeps finding them.\n\n" +
+                "Close the app that uses this folder (for example LM Studio or Ollama) before continuing. " +
+                "Across drives each item is copied and checked before the original is removed; if anything fails, " +
+                "relocation stops and the remaining files stay where they are.";
+            if (System.Windows.MessageBox.Show(message, "Confirm Relocate", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question) != System.Windows.MessageBoxResult.Yes)
+            {
+                StatusMessage = "Relocation cancelled";
+                return;
+            }
+
+            IsLoading = true;
+            StatusMessage = $"Relocating {item.Category} to {destination}... (large folders can take a while)";
+            try
+            {
+                var result = await _organizerService.RelocateModelsAsync(item.Path, destination, createSymlinks: true);
+                if (result.Success)
+                {
+                    StatusMessage = $"Relocated {FormatSize(result.BytesProcessed)} to {destination}; the old path now links there";
+                    await AnalyzeAsync();
+                }
+                else
+                {
+                    var errors = string.Join("\n", result.Errors.Take(5));
+                    StatusMessage = $"Relocation did not complete: {result.Errors.FirstOrDefault()}";
+                    System.Windows.MessageBox.Show(errors, "Relocation did not complete", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Relocation failed: {ex.Message}";
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
         private static bool IsKnownTempFolder(string path)
         {
             static string Norm(string p) => System.IO.Path.GetFullPath(p).TrimEnd(System.IO.Path.DirectorySeparatorChar);

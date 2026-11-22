@@ -194,7 +194,7 @@
       <TextBlock DockPanel.Dock="Left" Text="{Binding StatusMessage}" VerticalAlignment="Center" FontSize="14" TextTrimming="CharacterEllipsis" ToolTip="{Binding StatusMessage}" Foreground="{DynamicResource SubTextColor}" />
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
         <Button Content="Preview Refresh" Width="120" Height="35" Margin="0,0,10,0" Command="{Binding RefreshPreviewCommand}" Style="{DynamicResource SecondaryButtonStyle}" />
-        <Button Content="Apply Rename" Width="120" Height="35" Margin="0,0,10,0" Command="{Binding ApplyRenameCommand}" Style="{DynamicResource PrimaryButtonStyle}" />
+        <Button Content="Apply Rename" MinWidth="130" Padding="12,0" Height="35" Margin="0,0,10,0" Command="{Binding ApplyRenameCommand}" Style="{DynamicResource PrimaryButtonStyle}" />
         <Button Content="Undo Last Batch" Width="120" Height="35" Command="{Binding UndoLastBatchCommand}" IsEnabled="{Binding CanUndo}" Style="{DynamicResource SecondaryButtonStyle}" />
       </StackPanel>
       </DockPanel>

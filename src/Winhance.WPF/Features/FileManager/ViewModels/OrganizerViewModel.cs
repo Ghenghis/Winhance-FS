@@ -644,53 +644,6 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         }
 
         [RelayCommand]
-        private async Task ExecuteRecoveryAsync()
-        {
-            if (_organizerService == null)
-            {
-                return;
-            }
-
-            var selectedOpportunities = RecoveryOpportunities.Where(o => o.IsSelected).ToList();
-            if (selectedOpportunities.Count == 0)
-            {
-                StatusMessage = "No items selected for recovery";
-                return;
-            }
-
-            IsLoading = true;
-            StatusMessage = "Executing recovery...";
-
-            try
-            {
-                // For now, handle model relocation specifically
-                foreach (var opportunity in selectedOpportunities)
-                {
-                    if (opportunity.RecommendedAction == RecoveryAction.Relocate)
-                    {
-                        var result = await _organizerService.RelocateModelsAsync(
-                            opportunity.Path,
-                            $"D:\\AI-Models\\{opportunity.Category}",
-                            createSymlinks: true);
-
-                        if (result.Success)
-                        {
-                            StatusMessage = $"Relocated {FormatSize(result.BytesProcessed)}";
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error: {ex.Message}";
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        [RelayCommand]
         private async Task FindDuplicatesAsync()
         {
             if (_organizerService == null || string.IsNullOrEmpty(SourcePath))

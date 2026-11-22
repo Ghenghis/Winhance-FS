@@ -156,6 +156,40 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             CurrentView = SpaceRecoveryViewModel;
         }
 
+        // The tab headers are RadioButtons bound TwoWay to these flags, so selecting a tab by keyboard,
+        // screen reader or UI Automation (which sets IsChecked without a click) also switches the view.
+        partial void OnIsBrowserTabSelectedChanged(bool value)
+        {
+            if (value && !ReferenceEquals(CurrentView, BrowserViewModel))
+            {
+                SelectBrowserTab();
+            }
+        }
+
+        partial void OnIsBatchRenameTabSelectedChanged(bool value)
+        {
+            if (value && !ReferenceEquals(CurrentView, BatchRenameViewModel))
+            {
+                SelectBatchRenameTab();
+            }
+        }
+
+        partial void OnIsOrganizerTabSelectedChanged(bool value)
+        {
+            if (value && !ReferenceEquals(CurrentView, OrganizerViewModel))
+            {
+                SelectOrganizerTab();
+            }
+        }
+
+        partial void OnIsSpaceRecoveryTabSelectedChanged(bool value)
+        {
+            if (value && !ReferenceEquals(CurrentView, SpaceRecoveryViewModel))
+            {
+                SelectSpaceRecoveryTab();
+            }
+        }
+
         [RelayCommand]
         private async Task RefreshAsync()
         {

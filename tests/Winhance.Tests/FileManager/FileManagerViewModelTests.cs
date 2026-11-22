@@ -27,6 +27,24 @@ public class FileManagerViewModelTests
 
     [Fact]
     [Trait("Category", "Backend")]
+    public void SettingTabFlag_AsKeyboardOrAutomationDoes_SwitchesView()
+    {
+        var viewModel = new FileManagerViewModel();
+
+        // RadioButton tabs set IsChecked (TwoWay) without a click when selected by keyboard or UI Automation.
+        viewModel.IsOrganizerTabSelected = true;
+
+        viewModel.CurrentView.Should().BeSameAs(viewModel.OrganizerViewModel);
+        viewModel.IsBrowserTabSelected.Should().BeFalse();
+
+        viewModel.IsBrowserTabSelected = true;
+
+        viewModel.CurrentView.Should().BeSameAs(viewModel.BrowserViewModel);
+        viewModel.IsOrganizerTabSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Category", "Backend")]
     public async Task RefreshAsync_WhenSpaceRecoveryTabSelected_RunsSpaceRecoveryAnalysis()
     {
         var organizerService = new Mock<IOrganizerService>();

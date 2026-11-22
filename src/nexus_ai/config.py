@@ -9,7 +9,7 @@ from pathlib import Path
 
 import toml
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from nexus_ai.paths import nexus_home
 
 # Default paths
@@ -167,9 +167,7 @@ class NexusConfig(BaseSettings):
     log_rotation: str = "10 MB"
     log_retention: int = 5
 
-    class Config:
-        env_prefix = "NEXUS_"
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_prefix="NEXUS_", env_file=".env")
 
     @classmethod
     def load(cls, config_path: Path | None = None) -> "NexusConfig":

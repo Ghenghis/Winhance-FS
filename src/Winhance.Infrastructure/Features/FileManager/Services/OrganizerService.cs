@@ -436,103 +436,115 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             bool createSymlinks,
             CancellationToken cancellationToken = default)
         {
-            var result = new OrganizationResult { Success = true };
+            var result = new OrganizationResult { Success = false };
             var errors = new List<string>();
             var transactionId = Guid.NewGuid().ToString();
             var transactionLog = new List<OrganizationTransaction>();
 
             try
             {
-                if (!Directory.Exists(sourcePath))
+                if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
                 {
-                    result.Success = false;
-                    errors.Add("Source path not found");
+                    errors.Add("Source folder not found.");
                     result.Errors = errors;
                     return result;
                 }
 
-                // Create destination
-                Directory.CreateDirectory(destinationPath);
+                if (string.IsNullOrWhiteSpace(destinationPath))
+                {
+                    errors.Add("No destination folder was given.");
+                    result.Errors = errors;
+                    return result;
+                }
 
-                // Move all files and folders
-                foreach (var dir in Directory.GetDirectories(sourcePath))
+                var source = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sourcePath));
+                var destination = Path.TrimEndingDirectorySeparator(Path.GetFullPath(destinationPath));
+
+                if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase)
+                    || destination.StartsWith(source + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                    || source.StartsWith(destination + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    errors.Add("The destination cannot be the source folder, inside it, or a parent of it.");
+                    result.Errors = errors;
+                    return result;
+                }
+
+                if (new DirectoryInfo(source).Attributes.HasFlag(FileAttributes.ReparsePoint))
+                {
+                    errors.Add("The source folder is already a link (it has probably been relocated before).");
+                    result.Errors = errors;
+                    return result;
+                }
+
+                if (Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
+                {
+                    errors.Add("The destination folder must be empty or not exist yet, so nothing is overwritten.");
+                    result.Errors = errors;
+                    return result;
+                }
+
+                Directory.CreateDirectory(destination);
+                var sameVolume = string.Equals(
+                    Path.GetPathRoot(source), Path.GetPathRoot(destination), StringComparison.OrdinalIgnoreCase);
+
+                // Move entry by entry. Across drives each entry is copied, verified, and only then deleted,
+                // so a failure leaves every not-yet-moved entry untouched in the source.
+                var entries = Directory.EnumerateFileSystemEntries(source).ToList();
+                foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
+                    var target = Path.Combine(destination, Path.GetFileName(entry));
                     try
                     {
-                        var destDir = Path.Combine(destinationPath, Path.GetFileName(dir));
-                        await Task.Run(() => Directory.Move(dir, destDir), cancellationToken);
-
+                        var bytes = await Task.Run(() => MoveEntry(entry, target, sameVolume, cancellationToken), cancellationToken);
                         transactionLog.Add(new OrganizationTransaction
                         {
-                            SourcePath = dir,
-                            DestinationPath = destDir,
+                            SourcePath = entry,
+                            DestinationPath = target,
                             Category = "AI Model Relocation",
                             Timestamp = DateTime.UtcNow,
                         });
-
                         result.FilesOrganized++;
+                        result.BytesProcessed += bytes;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
-                        errors.Add($"{dir}: {ex.Message}");
+                        errors.Add($"{entry}: {ex.Message}");
                         result.FilesFailed++;
+                        break; // stop at the first failure; the rest stays where it was
                     }
                 }
 
-                foreach (var file in Directory.GetFiles(sourcePath))
+                if (result.FilesFailed > 0)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    try
+                    errors.Add($"Relocation stopped. {result.FilesOrganized} item(s) were moved to {destination}; "
+                        + $"the remaining items are still in {source}. No link was created.");
+                }
+                else if (createSymlinks)
+                {
+                    if (Directory.EnumerateFileSystemEntries(source).Any())
                     {
-                        var destFile = Path.Combine(destinationPath, Path.GetFileName(file));
-                        var fileInfo = new FileInfo(file);
-
-                        await Task.Run(() => File.Move(file, destFile), cancellationToken);
-
-                        transactionLog.Add(new OrganizationTransaction
-                        {
-                            SourcePath = file,
-                            DestinationPath = destFile,
-                            Category = "AI Model Relocation",
-                            Timestamp = DateTime.UtcNow,
-                        });
-
-                        result.FilesOrganized++;
-                        result.BytesProcessed += fileInfo.Length;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"{file}: {ex.Message}");
+                        errors.Add($"New files appeared in {source} during the move; no link was created.");
                         result.FilesFailed++;
                     }
-                }
-
-                // Create symbolic link from source to destination
-                if (result.FilesFailed == 0)
-                {
-                    try
+                    else
                     {
-                        // Remove original directory if empty
-                        if (Directory.GetFileSystemEntries(sourcePath).Length == 0)
+                        Directory.Delete(source);
+                        var linkError = await CreateSymbolicLinkAsync(source, destination);
+                        if (linkError != null)
                         {
-                            Directory.Delete(sourcePath);
+                            errors.Add($"Files were moved to {destination}, but the link at {source} could not be "
+                                + $"created ({linkError}). Create it manually with: mklink /J \"{source}\" \"{destination}\"");
+                            result.FilesFailed++;
                         }
-
-                        // Create junction/symlink
-                        await CreateSymbolicLinkAsync(sourcePath, destinationPath);
-
-                        _logService.Log(
-                            LogLevel.Info,
-                            $"Created symbolic link: {sourcePath} -> {destinationPath}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logService.Log(
-                            LogLevel.Warning,
-                            $"Could not create symbolic link: {ex.Message}");
+                        else
+                        {
+                            _logService.Log(LogLevel.Info, $"Created junction: {source} -> {destination}");
+                        }
                     }
                 }
 
@@ -541,24 +553,88 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
                 _logService.Log(
                     LogLevel.Info,
-                    $"Model relocation complete: {result.BytesProcessed / (1024 * 1024)} MB moved");
+                    $"Model relocation: {result.FilesOrganized} item(s), {result.BytesProcessed / (1024 * 1024)} MB moved, {result.FilesFailed} failed");
             }
             catch (OperationCanceledException)
             {
-                result.Success = false;
-                throw;
+                errors.Add("Relocation was cancelled; items not yet moved are still in the source folder.");
+                result.FilesFailed++;
             }
             catch (Exception ex)
             {
-                result.Success = false;
+                errors.Add(ex.Message);
+                result.FilesFailed++;
                 _logService.Log(LogLevel.Error, $"Relocation failed: {ex.Message}");
             }
 
             result.Errors = errors;
-            result.Success = result.FilesFailed == 0;
-
+            result.Success = result.FilesFailed == 0 && errors.Count == 0;
             return result;
         }
+
+        /// <summary>Moves a file or directory; across volumes copies, verifies size, then deletes the source.</summary>
+        private static long MoveEntry(string source, string target, bool sameVolume, CancellationToken ct)
+        {
+            if (File.Exists(source))
+            {
+                var length = new FileInfo(source).Length;
+                if (sameVolume)
+                {
+                    File.Move(source, target);
+                    return length;
+                }
+
+                File.Copy(source, target, overwrite: false);
+                if (new FileInfo(target).Length != length)
+                {
+                    File.Delete(target);
+                    throw new IOException("Copied file size does not match the original.");
+                }
+
+                File.Delete(source);
+                return length;
+            }
+
+            var sourceBytes = DirectorySize(source);
+            if (sameVolume)
+            {
+                Directory.Move(source, target);
+                return sourceBytes;
+            }
+
+            CopyDirectory(source, target, ct);
+            if (DirectorySize(target) != sourceBytes)
+            {
+                throw new IOException("Copied folder size does not match the original; the original was kept.");
+            }
+
+            Directory.Delete(source, recursive: true);
+            return sourceBytes;
+        }
+
+        private static void CopyDirectory(string source, string target, CancellationToken ct)
+        {
+            Directory.CreateDirectory(target);
+            foreach (var file in Directory.EnumerateFiles(source))
+            {
+                ct.ThrowIfCancellationRequested();
+                File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: false);
+            }
+
+            foreach (var dir in Directory.EnumerateDirectories(source))
+            {
+                ct.ThrowIfCancellationRequested();
+                if (new DirectoryInfo(dir).Attributes.HasFlag(FileAttributes.ReparsePoint))
+                {
+                    throw new IOException($"{dir} is a link; relocate it separately.");
+                }
+
+                CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)), ct);
+            }
+        }
+
+        private static long DirectorySize(string path) =>
+            new DirectoryInfo(path).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
 
         public async Task<IEnumerable<DuplicateGroup>> FindDuplicatesAsync(
             string searchPath,
@@ -875,12 +951,12 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             }
         }
 
-        private async Task CreateSymbolicLinkAsync(string linkPath, string targetPath)
+        /// <summary>Creates a directory junction (no admin needed). Returns null on success, else the error.</summary>
+        private static async Task<string?> CreateSymbolicLinkAsync(string linkPath, string targetPath)
         {
-            await Task.Run(() =>
+            return await Task.Run(() =>
             {
-                // Use mklink /J for directory junction (doesn't require admin)
-                var process = new System.Diagnostics.Process
+                using var process = new System.Diagnostics.Process
                 {
                     StartInfo = new System.Diagnostics.ProcessStartInfo
                     {
@@ -893,7 +969,12 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                     },
                 };
                 process.Start();
+                var stderr = process.StandardError.ReadToEnd();
+                process.StandardOutput.ReadToEnd();
                 process.WaitForExit();
+                return process.ExitCode == 0 && Directory.Exists(linkPath)
+                    ? null
+                    : (string.IsNullOrWhiteSpace(stderr) ? $"mklink exit code {process.ExitCode}" : stderr.Trim());
             });
         }
 

@@ -678,16 +678,23 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
         private async Task SendToRecycleBinAsync(string path)
         {
-            // This would use the Windows Shell API to send files to recycle bin
-            // For now, just delete permanently
-            if (Directory.Exists(path))
+            await Task.Run(() =>
             {
-                Directory.Delete(path, true);
-            }
-            else if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+                if (Directory.Exists(path))
+                {
+                    Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
+                        path,
+                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                }
+                else if (File.Exists(path))
+                {
+                    Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
+                        path,
+                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                }
+            });
         }
 
         private async Task WaitForResumeAsync(FileOperation operation)

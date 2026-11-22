@@ -46,7 +46,10 @@
           <TextBlock Text="{Binding RecoverableSpaceDisplay}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" />
         </StackPanel>
 
-        <Button Grid.Column="3" Content="Clean Selected" Width="120" Height="32" Command="{Binding ExecuteRecoveryCommand}" Style="{DynamicResource DangerButtonStyle}" />
+        <StackPanel Grid.Column="3" Orientation="Horizontal">
+          <Button Content="Relocate Selected..." Width="150" Height="32" Margin="0,0,10,0" Command="{Binding RelocateSelectedCommand}" ToolTip="Move one selected model folder to another drive and leave a link at the old path" AutomationProperties.Name="Relocate Selected" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="Clean Selected" Width="120" Height="32" Command="{Binding ExecuteRecoveryCommand}" ToolTip="Delete old temporary files in the selected temp folders (asks first)" AutomationProperties.Name="Clean Selected" Style="{DynamicResource DangerButtonStyle}" />
+        </StackPanel>
       </Grid>
     </Border>
 

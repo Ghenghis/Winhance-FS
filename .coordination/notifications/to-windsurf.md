@@ -78,5 +78,13 @@ public DualPaneBrowserViewModel(
 - Backend is ready - no more blockers!
 
 ---
+---
+### 2026-11-22 — Claude Code edited File Manager WPF files (user-authorized release polish)
+- `Views/FileManagerView.xaml`: tab headers are now `RadioButton`s (`FileManagerTabStyle`), `IsChecked` TwoWay to
+  `Is*TabSelected`; `FileManagerViewModel` has `OnIs*TabSelectedChanged` handlers that switch the view.
+- `Views/SpaceRecoveryView.xaml` + `SpaceRecoveryViewModel`: new `RelocateSelectedCommand` / "Relocate Selected..." button.
+- `OrganizerViewModel`: removed unbound `ExecuteRecoveryAsync` (hard-coded D:\AI-Models).
+Please pull before editing these files.
+
 ### Previous Messages:
 [Keep older messages below for reference]

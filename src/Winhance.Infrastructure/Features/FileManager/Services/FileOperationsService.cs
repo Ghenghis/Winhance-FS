@@ -114,9 +114,10 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                 }
                 else
                 {
-                    // Move to recycle bin (would need additional library for this)
-                    // For now, just delete
-                    await Task.Run(() => File.Delete(filePath));
+                    await Task.Run(() => Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
+                        filePath,
+                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin));
                 }
                 
                 _logger.LogInformation($"File deleted successfully: {filePath}");

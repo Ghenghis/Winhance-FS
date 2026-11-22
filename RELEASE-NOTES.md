@@ -1,5 +1,17 @@
 # Winhance-FS Release Notes
 
+## Version 1.3.0 - November 22, 2026
+
+The File Manager section (File Browser, Batch Rename, Smart Organizer, Space Recovery) is end-to-end tested.
+New in this release: Space Recovery can **relocate AI model folders to another drive** safely (copy, verify,
+then remove, leaving a link at the old path), "recycle" deletes really go to the Recycle Bin, and the File
+Manager tabs work from the keyboard and screen readers. Full list: [CHANGELOG.md](CHANGELOG.md#130---2026-11-22).
+
+**Downloads** (GitHub Releases): `Winhance-Setup-v1.3.0.exe` (installer), `Winhance-x64-Portable-v1.3.0.zip`
+(self-contained portable), framework-dependent and x86/ARM64 variants, each with a `.sha256`.
+
+---
+
 ## Version 0.1.0-Backend - January 26, 2026
 
 ### Backend Release - Complete FileManager Services

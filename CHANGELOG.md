@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-11-22
+
+### Added
+- **Space Recovery → Relocate Selected:** moves one AI model folder (LM Studio, Ollama, Hugging Face) to a
+  folder you pick, after checking free space and confirming, and leaves a directory junction at the old path so
+  the owning app keeps working.
+- README: screenshots of every File Manager tool, a comparison with stock Winhance, and accurate download and
+  checksum instructions.
+
+### Fixed
+- **Model relocation across drives failed and could leave models split between drives.** Folders were moved
+  with `Directory.Move`, which cannot cross volumes. Each item is now copied, size-verified and only then
+  removed; relocation stops at the first failure, never overwrites a non-empty destination, refuses a source
+  that is already a link, and reports when the junction could not be created instead of ignoring it.
+- **"Recycle" deletes were permanent** in `IFileOperationsService.DeleteFileAsync(permanent: false)` and the
+  operation queue; they now go to the Recycle Bin.
+- File Manager tabs (File Browser, Batch Rename, Smart Organizer, Space Recovery) were mouse-only. They are now
+  keyboard-focusable, show a focus ring and the selected tab, and switch views when selected by a screen reader.
+- Removed an unreachable Organizer command that would relocate models to a hard-coded `D:\AI-Models` without
+  asking.
+- Development builds reported upstream's version `25.12.12`, which the update check treated as newer than any
+  Winhance-FS release.
+- Python: `nexus_ai` settings use Pydantic V2 `SettingsConfigDict` (removes the deprecation warning).
+
+### Removed
+- README quick-install command for `get.winhance-fs.net`, which does not exist.
+
+---
+
 ## [1.2.0] - 2026-11-14
 
 ### Fixed
