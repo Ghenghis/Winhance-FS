@@ -69,7 +69,7 @@ Download from [GitHub Releases](https://github.com/Ghenghis/Winhance-FS/releases
 
 | File | What it is |
 |------|------------|
-| `Winhance-Setup-vX.Y.Z.exe` | Installer with Start Menu entry and uninstaller |
+| `Winhance-FS-Setup-vX.Y.Z.exe` | Installer with Start Menu entry and uninstaller |
 | `Winhance-x64-Portable-vX.Y.Z.zip` | Self-contained portable — unzip and run `Winhance.exe` |
 | `Winhance-x64-FrameworkDependent-Portable-vX.Y.Z.zip` | Smaller portable; needs the .NET 9 Desktop Runtime |
 

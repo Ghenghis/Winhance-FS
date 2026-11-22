@@ -60,17 +60,23 @@ namespace Winhance.Infrastructure.Features.Common.Services
             {
                 // Get the assembly version
                 Assembly assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-                string? location = assembly.Location;
 
-                if (string.IsNullOrEmpty(location))
+                // Prefer the version embedded in the assembly: Assembly.Location is empty in single-file
+                // (portable) builds, so reading the file's version info alone reported 0.0.0 there.
+                string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+                if (string.IsNullOrWhiteSpace(version))
                 {
-                    _logService.Log(LogLevel.Error, "Could not determine assembly location for version check");
-                    return CreateDefaultVersion();
-                }
+                    string? location = !string.IsNullOrEmpty(assembly.Location) ? assembly.Location : Environment.ProcessPath;
+                    if (string.IsNullOrEmpty(location))
+                    {
+                        _logService.Log(LogLevel.Error, "Could not determine the application version for the update check");
+                        return CreateDefaultVersion();
+                    }
 
-                // Get the InformationalVersion which can include the -beta tag
-                FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(location);
-                string version = versionInfo.ProductVersion ?? versionInfo.FileVersion ?? "v0.0.0";
+                    FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(location);
+                    version = versionInfo.ProductVersion ?? versionInfo.FileVersion ?? "v0.0.0";
+                }
 
                 // Trim any build metadata (anything after the + symbol)
                 int plusIndex = version.IndexOf('+');

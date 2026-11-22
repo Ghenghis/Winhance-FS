@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development builds reported upstream's version `25.12.12`, which the update check treated as newer than any
   Winhance-FS release.
 - Python: `nexus_ai` settings use Pydantic V2 `SettingsConfigDict` (removes the deprecation warning).
+- **Portable (single-file) builds reported version 0.0.0** to the update check because `Assembly.Location` is
+  empty in single-file apps; the version is now read from the assembly itself.
+- **Release pipeline never published a release:** the GitHub Release waited on all 12 packaging jobs, so any
+  failing optional format (MSIX, APPX, Chocolatey, …) blocked it. It now requires only the core zips, the
+  verified x64 build and the Setup installer; optional packages are attached when they build.
+- **Setup installer:** shortcuts and "launch after install" pointed at `Winhance.WPF.exe` (the app is
+  `Winhance.exe`), and it installed as "Winhance" without an AppId, colliding with stock Winhance. It is now
+  `Winhance-FS-Setup-vX.Y.Z.exe` with its own AppId, install folder and Start Menu entry.
+- Release notes list only files that were actually built, and the change list starts from the previous tag.
 
 ### Removed
 - README quick-install command for `get.winhance-fs.net`, which does not exist.

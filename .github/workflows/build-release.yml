@@ -702,19 +702,28 @@ jobs:
           # Create Inno Setup script
           $issContent = @"
           [Setup]
-          AppName=Winhance
+          AppId={{8F3C2A71-5B4E-4D2A-9C1E-6A7B3D9E2F14}
+          AppName=Winhance-FS
           AppVersion=${{ steps.version.outputs.version }}
-          AppPublisher=Winhance Team
-          DefaultDirName={autopf}\Winhance
-          DefaultGroupName=Winhance
+          AppVerName=Winhance-FS ${{ steps.version.outputs.version }}
+          AppPublisher=Ghenghis
+          AppPublisherURL=https://github.com/Ghenghis/Winhance-FS
+          AppSupportURL=https://github.com/Ghenghis/Winhance-FS/issues
+          AppUpdatesURL=https://github.com/Ghenghis/Winhance-FS/releases
+          DefaultDirName={autopf}\Winhance-FS
+          DefaultGroupName=Winhance-FS
+          DisableProgramGroupPage=yes
           OutputDir=.\output
-          OutputBaseFilename=Winhance-Setup-${{ steps.version.outputs.version }}
+          OutputBaseFilename=Winhance-FS-Setup-${{ steps.version.outputs.version }}
           Compression=lzma2/ultra64
           SolidCompression=yes
+          ArchitecturesAllowed=x64compatible
           ArchitecturesInstallIn64BitMode=x64compatible
+          MinVersion=10.0
           PrivilegesRequired=admin
-          SetupIconFile=
-          UninstallDisplayIcon={app}\Winhance.WPF.exe
+          CloseApplications=yes
+          UninstallDisplayIcon={app}\Winhance.exe
+          UninstallDisplayName=Winhance-FS
 
           [Languages]
           Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -726,13 +735,14 @@ jobs:
           Source: "app-files\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
           [Icons]
-          Name: "{group}\Winhance"; Filename: "{app}\Winhance.WPF.exe"
-          Name: "{autodesktop}\Winhance"; Filename: "{app}\Winhance.WPF.exe"; Tasks: desktopicon
+          Name: "{group}\Winhance-FS"; Filename: "{app}\Winhance.exe"
+          Name: "{autodesktop}\Winhance-FS"; Filename: "{app}\Winhance.exe"; Tasks: desktopicon
 
           [Run]
-          Filename: "{app}\Winhance.WPF.exe"; Description: "{cm:LaunchProgram,Winhance}"; Flags: nowait postinstall skipifsilent runascurrentuser
+          Filename: "{app}\Winhance.exe"; Description: "{cm:LaunchProgram,Winhance-FS}"; Flags: nowait postinstall skipifsilent shellexec
           "@
 
+          if (-not (Test-Path ./app-files/Winhance.exe)) { throw "Winhance.exe not found in the x64 package" }
           $issContent | Out-File -FilePath "setup.iss" -Encoding UTF8
 
       - name: Install Inno Setup
@@ -1165,9 +1175,17 @@ jobs:
 
   release:
     name: Create Release
-    needs: [rust-build, build, msix-build, msix-bundle, appx-build, appx-bundle, installer-build, msi-build, chocolatey-build, winget-build, squirrel-build, clickonce-build]
+    # Waits for every packaging job, but only the core assets (portable/standard zips, verified x64 build and
+    # the Setup installer) are required. Store, MSI, Chocolatey, WinGet, Squirrel and ClickOnce packages are
+    # attached when they succeed and skipped when they fail, so they can never block a release again.
+    needs: [rust-build, build, verify, msix-build, msix-bundle, appx-build, appx-bundle, installer-build, msi-build, chocolatey-build, winget-build, squirrel-build, clickonce-build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    if: >-
+      always() &&
+      (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') &&
+      needs.build.result == 'success' &&
+      needs.verify.result == 'success' &&
+      needs.installer-build.result == 'success'
 
     steps:
       - name: Checkout code
@@ -1194,94 +1212,26 @@ jobs:
         id: notes
         run: |
           CURRENT_TAG="${{ steps.version.outputs.version }}"
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null || echo "")
 
-          cat << 'HEADER' > release_body.md
-          ## Winhance-FS ${{ steps.version.outputs.version }}
-
-          ### Downloads - Self-Contained (Includes .NET Runtime)
-
-          | Package | Architecture | Type |
-          |---------|--------------|------|
-          | `Winhance-x64-${{ steps.version.outputs.version }}.zip` | x64 (64-bit) | Standard |
-          | `Winhance-x64-Portable-${{ steps.version.outputs.version }}.zip` | x64 (64-bit) | Single-file Portable |
-          | `Winhance-x86-${{ steps.version.outputs.version }}.zip` | x86 (32-bit) | Standard |
-          | `Winhance-x86-Portable-${{ steps.version.outputs.version }}.zip` | x86 (32-bit) | Single-file Portable |
-          | `Winhance-ARM64-${{ steps.version.outputs.version }}.zip` | ARM64 | Standard |
-          | `Winhance-ARM64-Portable-${{ steps.version.outputs.version }}.zip` | ARM64 | Single-file Portable |
-
-          ### Downloads - Framework-Dependent (Requires .NET 9.0 Runtime)
-
-          | Package | Architecture | Type |
-          |---------|--------------|------|
-          | `Winhance-x64-FrameworkDependent-${{ steps.version.outputs.version }}.zip` | x64 (64-bit) | Standard |
-          | `Winhance-x64-FrameworkDependent-Portable-${{ steps.version.outputs.version }}.zip` | x64 (64-bit) | Single-file Portable |
-          | `Winhance-x86-FrameworkDependent-${{ steps.version.outputs.version }}.zip` | x86 (32-bit) | Standard |
-          | `Winhance-x86-FrameworkDependent-Portable-${{ steps.version.outputs.version }}.zip` | x86 (32-bit) | Single-file Portable |
-          | `Winhance-ARM64-FrameworkDependent-${{ steps.version.outputs.version }}.zip` | ARM64 | Standard |
-          | `Winhance-ARM64-FrameworkDependent-Portable-${{ steps.version.outputs.version }}.zip` | ARM64 | Single-file Portable |
-
-          ### Installers & Deployment Packages
-
-          | Package | Description |
-          |---------|-------------|
-          | `Winhance-Setup-${{ steps.version.outputs.version }}.exe` | Windows Setup Installer (Inno Setup) |
-          | `Winhance-MSI-x64-${{ steps.version.outputs.version }}.zip` | MSI Installer Package (x64) |
-          | `Winhance-ClickOnce-${{ steps.version.outputs.version }}.zip` | ClickOnce Deployment Package |
-
-          ### Windows Store Packages (MSIX/APPX)
-
-          | Package | Format | Description |
-          |---------|--------|-------------|
-          | `Winhance-x64-${{ steps.version.outputs.version }}.msix` | MSIX | Windows 10/11 Package (x64) |
-          | `Winhance-x86-${{ steps.version.outputs.version }}.msix` | MSIX | Windows 10/11 Package (x86) |
-          | `Winhance-arm64-${{ steps.version.outputs.version }}.msix` | MSIX | Windows 10/11 Package (ARM64) |
-          | `Winhance-${{ steps.version.outputs.version }}.msixbundle` | MSIX Bundle | Multi-arch Bundle (x64+x86+ARM64) |
-          | `Winhance-x64-${{ steps.version.outputs.version }}.appx` | APPX | Legacy Windows 10 Package (x64) |
-          | `Winhance-x86-${{ steps.version.outputs.version }}.appx` | APPX | Legacy Windows 10 Package (x86) |
-          | `Winhance-${{ steps.version.outputs.version }}.appxbundle` | APPX Bundle | Legacy Multi-arch Bundle |
-
-          > **Note**: MSIX/APPX packages support auto-updates and secure deployment. For Microsoft Store submission, packages require code signing.
-
-          ### Package Managers
-
-          | Package | Description |
-          |---------|-------------|
-          | `winhance.${{ steps.version.outputs.version }}.nupkg` | Chocolatey Package (`choco install winhance`) |
-          | `Winhance-WinGet-Manifest-${{ steps.version.outputs.version }}.zip` | WinGet Manifest (`winget install Winhance`) |
-          | `Winhance-Squirrel-${{ steps.version.outputs.version }}.zip` | Squirrel.Windows Auto-Update Package |
-
-          ### Which Version Should I Download?
-
-          - **Most Users**: `Winhance-Setup` (Windows installer with Start Menu integration)
-          - **Enterprise IT**: `Winhance-MSI` or `Winhance-MSIX` for managed deployment
-          - **No Install Needed**: `Winhance-x64-Portable` (single .exe file, works everywhere)
-          - **32-bit Windows**: `Winhance-x86-Portable`
-          - **ARM Devices (Surface Pro X, etc.)**: `Winhance-ARM64-Portable`
-          - **Chocolatey Users**: `choco install winhance`
-          - **WinGet Users**: `winget install Winhance`
-          - **Auto-Updates**: Use Squirrel package for built-in update support
-          - **Already have .NET 9.0?**: Use Framework-Dependent versions (smaller download)
-
-          ### System Requirements
-
-          - **OS**: Windows 10/11 (x64, x86, or ARM64)
-          - **Runtime**: .NET 9.0 (included in self-contained, required separately for framework-dependent)
-          - **Permissions**: Administrator required for system optimization features
-
-          ### Installation
-
-          **Standard Installation:**
-          1. Download `Winhance-x64-${{ steps.version.outputs.version }}.zip`
-          2. Extract to desired location
-          3. Run `Winhance.WPF.exe` as Administrator
-
-          **Portable:**
-          1. Download `Winhance-x64-Portable-${{ steps.version.outputs.version }}.zip`
-          2. Extract the single executable
-          3. Run as Administrator
-
-          HEADER
+          V="${{ steps.version.outputs.version }}"
+          {
+            echo "## Winhance-FS $V"
+            echo ""
+            echo "### Which file should I download?"
+            echo ""
+            echo "- **Most people:** \`Winhance-FS-Setup-$V.exe\` (installer with Start Menu entry and uninstaller)"
+            echo "- **No install:** \`Winhance-x64-Portable-$V.zip\` (self-contained, unzip and run \`Winhance.exe\`)"
+            echo "- **Already have the .NET 9 Desktop Runtime:** a \`FrameworkDependent\` zip (smaller)"
+            echo "- **32-bit / ARM devices:** the \`x86\` / \`ARM64\` zips"
+            echo ""
+            echo "Windows 10 or 11. Winhance-FS asks for administrator rights when it starts."
+            echo ""
+            echo "### Files in this release"
+            echo ""
+            find ./artifacts -type f \( -name '*.zip' -o -name '*.exe' -o -name '*.msix*' -o -name '*.appx*' -o -name '*.nupkg' \) \
+              -printf '%f\n' | sort | sed 's/^/- `/; s/$/`/'
+          } > release_body.md
 
           echo "" >> release_body.md
           echo "### Changes" >> release_body.md
@@ -1308,10 +1258,11 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.version }}
           target_commitish: ${{ github.sha }}
-          name: Winhance ${{ steps.version.outputs.version }}
+          name: Winhance-FS ${{ steps.version.outputs.version }}
           body_path: release_body.md
           draft: false
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          fail_on_unmatched_files: false
           files: |
             ./artifacts/**/*.zip
             ./artifacts/**/*.exe

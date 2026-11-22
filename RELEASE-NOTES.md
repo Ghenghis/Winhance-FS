@@ -7,7 +7,7 @@ New in this release: Space Recovery can **relocate AI model folders to another d
 then remove, leaving a link at the old path), "recycle" deletes really go to the Recycle Bin, and the File
 Manager tabs work from the keyboard and screen readers. Full list: [CHANGELOG.md](CHANGELOG.md#130---2026-11-22).
 
-**Downloads** (GitHub Releases): `Winhance-Setup-v1.3.0.exe` (installer), `Winhance-x64-Portable-v1.3.0.zip`
+**Downloads** (GitHub Releases): `Winhance-FS-Setup-v1.3.0.exe` (installer), `Winhance-x64-Portable-v1.3.0.zip`
 (self-contained portable), framework-dependent and x86/ARM64 variants, each with a `.sha256`.
 
 ---
