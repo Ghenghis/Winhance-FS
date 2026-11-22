@@ -22,6 +22,13 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
             services.TryAddSingleton<IOrganizerService, OrganizerService>();
             services.TryAddSingleton<ISearchService, SearchService>();
             services.TryAddSingleton<IDuplicateFinderService, DuplicateFinderService>();
+
+            // Environment & PATH Doctor (registry-backed store; factory because the service has a test constructor)
+            services.TryAddSingleton<IEnvironmentStore, RegistryEnvironmentStore>();
+            services.TryAddSingleton<IEnvironmentDoctorService>(sp => new EnvironmentDoctorService(
+                sp.GetRequiredService<IEnvironmentStore>(),
+                sp.GetRequiredService<Winhance.Core.Features.Common.Interfaces.ILogService>(),
+                null));
             
             // File Operations Services
             services.TryAddSingleton<IFileOperationsService, FileOperationsService>();

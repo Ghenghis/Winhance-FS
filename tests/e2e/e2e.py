@@ -310,6 +310,8 @@ if __name__ == '__main__':
         sys.path.insert(0, W)
         import e2e_extended
         sections[2:2] = e2e_extended.install(sys.modules[__name__])
+        import e2e_env
+        sections += e2e_env.install(sys.modules[__name__])
     for section in sections:
         try:
             section()

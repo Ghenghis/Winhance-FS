@@ -36,6 +36,9 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private bool _isSpaceRecoveryTabSelected;
 
         [ObservableProperty]
+        private bool _isEnvironmentTabSelected;
+
+        [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
@@ -63,6 +66,8 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         public OrganizerViewModel? OrganizerViewModel { get; private set; }
 
         public SpaceRecoveryViewModel? SpaceRecoveryViewModel { get; private set; }
+
+        public EnvironmentDoctorViewModel? EnvironmentDoctorViewModel { get; private set; }
 
         public TabContainerViewModel? TabContainerViewModel { get; private set; }
 
@@ -98,6 +103,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             BatchRenameViewModel = new BatchRenameViewModel(_batchRenameService);
             OrganizerViewModel = new OrganizerViewModel(_organizerService);
             SpaceRecoveryViewModel = new SpaceRecoveryViewModel(_organizerService);
+            EnvironmentDoctorViewModel = new EnvironmentDoctorViewModel(_serviceProvider?.GetService<IEnvironmentDoctorService>());
             TabContainerViewModel = _serviceProvider?.GetRequiredService<TabContainerViewModel>() ?? new TabContainerViewModel();
             SearchResultsViewModel = _serviceProvider?.GetRequiredService<SearchResultsViewModel>() ?? new SearchResultsViewModel();
 
@@ -123,6 +129,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             IsBatchRenameTabSelected = false;
             IsOrganizerTabSelected = false;
             IsSpaceRecoveryTabSelected = false;
+            IsEnvironmentTabSelected = false;
             CurrentView = BrowserViewModel;
         }
 
@@ -133,6 +140,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             IsBatchRenameTabSelected = true;
             IsOrganizerTabSelected = false;
             IsSpaceRecoveryTabSelected = false;
+            IsEnvironmentTabSelected = false;
             CurrentView = BatchRenameViewModel;
         }
 
@@ -143,6 +151,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             IsBatchRenameTabSelected = false;
             IsOrganizerTabSelected = true;
             IsSpaceRecoveryTabSelected = false;
+            IsEnvironmentTabSelected = false;
             CurrentView = OrganizerViewModel;
         }
 
@@ -153,7 +162,27 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             IsBatchRenameTabSelected = false;
             IsOrganizerTabSelected = false;
             IsSpaceRecoveryTabSelected = true;
+            IsEnvironmentTabSelected = false;
             CurrentView = SpaceRecoveryViewModel;
+        }
+
+        [RelayCommand]
+        private void SelectEnvironmentTab()
+        {
+            IsBrowserTabSelected = false;
+            IsBatchRenameTabSelected = false;
+            IsOrganizerTabSelected = false;
+            IsSpaceRecoveryTabSelected = false;
+            IsEnvironmentTabSelected = true;
+            CurrentView = EnvironmentDoctorViewModel;
+        }
+
+        partial void OnIsEnvironmentTabSelectedChanged(bool value)
+        {
+            if (value && !ReferenceEquals(CurrentView, EnvironmentDoctorViewModel))
+            {
+                SelectEnvironmentTab();
+            }
         }
 
         // The tab headers are RadioButtons bound TwoWay to these flags, so selecting a tab by keyboard,
@@ -213,6 +242,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 else if (IsSpaceRecoveryTabSelected && SpaceRecoveryViewModel != null)
                 {
                     await SpaceRecoveryViewModel.AnalyzeCommand.ExecuteAsync(null);
+                }
+                else if (IsEnvironmentTabSelected && EnvironmentDoctorViewModel != null)
+                {
+                    await EnvironmentDoctorViewModel.ScanCommand.ExecuteAsync(null);
                 }
 
                 StatusMessage = "Ready";

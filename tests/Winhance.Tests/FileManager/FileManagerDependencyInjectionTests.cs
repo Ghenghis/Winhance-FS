@@ -3,6 +3,9 @@ using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Threading.Tasks;
+using Winhance.Core.Features.FileManager.Interfaces;
+using Winhance.Infrastructure.Features.FileManager.Services;
 using Winhance.WPF.Features.Common.Extensions.DI;
 using Winhance.WPF.Features.FileManager.ViewModels;
 
@@ -76,5 +79,22 @@ public class FileManagerDependencyInjectionTests
         var resolve = () => host.Services.GetRequiredService(viewModelType);
 
         resolve.Should().NotThrow($"{viewModelType.Name} is DI-registered and must be constructible");
+    }
+
+    [Fact]
+    [Trait("Category", "Backend")]
+    public async Task CompositionRoot_EnvironmentTab_GetsAWorkingDoctor()
+    {
+        using var host = BuildAppHost();
+
+        var fileManager = host.Services.GetRequiredService<FileManagerViewModel>();
+        host.Services.GetRequiredService<IEnvironmentDoctorService>().Should().BeOfType<EnvironmentDoctorService>();
+
+        fileManager.EnvironmentDoctorViewModel.Should().NotBeNull();
+        fileManager.SelectEnvironmentTabCommand.Execute(null);
+        fileManager.CurrentView.Should().BeSameAs(fileManager.EnvironmentDoctorViewModel);
+        await fileManager.EnvironmentDoctorViewModel!.ScanCommand.ExecuteAsync(null);
+        fileManager.EnvironmentDoctorViewModel.HasScanned.Should().BeTrue("the doctor must be injected, not null");
+        fileManager.EnvironmentDoctorViewModel.Variables.Should().NotBeEmpty();
     }
 }

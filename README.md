@@ -43,11 +43,12 @@ Screenshots are taken by the end-to-end test sweep (`tests/e2e/`) against a sand
 
 | Area | Stock Winhance | Winhance-FS |
 |------|----------------|-------------|
-| **File Manager section** | — | New: File Browser, Batch Rename, Smart Organizer, Space Recovery |
+| **File Manager section** | — | New: File Browser, Batch Rename, Smart Organizer, Space Recovery, Environment Doctor |
 | Dual-pane browser | — | F5/F6 copy/move between panes, Explorer-compatible cut/copy/paste, F2 rename with validation, Recycle Bin delete, right-click menu |
 | Batch rename | — | 8 rule types, live preview, conflict detection, undo of the last batch |
 | Folder organizer | — | By type / date / project / size / AI category, preview before moving, undo |
 | Space recovery | — | Finds temp files, AI model folders (LM Studio, Ollama, Hugging Face) and package caches; cleans old temp files; **relocates model folders to another drive** and leaves a link so the apps keep working |
+| Environment variables / PATH | — | Environment Doctor: detects 45 kinds of problems, command conflicts and runtime homes; previewed repairs with backup, verification and automatic rollback |
 | Updates | Checks memstechtips/Winhance | Checks this repository's releases; version history and rollback |
 | Native and AI tooling | — | Rust `nexus_core` (MFT/USN indexing), Python MCP server, CLI and AI agents (separate components, not used by the app UI yet) |
 | Software & Apps, Optimize, Customize, Advanced Tools | ✔ | Unchanged from upstream apart from small fixes |
@@ -111,6 +112,7 @@ Winhance is useful to you, please support its developer:
 | [Batch Rename](#batch-rename--available) | ✅ Available |
 | [Smart Organizer](#smart-organizer--available) | ✅ Available |
 | [Space Recovery](#space-recovery--available) | ✅ Available |
+| [Environment Doctor](#environment-doctor--available) (environment variables and PATH) | ✅ Available |
 | [Undo / transaction log](#undo-and-safety) | ✅ Available (rename and organize) |
 | Duplicate Finder | ⚠️ Backend only (`IDuplicateFinderService`) |
 | [AI model relocation](#space-recovery--available) | ✅ Available (Space Recovery → Relocate Selected) |
@@ -185,6 +187,32 @@ Finds space you can get back on a drive:
 | NuGet, Cargo, npm and pip package caches | **Review** — reported only, never deleted by the app |
 
 Results show size and file count for each location, plus a treemap.
+
+---
+
+## Environment Doctor ✅ Available
+
+The **Environment** tab in File Manager diagnoses and repairs Windows environment variables and PATH, for
+the current user and the whole system. Scanning is read-only; nothing changes until you review the
+fixes and choose **Fix Selected**.
+
+| Area | What it finds |
+|------|---------------|
+| **PATH** (User and System) | Folders that no longer exist, duplicates (including `%VAR%` vs expanded forms and User copies of System entries), quotes, stray spaces, empty `;;` entries, relative paths, files listed as folders, undefined `%VARIABLES%`, folders with no programs, user-writable folders in the System PATH, missing essential Windows folders (`system32`, `Wbem`, PowerShell, OpenSSH), length over legacy limits |
+| **Registry type** | Values with `%VARIABLES%` stored as `REG_SZ`, so Windows never expands them (a classic cause of "command not found") |
+| **Command conflicts** | Which copy of `python`, `node`, `java`, `git`, `dotnet`, `go`, `cargo` and 20 more actually runs, every shadowed copy with its version, the Microsoft Store `python` alias hiding a real install, Windows commands (`find`, `sort`, `curl`, `tar`, `ssh`) shadowed by Git/MSYS/conda tools. **Make this run** moves the folder you choose ahead. |
+| **Runtime homes** | `JAVA_HOME`, `JDK_HOME`, `GOROOT`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `CUDA_PATH`, `DOTNET_ROOT`, `MAVEN_HOME`, `GRADLE_HOME`, `NVM_*` and more: missing folder, pointing at `in`, invalid layout, a different install than the one on PATH, with a suggested replacement found on disk |
+| **Developer pitfalls** | Global `PYTHONHOME`/`PYTHONPATH`, `NODE_ENV`, `_JAVA_OPTIONS`/`JAVA_TOOL_OPTIONS`, `PY_PYTHON` naming a Python that is not installed, conda folders on the global PATH, conflicting SDK pairs (`CUDA_PATH` vs `CUDA_HOME` …), User values overriding System ones, manual `PATH_BACKUP` copies, Linux-style `/paths` |
+| **Core variables** | `ComSpec`, `windir`, `OS`, `PATHEXT` (missing `.EXE` etc.), `PSModulePath`, `TEMP`/`TMP` missing or not writable |
+| **Security** | `SSLKEYLOGFILE` (TLS keys written to disk), passwords, tokens and API keys stored as plain variables (values are always hidden in the app and in reports) |
+
+**Repairs are safe by construction:** only unambiguous fixes are pre-selected; every fix is previewed; a full
+backup (JSON + double-clickable `.reg`) is saved first; the plan refuses anything that would empty the System
+PATH, drop `system32`, delete core variables or exceed Windows limits; if another program changed a value since
+the scan, nothing is written; every value is read back after writing and **all changes roll back
+automatically** on any mismatch; running programs are notified (`WM_SETTINGCHANGE`). Any backup can be restored
+from the **Backups** section, and a restore is itself backed up. **Export Report** saves a shareable text report
+with secrets hidden.
 
 ---
 

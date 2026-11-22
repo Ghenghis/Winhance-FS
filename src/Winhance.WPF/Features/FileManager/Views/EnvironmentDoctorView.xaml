@@ -1,0 +1,288 @@
+<UserControl x:Class="Winhance.WPF.Features.FileManager.Views.EnvironmentDoctorView"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:viewModels="clr-namespace:Winhance.WPF.Features.FileManager.ViewModels"
+  xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks" d:DataContext="{d:DesignInstance Type=viewModels:EnvironmentDoctorViewModel}" mc:Ignorable="d">
+
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Features/Common/Resources/Converters/Converters.xaml"/>
+        <ResourceDictionary Source="/Features/Common/Resources/Styles/TableViewStyles.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+
+      <Style x:Key="SectionTabStyle" TargetType="RadioButton">
+        <Setter Property="GroupName" Value="EnvSections" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Margin" Value="0,0,6,0" />
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColor}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="RadioButton">
+              <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" CornerRadius="4" Padding="12,6">
+                <ContentPresenter VerticalAlignment="Center" />
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBackground}" />
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                  <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                  <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBackground}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                  <Setter TargetName="Bd" Property="BorderThickness" Value="1" />
+                  <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!-- Toolbar -->
+    <Border Grid.Row="0" Background="{DynamicResource CardBackground}" CornerRadius="8" Padding="15,10" Margin="0,0,0,8">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Content="Scan" MinWidth="90" Height="32" Margin="0,0,8,0" Padding="12,0" Command="{Binding ScanCommand}" ToolTip="Check all User and System variables, PATH and installed tools (read-only)" Style="{DynamicResource PrimaryButtonStyle}" />
+          <Button Content="Fix Selected..." MinWidth="120" Height="32" Margin="0,0,8,0" Padding="12,0" Command="{Binding FixSelectedCommand}" IsEnabled="{Binding HasScanned}" ToolTip="Preview the selected fixes, back up, apply, verify, roll back on any mismatch" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="Back Up Now" MinWidth="110" Height="32" Margin="0,0,8,0" Padding="12,0" Command="{Binding CreateBackupCommand}" ToolTip="Save all variables as JSON and a .reg file" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="Export Report..." MinWidth="120" Height="32" Margin="0,0,8,0" Padding="12,0" Command="{Binding ExportReportCommand}" IsEnabled="{Binding HasScanned}" ToolTip="Save a text report (secret values hidden) to share or keep" Style="{DynamicResource SecondaryButtonStyle}" />
+          <Button Content="Windows Editor" MinWidth="120" Height="32" Padding="12,0" Command="{Binding OpenWindowsEditorCommand}" ToolTip="Open the built-in Windows Environment Variables dialog" Style="{DynamicResource SecondaryButtonStyle}" />
+        </WrapPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <iconPacks:PackIconMaterial Kind="Stethoscope" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding Summary}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Section switcher -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+      <RadioButton Style="{StaticResource SectionTabStyle}" IsChecked="{Binding IsProblemsSection, Mode=TwoWay}" AutomationProperties.Name="Problems">
+        <TextBlock Text="{Binding Issues.Count, StringFormat='Problems ({0})'}" FontWeight="SemiBold" />
+      </RadioButton>
+      <RadioButton Style="{StaticResource SectionTabStyle}" IsChecked="{Binding IsPathSection, Mode=TwoWay}" AutomationProperties.Name="PATH">
+        <TextBlock Text="{Binding PathEntries.Count, StringFormat='PATH ({0})'}" FontWeight="SemiBold" />
+      </RadioButton>
+      <RadioButton Style="{StaticResource SectionTabStyle}" IsChecked="{Binding IsCommandsSection, Mode=TwoWay}" AutomationProperties.Name="Command conflicts">
+        <TextBlock Text="{Binding Commands.Count, StringFormat='Commands ({0})'}" FontWeight="SemiBold" />
+      </RadioButton>
+      <RadioButton Style="{StaticResource SectionTabStyle}" IsChecked="{Binding IsVariablesSection, Mode=TwoWay}" AutomationProperties.Name="All variables">
+        <TextBlock Text="{Binding Variables.Count, StringFormat='All Variables ({0})'}" FontWeight="SemiBold" />
+      </RadioButton>
+      <RadioButton Style="{StaticResource SectionTabStyle}" IsChecked="{Binding IsBackupsSection, Mode=TwoWay}" AutomationProperties.Name="Backups">
+        <TextBlock Text="{Binding Backups.Count, StringFormat='Backups ({0})'}" FontWeight="SemiBold" />
+      </RadioButton>
+    </StackPanel>
+
+    <Border Grid.Row="2" Background="{DynamicResource CardBackground}" CornerRadius="8" Padding="12">
+      <Grid>
+        <!-- Problems -->
+        <Grid Visibility="{Binding IsProblemsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Select Recommended" Height="28" Padding="10,0" Margin="0,0,6,0" Command="{Binding SelectRecommendedCommand}" ToolTip="Only unambiguous, safe fixes (missing/duplicate entries, broken system values)" Style="{DynamicResource SecondaryButtonStyle}" />
+            <Button Content="Select All Fixable" Height="28" Padding="10,0" Margin="0,0,6,0" Command="{Binding SelectAllFixableCommand}" Style="{DynamicResource SecondaryButtonStyle}" />
+            <Button Content="Select None" Height="28" Padding="10,0" Margin="0,0,12,0" Command="{Binding SelectNoneCommand}" Style="{DynamicResource SecondaryButtonStyle}" />
+            <TextBlock Text="{Binding SelectedCount, StringFormat='{}{0} selected'}" VerticalAlignment="Center" Foreground="{DynamicResource SubTextColor}" />
+          </StackPanel>
+          <ListView Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" VirtualizingPanel.IsVirtualizing="True" AutomationProperties.Name="Problems list">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="" Width="36">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanFix}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Issue.Title}" />
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Severity" Width="90">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="10" Height="10" Fill="{Binding SeverityColor}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SeverityText}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Scope" Width="70" DisplayMemberBinding="{Binding ScopeText}" />
+                <GridViewColumn Header="Variable" Width="150">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Issue.Variable}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Issue.Variable}" />
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Problem" Width="480">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Issue.Title}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Issue.Title}" />
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Fix" Width="300">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding FixText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FixText}" Foreground="{DynamicResource SubTextColor}" />
+                    </DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+              </GridView>
+            </ListView.View>
+          </ListView>
+          <Border Grid.Row="2" Margin="0,8,0,0" Padding="10" CornerRadius="6" Background="{DynamicResource MainContainerBorderBrush}" MinHeight="64">
+            <StackPanel>
+              <TextBlock Text="{Binding SelectedIssue.Issue.Title}" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColor}" />
+              <TextBlock Text="{Binding SelectedIssue.Issue.Detail}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{DynamicResource SubTextColor}" />
+            </StackPanel>
+          </Border>
+          <!-- Empty state -->
+          <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding Issues.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Invert}">
+            <iconPacks:PackIconMaterial Kind="Stethoscope" Width="56" Height="56" Foreground="{DynamicResource SubTextColor}" HorizontalAlignment="Center" />
+            <TextBlock Text="Click 'Scan' to check environment variables, PATH and command conflicts" FontSize="15" Margin="0,12,0,0" Foreground="{DynamicResource SubTextColor}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Grid>
+
+        <!-- PATH -->
+        <ListView Visibility="{Binding IsPathSection, Converter={StaticResource BooleanToVisibilityConverter}}" ItemsSource="{Binding PathEntries}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" AutomationProperties.Name="PATH entries">
+          <ListView.View>
+            <GridView>
+              <GridViewColumn Header="Scope" Width="70" DisplayMemberBinding="{Binding Scope}" />
+              <GridViewColumn Header="#" Width="40" DisplayMemberBinding="{Binding Position}" />
+              <GridViewColumn Header="Status" Width="150" DisplayMemberBinding="{Binding Status}" />
+              <GridViewColumn Header="Programs" Width="80" DisplayMemberBinding="{Binding ExecutableCount}" />
+              <GridViewColumn Header="Entry" Width="420">
+                <GridViewColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Raw}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Raw}" />
+                  </DataTemplate>
+                </GridViewColumn.CellTemplate>
+              </GridViewColumn>
+              <GridViewColumn Header="Resolves to" Width="420">
+                <GridViewColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Expanded}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Expanded}" Foreground="{DynamicResource SubTextColor}" />
+                  </DataTemplate>
+                </GridViewColumn.CellTemplate>
+              </GridViewColumn>
+            </GridView>
+          </ListView.View>
+        </ListView>
+
+        <!-- Commands -->
+        <Grid Visibility="{Binding IsCommandsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <ListView Grid.Column="0" ItemsSource="{Binding Commands}" SelectedItem="{Binding SelectedCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" AutomationProperties.Name="Commands">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Command" Width="120" DisplayMemberBinding="{Binding Command}" />
+                <GridViewColumn Header="On PATH" Width="140" DisplayMemberBinding="{Binding CopiesText}" />
+              </GridView>
+            </ListView.View>
+          </ListView>
+          <StackPanel Grid.Column="1" Margin="16,0,0,0">
+            <TextBlock Text="The first match runs. Use 'Make this run' to move its folder ahead (preview first, backed up, undoable)." TextWrapping="Wrap" Foreground="{DynamicResource SubTextColor}" Margin="0,0,0,8" />
+            <ItemsControl ItemsSource="{Binding SelectedCommand.Matches}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="80" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Role}" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Display}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+                    <Button Grid.Column="2" Content="Make this run" Height="26" Padding="10,0" Margin="8,0,0,0" Command="{Binding DataContext.PreferMatchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Visibility="{Binding IsWinner, Converter={StaticResource InverseBooleanToVisibilityConverter}}" Style="{DynamicResource SecondaryButtonStyle}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Grid>
+
+        <!-- All variables -->
+        <ListView Visibility="{Binding IsVariablesSection, Converter={StaticResource BooleanToVisibilityConverter}}" ItemsSource="{Binding Variables}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" AutomationProperties.Name="All variables">
+          <ListView.View>
+            <GridView>
+              <GridViewColumn Header="Scope" Width="70" DisplayMemberBinding="{Binding Scope}" />
+              <GridViewColumn Header="Name" Width="260" DisplayMemberBinding="{Binding Name}" />
+              <GridViewColumn Header="Type" Width="120" DisplayMemberBinding="{Binding Kind}" />
+              <GridViewColumn Header="Value (secrets hidden)" Width="760">
+                <GridViewColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Value}" />
+                  </DataTemplate>
+                </GridViewColumn.CellTemplate>
+              </GridViewColumn>
+            </GridView>
+          </ListView.View>
+        </ListView>
+
+        <!-- Backups -->
+        <Grid Visibility="{Binding IsBackupsSection, Converter={StaticResource BooleanToVisibilityConverter}}">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Restore Selected..." Height="28" Padding="10,0" Margin="0,0,6,0" Command="{Binding RestoreBackupCommand}" ToolTip="Put every variable back as it was in the backup (the current state is backed up first)" Style="{DynamicResource SecondaryButtonStyle}" />
+            <Button Content="Open Backup Folder" Height="28" Padding="10,0" Command="{Binding OpenBackupFolderCommand}" ToolTip="Each backup is a JSON file and a .reg file you can double-click to merge" Style="{DynamicResource SecondaryButtonStyle}" />
+          </StackPanel>
+          <ListView Grid.Row="1" ItemsSource="{Binding Backups}" SelectedItem="{Binding SelectedBackup}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource PrimaryTextColor}" ItemContainerStyle="{DynamicResource ThemedListViewItem}" AutomationProperties.Name="Backups list">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Created (UTC)" Width="170" DisplayMemberBinding="{Binding CreatedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" />
+                <GridViewColumn Header="Reason" Width="360" DisplayMemberBinding="{Binding Reason}" />
+                <GridViewColumn Header="Variables" Width="90" DisplayMemberBinding="{Binding VariableCount}" />
+                <GridViewColumn Header="Id" Width="240" DisplayMemberBinding="{Binding Id}" />
+              </GridView>
+            </ListView.View>
+          </ListView>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <!-- Status bar -->
+    <Border Grid.Row="3" Background="{DynamicResource MainContainerBorderBrush}" CornerRadius="8" Padding="15,10" Margin="0,8,0,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" TextWrapping="Wrap" FontSize="14" Foreground="{DynamicResource SubTextColor}" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+          <iconPacks:PackIconMaterial Kind="Loading" Width="16" Height="16" Foreground="{DynamicResource AccentBrush}" Spin="True" Margin="0,0,8,0" />
+          <TextBlock Text="Working..." FontSize="14" Foreground="{DynamicResource AccentBrush}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-11-22
 
 ### Added
+- **Environment Doctor** (File Manager → Environment): diagnoses User and System environment variables and PATH
+  — 45 problem types across PATH hygiene, `REG_SZ`/`REG_EXPAND_SZ` mistakes, command conflicts (which `python`,
+  `node`, `java`, … actually runs, Store aliases, shadowed Windows commands), runtime homes (`JAVA_HOME`,
+  `CUDA_PATH`, `ANDROID_HOME`, …), developer pitfalls (global `PYTHONPATH`, `NODE_ENV`, `_JAVA_OPTIONS`,
+  `PY_PYTHON`, conda on PATH), core Windows variables and security (`SSLKEYLOGFILE`, plain-text secrets, always
+  masked). Repairs are previewed, backed up (JSON + `.reg`), refused when unsafe or stale, verified by reading
+  back and rolled back automatically on any mismatch; backups can be restored. Includes a "Make this run"
+  command-conflict resolver, a full variable browser and a shareable report. 18 unit tests plus a read-only
+  end-to-end sweep that proves scan/preview/cancel leave the registry untouched.
 - **Space Recovery → Relocate Selected:** moves one AI model folder (LM Studio, Ollama, Hugging Face) to a
   folder you pick, after checking free space and confirming, and leaves a directory junction at the old path so
   the owning app keeps working.
