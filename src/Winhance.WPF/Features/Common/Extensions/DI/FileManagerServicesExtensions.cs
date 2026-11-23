@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Winhance.Core.Features.Common.Interfaces;
 using Winhance.Core.Features.FileManager.Interfaces;
 using Winhance.Infrastructure.Features.FileManager.Services;
 
@@ -22,6 +23,7 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
             services.TryAddSingleton<IOrganizerService, OrganizerService>();
             services.TryAddSingleton<ISearchService, SearchService>();
             services.TryAddSingleton<IDuplicateFinderService, DuplicateFinderService>();
+            services.TryAddSingleton<IForensicsService>(sp => new ForensicsService(sp.GetService<ILogService>()));
 
             // Environment & PATH Doctor (registry-backed store; factory because the service has a test constructor)
             services.TryAddSingleton<IEnvironmentStore>(_ => SnapshotEnvironmentStore.CreateDefault()); // registry, or WINHANCE_ENV_SNAPSHOT file

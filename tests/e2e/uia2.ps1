@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory)][string]$Action,
   [int]$Index = 0,
   [string]$Value = '',
+  [string]$Name = '',
   [switch]$Add
 )
 # UI Automation driver for Winhance File Manager smoke tests (sandbox folders only).
@@ -30,6 +31,13 @@ switch ($Action) {
     $e = (All $root $CT::Edit)[$Index]
     try { $e.SetFocus() } catch {}
     (Pat $e ([System.Windows.Automation.ValuePattern]::Pattern)).SetValue($Value); "edit[$Index] = $Value"
+  }
+  'setnamed' {
+    # Set the text of the edit box whose accessible name is $Name
+    $e = All $root $CT::Edit | Where-Object { $_.Current.Name -eq $Name } | Select-Object -First 1
+    if (-not $e) { "NOT FOUND edit '$Name'"; exit 1 }
+    try { $e.SetFocus() } catch {}
+    (Pat $e ([System.Windows.Automation.ValuePattern]::Pattern)).SetValue($Value); "edit '$Name' = $Value"
   }
   'buttons' { $i = 0; foreach ($b in (All $root $CT::Button)) { "[$i] name='$($b.Current.Name)' help='$($b.Current.HelpText)'"; $i++ } }
   'btnhelp' {

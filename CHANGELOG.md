@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-11-22
+
+### Added
+- **Duplicates tab** (File Manager → Duplicates): find files with identical content in one or more folders (size,
+  quick hash, SHA-256), grouped in sets with the reclaimable space; keep rules (newest, oldest, shortest path,
+  first listed folder) mark the extra copies, or tick them by hand; **Delete Marked** moves them to the Recycle Bin.
+- **Forensics tab** (File Manager → Forensics):
+  - *Hidden Streams*: NTFS alternate data streams — download markers (with the source URL), app metadata, hidden
+    data and programs hidden inside streams — with a contents preview and safe removal (the file is untouched).
+  - *Content Check*: real file type from the header plus Shannon entropy, flagging programs disguised as
+    documents, likely encrypted files (ransomware: random content with no valid header, or a known ransomware
+    extension) and wrong extensions.
+  - *Previous Versions*: earlier copies from Volume Shadow Copies, one row per distinct version, restore as a copy
+    or replace (asks first); snapshot status per drive and a shortcut to System Protection.
+  - *Recycle Bin*: every drive's items for the current user with original path, date and size; filter; restore to
+    the original place or another folder, never overwriting.
+
+### Fixed
+- Duplicate finder could report a file as its own duplicate — and **Delete** would then remove the only copy —
+  when a junction or symbolic link led back into the scanned tree, or when overlapping folders were scanned. It
+  now never follows reparse points, lists each path once and ignores hard links.
+- Duplicate deletion re-verifies every file right before deleting it (exists, same size and SHA-256 as the kept
+  copy, not a hard link to it) and always keeps at least one copy per set. "Keep newest/oldest" now use the
+  modified time (creation time changes when a file is copied).
+- An inaccessible folder no longer aborts a whole duplicate scan; progress now reaches 100%.
+
+---
+
 ## [1.3.1] - 2026-11-22
 
 First published Windows release of the 1.3 line (the v1.3.0 tag built, but no release was published).

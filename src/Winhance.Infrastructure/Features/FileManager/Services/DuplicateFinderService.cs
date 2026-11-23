@@ -104,6 +104,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             // Phase 1: Collect all files
             progress?.Report(new DuplicateScanProgress { Phase = "Scanning directories" });
             var allFiles = new List<FileInfo>();
+            var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // overlapping roots list a file once
 
             foreach (var path in validatedPaths)
             {
@@ -112,7 +113,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                     break;
                 }
 
-                CollectFiles(path, allFiles, options);
+                CollectFiles(path, allFiles, options, seenPaths);
             }
 
             result.TotalFilesScanned = allFiles.Count;
@@ -125,6 +126,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                 .GroupBy(f => f.Length)
                 .Where(g => g.Count() > 1)
                 .ToList();
+            var filesToHash = sizeGroups.Sum(g => g.Count());
 
             // Phase 3: Hash files in size groups
             var duplicateGroups = new ConcurrentBag<DuplicateFileGroup>();
@@ -151,7 +153,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                     {
                         Phase = "Hashing files",
                         FilesProcessed = filesProcessed,
-                        TotalFiles = allFiles.Count,
+                        TotalFiles = filesToHash,
                         CurrentFile = file.Name,
                         DuplicateGroupsFound = duplicateGroups.Count,
                     });
@@ -186,12 +188,16 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                     }
                     else
                     {
-                        duplicateGroups.Add(CreateDuplicateGroup(hashGroup.Key, hashGroup.Value));
+                        var group = CreateDuplicateGroup(hashGroup.Key, hashGroup.Value);
+                        if (group != null)
+                        {
+                            duplicateGroups.Add(group);
+                        }
                     }
                 }
             }
 
-            result.Groups = duplicateGroups.ToList();
+            result.Groups = duplicateGroups.OrderByDescending(g => g.WastedBytes).ThenBy(g => g.Files[0].Path, StringComparer.OrdinalIgnoreCase).ToList();
             result.DuplicateCount = result.Groups.Sum(g => g.Count - 1);
             result.WastedBytes = result.Groups.Sum(g => g.WastedBytes);
 
@@ -205,14 +211,14 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             return result;
         }
 
-        private void CollectFiles(string path, List<FileInfo> files, DuplicateScanOptions options)
+        private void CollectFiles(string path, List<FileInfo> files, DuplicateScanOptions options, HashSet<string> seenPaths)
         {
             try
             {
                 if (File.Exists(path))
                 {
                     var fi = new FileInfo(path);
-                    if (ShouldIncludeFile(fi, options))
+                    if (ShouldIncludeFile(fi, options) && seenPaths.Add(fi.FullName))
                     {
                         files.Add(fi);
                     }
@@ -225,9 +231,29 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                     return;
                 }
 
-                var searchOption = options.ScanSubfolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                // Never follow junctions or symbolic links: reaching the same file by two routes would make it look
+                // like its own duplicate, and "deleting the duplicate" would delete the only copy. Inaccessible
+                // folders are skipped instead of aborting the whole scan.
+                var skip = FileAttributes.ReparsePoint;
+                if (!options.IncludeHiddenFiles)
+                {
+                    skip |= FileAttributes.Hidden;
+                }
 
-                foreach (var file in Directory.EnumerateFiles(path, "*", searchOption))
+                if (!options.IncludeSystemFiles)
+                {
+                    skip |= FileAttributes.System;
+                }
+
+                var enumeration = new EnumerationOptions
+                {
+                    RecurseSubdirectories = options.ScanSubfolders,
+                    IgnoreInaccessible = true,
+                    AttributesToSkip = skip,
+                    ReturnSpecialDirectories = false,
+                };
+
+                foreach (var file in Directory.EnumerateFiles(path, "*", enumeration))
                 {
                     try
                     {
@@ -237,7 +263,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                         }
 
                         var fi = new FileInfo(file);
-                        if (ShouldIncludeFile(fi, options))
+                        if (ShouldIncludeFile(fi, options) && seenPaths.Add(fi.FullName))
                         {
                             files.Add(fi);
                         }
@@ -256,6 +282,11 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
         private bool ShouldIncludeFile(FileInfo fi, DuplicateScanOptions options)
         {
+            if (fi.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                return false; // symbolic links point at another file; that file is scanned on its own
+            }
+
             if (fi.Length < options.MinFileSize || fi.Length > options.MaxFileSize)
             {
                 return false;
@@ -355,11 +386,22 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             return fullHashGroups
                 .Where(g => g.Value.Count > 1)
                 .Select(g => CreateDuplicateGroup(g.Key, g.Value))
+                .OfType<DuplicateFileGroup>()
                 .ToList();
         }
 
-        private DuplicateFileGroup CreateDuplicateGroup(string hash, List<FileInfo> files)
+        private static DuplicateFileGroup? CreateDuplicateGroup(string hash, List<FileInfo> files)
         {
+            // Hard links are one file with several names: deleting a name frees nothing and is not a duplicate.
+            files = files
+                .GroupBy(f => FileIdentity.TryGet(f.FullName) ?? f.FullName, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+            if (files.Count < 2)
+            {
+                return null;
+            }
+
             var group = new DuplicateFileGroup
             {
                 Hash = hash,
@@ -604,12 +646,32 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             return costs[s2.Length];
         }
 
-        public async Task<DuplicateDeleteResult> DeleteDuplicatesAsync(
+        public Task<DuplicateDeleteResult> DeleteDuplicatesAsync(
             IEnumerable<DuplicateFileGroup> groups,
             DuplicateKeepStrategy strategy,
             bool useRecycleBin = true,
             CancellationToken ct = default)
         {
+            ArgumentNullException.ThrowIfNull(groups);
+            var list = groups.ToList();
+            foreach (var group in list.Where(g => g.Files.Count > 1))
+            {
+                var toKeep = SelectFileToKeep(group, strategy);
+                foreach (var file in group.Files)
+                {
+                    file.MarkedForDeletion = !string.Equals(file.Path, toKeep.Path, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            return DeleteMarkedAsync(list, useRecycleBin, ct);
+        }
+
+        public async Task<DuplicateDeleteResult> DeleteMarkedAsync(
+            IEnumerable<DuplicateFileGroup> groups,
+            bool useRecycleBin = true,
+            CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(groups);
             var result = new DuplicateDeleteResult();
 
             foreach (var group in groups)
@@ -619,9 +681,39 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                     break;
                 }
 
-                var toKeep = SelectFileToKeep(group, strategy);
+                var marked = group.Files.Where(f => f.MarkedForDeletion).ToList();
+                if (marked.Count == 0)
+                {
+                    continue;
+                }
 
-                foreach (var file in group.Files.Where(f => f.Path != toKeep.Path))
+                // Every group must keep at least one copy that still exists and still has the same content.
+                var keepers = group.Files.Where(f => !f.MarkedForDeletion && File.Exists(f.Path)).ToList();
+                if (keepers.Count == 0)
+                {
+                    result.SkippedCount += marked.Count;
+                    result.Errors.Add($"Skipped {marked.Count} file(s) of '{group.Files[0].Name}': no copy would be kept.");
+                    continue;
+                }
+
+                var keeper = keepers[0];
+                string keeperHash;
+                long keeperLength;
+                try
+                {
+                    keeperLength = new FileInfo(keeper.Path).Length;
+                    keeperHash = await ComputeFullHashAsync(keeper.Path, ct);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    result.SkippedCount += marked.Count;
+                    result.Errors.Add($"Skipped '{group.Files[0].Name}': the copy to keep can't be read ({ex.Message}).");
+                    continue;
+                }
+
+                var keeperId = FileIdentity.TryGet(keeper.Path);
+
+                foreach (var file in marked)
                 {
                     if (ct.IsCancellationRequested)
                     {
@@ -630,6 +722,31 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
                     try
                     {
+                        if (!File.Exists(file.Path))
+                        {
+                            result.SkippedCount++;
+                            result.Errors.Add($"Skipped {file.Path}: it no longer exists.");
+                            continue;
+                        }
+
+                        // Re-verify at delete time: the file may have changed since the scan, or be the same file as
+                        // the keeper under another name (hard link) - deleting that name would free nothing.
+                        var id = FileIdentity.TryGet(file.Path);
+                        if (id != null && string.Equals(id, keeperId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.SkippedCount++;
+                            result.Errors.Add($"Skipped {file.Path}: it is the same file as the copy being kept (hard link).");
+                            continue;
+                        }
+
+                        var length = new FileInfo(file.Path).Length;
+                        if (length != keeperLength || await ComputeFullHashAsync(file.Path, ct) != keeperHash)
+                        {
+                            result.SkippedCount++;
+                            result.Errors.Add($"Skipped {file.Path}: its content no longer matches the copy being kept.");
+                            continue;
+                        }
+
                         if (useRecycleBin)
                         {
                             Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
@@ -643,7 +760,12 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                         }
 
                         result.DeletedCount++;
-                        result.BytesRecovered += group.FileSize;
+                        result.BytesRecovered += length;
+                        result.DeletedPaths.Add(file.Path);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -655,7 +777,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
             _logService.Log(
                 LogLevel.Info,
-                $"Deleted {result.DeletedCount} duplicates, recovered {FormatBytes(result.BytesRecovered)}");
+                $"Deleted {result.DeletedCount} duplicates, recovered {FormatBytes(result.BytesRecovered)}, skipped {result.SkippedCount}, failed {result.FailedCount}");
 
             return result;
         }
@@ -666,12 +788,12 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             {
                 DuplicateKeepStrategy.KeepFirst => group.Files.First(),
                 DuplicateKeepStrategy.KeepLast => group.Files.Last(),
-                DuplicateKeepStrategy.KeepOldest => group.Files.OrderBy(f => f.CreatedTime).First(),
-                DuplicateKeepStrategy.KeepNewest => group.Files.OrderByDescending(f => f.CreatedTime).First(),
+                DuplicateKeepStrategy.KeepOldest => group.Files.OrderBy(f => f.ModifiedTime).First(),
+                DuplicateKeepStrategy.KeepNewest => group.Files.OrderByDescending(f => f.ModifiedTime).First(),
                 DuplicateKeepStrategy.KeepShortestPath => group.Files.OrderBy(f => f.Path.Length).First(),
                 DuplicateKeepStrategy.KeepLongestPath => group.Files.OrderByDescending(f => f.Path.Length).First(),
                 DuplicateKeepStrategy.KeepSelected => group.Files.FirstOrDefault(f => f.IsSelected) ?? group.Files.First(),
-                _ => group.Files.First(f => f.IsOriginal),
+                _ => group.Files.FirstOrDefault(f => f.IsOriginal) ?? group.Files.First(),
             };
         }
 

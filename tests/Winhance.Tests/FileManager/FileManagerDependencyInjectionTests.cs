@@ -97,4 +97,73 @@ public class FileManagerDependencyInjectionTests
         fileManager.EnvironmentDoctorViewModel.HasScanned.Should().BeTrue("the doctor must be injected, not null");
         fileManager.EnvironmentDoctorViewModel.Variables.Should().NotBeEmpty();
     }
+
+    [Fact]
+    [Trait("Category", "Backend")]
+    public async Task CompositionRoot_DuplicatesTab_FindsAndMarksDuplicates()
+    {
+        using var host = BuildAppHost();
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "winhance-dupvm-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(System.IO.Path.Combine(root, "b"));
+        try
+        {
+            System.IO.File.WriteAllText(System.IO.Path.Combine(root, "a.txt"), new string('z', 200_000));
+            System.IO.File.WriteAllText(System.IO.Path.Combine(root, "b", "a copy.txt"), new string('z', 200_000));
+            var fileManager = host.Services.GetRequiredService<FileManagerViewModel>();
+            fileManager.SelectDuplicatesTabCommand.Execute(null);
+            var vm = fileManager.DuplicateFinderViewModel!;
+            fileManager.CurrentView.Should().BeSameAs(vm);
+            fileManager.IsEnvironmentTabSelected.Should().BeFalse();
+
+            vm.NewFolder = root;
+            await vm.ScanCommand.ExecuteAsync(null);
+
+            vm.Files.Should().HaveCount(2, vm.StatusMessage);
+            vm.GroupCount.Should().Be(1);
+            vm.SelectedRule = DuplicateFinderViewModel.KeepRules.Single(r => r.Strategy == DuplicateKeepStrategy.KeepShortestPath);
+            vm.ApplyRuleCommand.Execute(null);
+            vm.Files.Single(f => f.IsMarked).Name.Should().Be("a copy.txt");
+            vm.MarkedSummary.Should().StartWith("1 marked");
+        }
+        finally
+        {
+            System.IO.Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Backend")]
+    public async Task CompositionRoot_ForensicsTab_FindsStreamsAndSuspiciousFiles()
+    {
+        using var host = BuildAppHost();
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "winhance-forvm-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(root);
+        try
+        {
+            var file = System.IO.Path.Combine(root, "setup-notes.txt");
+            System.IO.File.WriteAllText(file, "hello");
+            System.IO.File.WriteAllText(file + ":Zone.Identifier", "[ZoneTransfer]\r\nZoneId=3\r\n");
+            var random = new byte[50_000];
+            new Random(1).NextBytes(random);
+            System.IO.File.WriteAllBytes(System.IO.Path.Combine(root, "thesis.docx"), random);
+
+            var fileManager = host.Services.GetRequiredService<FileManagerViewModel>();
+            host.Services.GetRequiredService<IForensicsService>().Should().BeOfType<ForensicsService>();
+            fileManager.SelectForensicsTabCommand.Execute(null);
+            var vm = fileManager.ForensicsViewModel!;
+            fileManager.CurrentView.Should().BeSameAs(vm);
+
+            vm.TargetPath = root;
+            await vm.ScanStreamsCommand.ExecuteAsync(null);
+            vm.Streams.Should().ContainSingle(vm.StatusMessage).Which.KindText.Should().Be("Download marker");
+
+            await vm.ScanContentCommand.ExecuteAsync(null);
+            vm.IsContentSection.Should().BeTrue();
+            vm.Inspections.Should().ContainSingle(vm.StatusMessage).Which.VerdictText.Should().Be("Likely encrypted");
+        }
+        finally
+        {
+            System.IO.Directory.Delete(root, recursive: true);
+        }
+    }
 }

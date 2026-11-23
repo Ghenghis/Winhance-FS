@@ -81,3 +81,19 @@ Created full search service with:
   hard-coded OrganizerViewModel.ExecuteRecoveryAsync.
 - nexus_ai config: Pydantic V2 SettingsConfigDict. Dev version 25.12.12 -> 1.3.0.
 - README/CHANGELOG/RELEASE-NOTES updated for 1.3.0.
+
+---
+
+## 2026-11-22 — Release 1.4.0: Duplicates and Forensics tabs (user-authorized UI edits)
+
+- DuplicateFinderService: never follows junctions/symlinks, de-duplicates overlapping roots, collapses hard links
+  (FileIdentity), skips inaccessible folders; new `DeleteMarkedAsync` re-verifies every file (exists, size,
+  SHA-256, not a hard link to the keeper) and always keeps one copy. Keep newest/oldest use modified time.
+- New `IForensicsService` / `ForensicsService` (partials): alternate data streams (scan, preview, Zone.Identifier,
+  safe removal), content check (signatures + Shannon entropy: disguised programs, likely encrypted, wrong
+  extension), previous versions from Volume Shadow Copies (WMI, injectable source), Recycle Bin $I/$R parsing and
+  restore (never overwrites, refuses items outside the bin).
+- WPF: `DuplicateFinderView`/`ViewModel`, `ForensicsView`/`ViewModel`, two new tabs in `FileManagerView`;
+  `FileManagerViewModel` tab switching consolidated into `ShowTab`.
+- Tests: DuplicateFinderTests (7), ForensicsTests (19 incl. theory rows), DI tests for both tabs; 202 passing.
+  E2E: tests/e2e/e2e_v14.py (26 checks: delete → Recycle Bin → restore round trip).

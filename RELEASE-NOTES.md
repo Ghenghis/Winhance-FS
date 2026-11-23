@@ -1,5 +1,23 @@
 # Winhance-FS Release Notes
 
+## Version 1.4.0 - November 22, 2026
+
+Two new File Manager tabs:
+
+- **Duplicates** — find identical files, let a keep rule mark the extra copies, and move them to the Recycle Bin.
+  Every copy is re-verified byte for byte right before it is removed, and one copy of every set is always kept.
+- **Forensics** — hidden NTFS streams (download markers, hidden data, programs hidden in streams), a content
+  check for encrypted (ransomware) and disguised files, previous versions from Windows snapshots, and Recycle Bin
+  restore.
+
+Also fixes a duplicate-finder bug that could treat a file reached through a junction as its own duplicate.
+Full list: [CHANGELOG.md](CHANGELOG.md#140---2026-11-22).
+
+**Downloads** (GitHub Releases): `Winhance-FS-Setup-v1.4.0.exe` (installer), `Winhance-x64-Portable-v1.4.0.zip`
+(self-contained portable), framework-dependent and x86/ARM64 variants, each with a `.sha256`.
+
+---
+
 ## Version 1.3.1 - November 22, 2026
 
 The File Manager section (File Browser, Batch Rename, Smart Organizer, Space Recovery) is end-to-end tested.

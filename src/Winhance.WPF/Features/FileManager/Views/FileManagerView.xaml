@@ -117,6 +117,10 @@
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- Tabs are RadioButtons so they are reachable with Tab/arrow keys and announced by screen readers. -->
@@ -166,6 +170,26 @@
                 <TextBlock Text="Environment" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
               </StackPanel>
             </RadioButton>
+
+            <!-- Separator -->
+            <Border Grid.Column="9" Width="1" Height="30" Background="#404040" />
+
+            <RadioButton Grid.Column="10" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectDuplicatesTabCommand}" IsChecked="{Binding IsDuplicatesTabSelected, Mode=TwoWay}" AutomationProperties.Name="Duplicates" ToolTip="Find files with identical content and reclaim the space">
+              <StackPanel Orientation="Horizontal">
+                <iconPacks:PackIconMaterial Kind="ContentDuplicate" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+                <TextBlock Text="Duplicates" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+              </StackPanel>
+            </RadioButton>
+
+            <!-- Separator -->
+            <Border Grid.Column="11" Width="1" Height="30" Background="#404040" />
+
+            <RadioButton Grid.Column="12" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectForensicsTabCommand}" IsChecked="{Binding IsForensicsTabSelected, Mode=TwoWay}" AutomationProperties.Name="Forensics" ToolTip="Hidden streams, encrypted or disguised files, previous versions and Recycle Bin recovery">
+              <StackPanel Orientation="Horizontal">
+                <iconPacks:PackIconMaterial Kind="ShieldSearch" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+                <TextBlock Text="Forensics" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+              </StackPanel>
+            </RadioButton>
           </Grid>
         </Border>
 
@@ -187,6 +211,12 @@
               </DataTemplate>
               <DataTemplate DataType="{x:Type viewModels:EnvironmentDoctorViewModel}">
                 <views:EnvironmentDoctorView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type viewModels:DuplicateFinderViewModel}">
+                <views:DuplicateFinderView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type viewModels:ForensicsViewModel}">
+                <views:ForensicsView />
               </DataTemplate>
             </ContentControl.Resources>
           </ContentControl>

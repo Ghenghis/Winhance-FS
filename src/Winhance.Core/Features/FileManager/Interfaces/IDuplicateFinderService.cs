@@ -42,6 +42,17 @@ namespace Winhance.Core.Features.FileManager.Interfaces
             IEnumerable<string> searchPaths, SimilarityOptions options, CancellationToken ct = default);
 
         /// <summary>
+        /// Delete the files marked <see cref="DuplicateFileEntry.MarkedForDeletion"/>. Each group always keeps at least
+        /// one unmarked copy; every marked file is re-checked (exists, same size and SHA-256 as the kept copy, not a
+        /// hard link to it) right before it is deleted, and skipped otherwise.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        Task<DuplicateDeleteResult> DeleteMarkedAsync(
+            IEnumerable<DuplicateFileGroup> groups,
+            bool useRecycleBin = true,
+            CancellationToken ct = default);
+
+        /// <summary>
         /// Delete duplicates keeping specified strategy.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -154,6 +165,9 @@ namespace Winhance.Core.Features.FileManager.Interfaces
         public bool IsSelected { get; set; }
 
         public bool IsOriginal { get; set; }
+
+        /// <summary>Set by the user or a keep rule; <see cref="IDuplicateFinderService.DeleteMarkedAsync"/> deletes these.</summary>
+        public bool MarkedForDeletion { get; set; }
     }
 
     public class DuplicateScanProgress
@@ -228,6 +242,11 @@ namespace Winhance.Core.Features.FileManager.Interfaces
         public long BytesRecovered { get; set; }
 
         public int FailedCount { get; set; }
+
+        /// <summary>Marked files left alone by the safety checks (changed since the scan, gone, hard link, no copy kept).</summary>
+        public int SkippedCount { get; set; }
+
+        public List<string> DeletedPaths { get; set; } = new();
 
         public List<string> Errors { get; set; } = new();
     }

@@ -86,5 +86,12 @@ public DualPaneBrowserViewModel(
 - `OrganizerViewModel`: removed unbound `ExecuteRecoveryAsync` (hard-coded D:\AI-Models).
 Please pull before editing these files.
 
+### 2026-11-22 — Claude Code added two File Manager tabs (user-authorized, release 1.4.0)
+- New: `Views/DuplicateFinderView.xaml(.cs)`, `Views/ForensicsView.xaml(.cs)`, `ViewModels/DuplicateFinderViewModel.cs`,
+  `ViewModels/ForensicsViewModel.cs`.
+- `Views/FileManagerView.xaml`: "Duplicates" and "Forensics" tab RadioButtons + DataTemplates.
+- `FileManagerViewModel`: `IsDuplicatesTabSelected`, `IsForensicsTabSelected`, one `ShowTab(view)` method for all tabs.
+Please pull before editing these files.
+
 ### Previous Messages:
 [Keep older messages below for reference]

@@ -23,7 +23,9 @@
 **Winhance-FS** is a fork of [Winhance](https://github.com/memstechtips/Winhance) by memstechtips. It keeps
 everything stock Winhance does (software install/removal, Optimize, Customize, Advanced Tools) and adds a
 **File Manager** section for answering *"Where did my disk space go?"* and getting it back: a dual-pane browser,
-batch rename, a folder organizer and space recovery, all with previews, confirmations and undo.
+batch rename, a folder organizer, space recovery and a duplicate finder, plus an **Environment Doctor** for PATH
+and environment variables and **Forensics** tools (hidden streams, encrypted or disguised files, previous versions,
+Recycle Bin recovery), all with previews, confirmations and undo.
 
 ---
 
@@ -52,8 +54,10 @@ operations use a throwaway sandbox folder; the Environment Doctor runs on a **de
 | ![Batch Rename preview](docs/images/batch-rename.png) | ![Batch Rename regex](docs/images/batch-rename-regex.png) |
 | **Smart Organizer — preview before moving** | **Smart Organizer — strategies** |
 | ![Smart Organizer preview](docs/images/smart-organizer.png) | ![Smart Organizer strategies](docs/images/smart-organizer-strategies.png) |
-| **Space Recovery — treemap, clean temp files, relocate AI models** | |
-| ![Space Recovery](docs/images/space-recovery.png) | |
+| **Space Recovery — treemap, clean temp files, relocate AI models** | **Duplicates — identical files grouped in sets** |
+| ![Space Recovery](docs/images/space-recovery.png) | ![Duplicates](docs/images/duplicates.png) |
+| **Duplicates — keep rule marks the extra copies** | |
+| ![Duplicates marked](docs/images/duplicates-marked.png) | |
 
 ### New: Environment Doctor (environment variables and PATH)
 
@@ -65,17 +69,27 @@ operations use a throwaway sandbox folder; the Environment Doctor runs on a **de
 | **All variables — secrets always hidden** | **Backups — restore any point** |
 | ![All variables](docs/images/env-variables.png) | ![Backups](docs/images/env-backups.png) |
 
+### New: Forensics (sandbox test files)
+
+| Hidden streams — download markers, hidden data, hidden programs | Content check — encrypted (ransomware) and disguised files |
+|:---:|:---:|
+| ![Hidden streams](docs/images/forensics-streams.png) | ![Content check](docs/images/forensics-content.png) |
+| **Previous versions — Windows snapshots per drive** | **Recycle Bin — search and restore** |
+| ![Previous versions](docs/images/forensics-versions.png) | ![Recycle Bin](docs/images/forensics-recycle-bin.png) |
+
 ---
 
 ## What's different from stock Winhance
 
 | Area | Stock Winhance | Winhance-FS |
 |------|----------------|-------------|
-| **File Manager section** | — | New: File Browser, Batch Rename, Smart Organizer, Space Recovery, Environment Doctor |
+| **File Manager section** | — | New: File Browser, Batch Rename, Smart Organizer, Space Recovery, Environment Doctor, Duplicates, Forensics |
 | Dual-pane browser | — | F5/F6 copy/move between panes, Explorer-compatible cut/copy/paste, F2 rename with validation, Recycle Bin delete, right-click menu |
 | Batch rename | — | 8 rule types, live preview, conflict detection, undo of the last batch |
 | Folder organizer | — | By type / date / project / size / AI category, preview before moving, undo |
 | Space recovery | — | Finds temp files, AI model folders (LM Studio, Ollama, Hugging Face) and package caches; cleans old temp files; **relocates model folders to another drive** and leaves a link so the apps keep working |
+| Duplicate finder | — | Size → quick hash → SHA-256; keep rules (newest, oldest, shortest path, first folder); never follows junctions or counts hard links; every copy re-verified before it goes to the Recycle Bin |
+| Forensics | — | Hidden NTFS streams (Mark of the Web, hidden data, programs hidden in streams) with preview and removal; content check for encrypted (ransomware) and disguised files by header and entropy; previous versions from Windows snapshots; Recycle Bin search and restore |
 | Environment variables / PATH | — | Environment Doctor: detects 45 kinds of problems, command conflicts and runtime homes; previewed repairs with backup, verification and automatic rollback |
 | Updates | Checks memstechtips/Winhance | Checks this repository's releases; version history and rollback |
 | Native and AI tooling | — | Rust `nexus_core` (MFT/USN indexing), Python MCP server, CLI and AI agents (separate components, not used by the app UI yet) |
@@ -142,11 +156,12 @@ Winhance is useful to you, please support its developer:
 | [Space Recovery](#space-recovery--available) | ✅ Available |
 | [Environment Doctor](#environment-doctor--available) (environment variables and PATH) | ✅ Available |
 | [Undo / transaction log](#undo-and-safety) | ✅ Available (rename and organize) |
-| Duplicate Finder | ⚠️ Backend only (`IDuplicateFinderService`) |
+| [Duplicate Finder](#duplicate-finder--available) | ✅ Available |
+| [Forensics](#forensics--available): hidden streams, content/entropy check, previous versions, Recycle Bin restore | ✅ Available |
 | [AI model relocation](#space-recovery--available) | ✅ Available (Space Recovery → Relocate Selected) |
 | Rust deep-scan engine (MFT reader, USN journal, Tantivy search) | ⚠️ Backend only (`src/nexus_core`) |
 | MCP server for AI assistants | ⚠️ Separate Python component (`src/nexus_mcp`) |
-| Forensics tools (ADS, shadow copies, entropy, undelete) | 🚧 Planned |
+| Raw-disk undelete (recovering files already removed from the Recycle Bin by reading the MFT) | 🚧 Planned |
 
 ---
 
@@ -244,10 +259,39 @@ with secrets hidden.
 
 ---
 
+## Duplicate Finder ✅ Available
+
+The **Duplicates** tab finds files with identical content in one or more folders.
+
+| Step | What happens |
+|------|--------------|
+| **Find Duplicates** | Files are grouped by size, then a quick hash (start and end of the file), then confirmed with SHA-256. Junctions and symbolic links are never followed, overlapping folders list a file once, and hard links (one file with two names) are not reported — so a file is never shown as its own duplicate. Filters: minimum size, file types, hidden files. |
+| **Mark the Others** | A keep rule picks one copy per set — newest, oldest, shortest path, or the copy in the first folder you listed — and marks the rest. Tick or untick copies by hand. |
+| **Delete Marked** | Asks first. Right before each delete the file is re-checked: it must still exist, not be a hard link to the kept copy, and match the kept copy byte for byte (SHA-256). A set always keeps at least one copy. Files go to the Recycle Bin. |
+
+---
+
+## Forensics ✅ Available
+
+The **Forensics** tab inspects a file or folder. All checks are read-only; removing or restoring always asks.
+
+| Section | What it does |
+|---------|--------------|
+| **Hidden Streams** | Lists NTFS alternate data streams, which Explorer never shows: *download markers* (Zone.Identifier, with the site a file came from), metadata written by Windows and sync apps, *unrecognized hidden data*, and *Windows programs hidden inside a stream* (a malware trick). Shows the first bytes of any stream. **Remove Selected** deletes streams without touching the file; removing a download marker is the same as **Unblock** in file Properties. |
+| **Content Check** | Reads each file's header and measures its entropy (randomness, 0–8 bits per byte). Flags **programs disguised as documents** (`holiday.jpg` that is really an `.exe`), **likely encrypted** files — a `.docx`, `.pdf` or `.txt` with no valid header and random content, or a known ransomware extension — and **wrong extensions** (a `.png` that is really a JPEG). |
+| **Previous Versions** | Lists earlier copies of a file or folder kept in Windows snapshots (Volume Shadow Copies, made by System Restore and backups), one row per distinct version, compared with the current file. **Restore a Copy** saves it next to the original; **Replace Current** asks first. Shows which drives have snapshots and opens **System Protection** to turn them on. |
+| **Recycle Bin** | Lists deleted items for every drive with original location, date and size; filter by name; **Restore** puts items back where they were (recreating the folder), **Restore To** puts them elsewhere. Never overwrites an existing file. |
+
+Not included: recovering files that were already removed from the Recycle Bin by reading raw disk structures
+(MFT). Look in **Previous Versions** for those.
+
+---
+
 ## Undo and safety
 
 - Batch rename and organize operations are recorded and can be undone from the app.
-- Deletes go to the Recycle Bin; nothing is permanently deleted without a confirmation that says so.
+- Deletes go to the Recycle Bin; nothing is permanently deleted without a confirmation that says so. The
+  Forensics tab can restore Recycle Bin items and earlier versions from Windows snapshots.
 - The clipboard follows the Windows convention (copy vs. move), so files cut or copied in Explorer
   behave the same when pasted into Winhance, and vice versa.
 
@@ -264,7 +308,8 @@ with secrets hidden.
 │  │  PRESENTATION LAYER (C# WPF)                                            │    │
 │  │  ├── File Manager Views                                                  │    │
 │  │  ├── Batch Rename UI                                                     │    │
-│  │  ├── Smart Organizer                                                     │    │
+│  │  ├── Smart Organizer, Space Recovery, Duplicates                         │    │
+│  │  ├── Environment Doctor, Forensics                                       │    │
 │  │  └── Settings & Configuration                                            │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                    │                                            │
@@ -274,7 +319,8 @@ with secrets hidden.
 │  │  ├── FileManagerService                                                  │    │
 │  │  ├── BatchRenameService                                                  │    │
 │  │  ├── OrganizerService                                                    │    │
-│  │  ├── DuplicateFinderService                                              │    │
+│  │  ├── DuplicateFinderService, ForensicsService                            │    │
+│  │  ├── EnvironmentDoctorService (+ registry / snapshot stores)             │    │
 │  │  └── NexusIndexerService (Rust Interop)                                  │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                    │                                            │

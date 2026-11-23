@@ -39,6 +39,12 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private bool _isEnvironmentTabSelected;
 
         [ObservableProperty]
+        private bool _isDuplicatesTabSelected;
+
+        [ObservableProperty]
+        private bool _isForensicsTabSelected;
+
+        [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
@@ -68,6 +74,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         public SpaceRecoveryViewModel? SpaceRecoveryViewModel { get; private set; }
 
         public EnvironmentDoctorViewModel? EnvironmentDoctorViewModel { get; private set; }
+
+        public DuplicateFinderViewModel? DuplicateFinderViewModel { get; private set; }
+
+        public ForensicsViewModel? ForensicsViewModel { get; private set; }
 
         public TabContainerViewModel? TabContainerViewModel { get; private set; }
 
@@ -104,6 +114,8 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             OrganizerViewModel = new OrganizerViewModel(_organizerService);
             SpaceRecoveryViewModel = new SpaceRecoveryViewModel(_organizerService);
             EnvironmentDoctorViewModel = new EnvironmentDoctorViewModel(_serviceProvider?.GetService<IEnvironmentDoctorService>());
+            DuplicateFinderViewModel = new DuplicateFinderViewModel(_serviceProvider?.GetService<IDuplicateFinderService>());
+            ForensicsViewModel = new ForensicsViewModel(_serviceProvider?.GetService<IForensicsService>());
             TabContainerViewModel = _serviceProvider?.GetRequiredService<TabContainerViewModel>() ?? new TabContainerViewModel();
             SearchResultsViewModel = _serviceProvider?.GetRequiredService<SearchResultsViewModel>() ?? new SearchResultsViewModel();
 
@@ -122,100 +134,61 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void SelectBrowserTab()
+        /// <summary>Show one tab: exactly one flag is true and <see cref="CurrentView"/> is its view model.</summary>
+        private void ShowTab(object? view)
         {
-            IsBrowserTabSelected = true;
-            IsBatchRenameTabSelected = false;
-            IsOrganizerTabSelected = false;
-            IsSpaceRecoveryTabSelected = false;
-            IsEnvironmentTabSelected = false;
-            CurrentView = BrowserViewModel;
+            CurrentView = view;
+            IsBrowserTabSelected = ReferenceEquals(view, BrowserViewModel);
+            IsBatchRenameTabSelected = ReferenceEquals(view, BatchRenameViewModel);
+            IsOrganizerTabSelected = ReferenceEquals(view, OrganizerViewModel);
+            IsSpaceRecoveryTabSelected = ReferenceEquals(view, SpaceRecoveryViewModel);
+            IsEnvironmentTabSelected = ReferenceEquals(view, EnvironmentDoctorViewModel);
+            IsDuplicatesTabSelected = ReferenceEquals(view, DuplicateFinderViewModel);
+            IsForensicsTabSelected = ReferenceEquals(view, ForensicsViewModel);
         }
 
         [RelayCommand]
-        private void SelectBatchRenameTab()
-        {
-            IsBrowserTabSelected = false;
-            IsBatchRenameTabSelected = true;
-            IsOrganizerTabSelected = false;
-            IsSpaceRecoveryTabSelected = false;
-            IsEnvironmentTabSelected = false;
-            CurrentView = BatchRenameViewModel;
-        }
+        private void SelectBrowserTab() => ShowTab(BrowserViewModel);
 
         [RelayCommand]
-        private void SelectOrganizerTab()
-        {
-            IsBrowserTabSelected = false;
-            IsBatchRenameTabSelected = false;
-            IsOrganizerTabSelected = true;
-            IsSpaceRecoveryTabSelected = false;
-            IsEnvironmentTabSelected = false;
-            CurrentView = OrganizerViewModel;
-        }
+        private void SelectBatchRenameTab() => ShowTab(BatchRenameViewModel);
 
         [RelayCommand]
-        private void SelectSpaceRecoveryTab()
-        {
-            IsBrowserTabSelected = false;
-            IsBatchRenameTabSelected = false;
-            IsOrganizerTabSelected = false;
-            IsSpaceRecoveryTabSelected = true;
-            IsEnvironmentTabSelected = false;
-            CurrentView = SpaceRecoveryViewModel;
-        }
+        private void SelectOrganizerTab() => ShowTab(OrganizerViewModel);
 
         [RelayCommand]
-        private void SelectEnvironmentTab()
-        {
-            IsBrowserTabSelected = false;
-            IsBatchRenameTabSelected = false;
-            IsOrganizerTabSelected = false;
-            IsSpaceRecoveryTabSelected = false;
-            IsEnvironmentTabSelected = true;
-            CurrentView = EnvironmentDoctorViewModel;
-        }
+        private void SelectSpaceRecoveryTab() => ShowTab(SpaceRecoveryViewModel);
 
-        partial void OnIsEnvironmentTabSelectedChanged(bool value)
-        {
-            if (value && !ReferenceEquals(CurrentView, EnvironmentDoctorViewModel))
-            {
-                SelectEnvironmentTab();
-            }
-        }
+        [RelayCommand]
+        private void SelectEnvironmentTab() => ShowTab(EnvironmentDoctorViewModel);
+
+        [RelayCommand]
+        private void SelectDuplicatesTab() => ShowTab(DuplicateFinderViewModel);
+
+        [RelayCommand]
+        private void SelectForensicsTab() => ShowTab(ForensicsViewModel);
 
         // The tab headers are RadioButtons bound TwoWay to these flags, so selecting a tab by keyboard,
         // screen reader or UI Automation (which sets IsChecked without a click) also switches the view.
-        partial void OnIsBrowserTabSelectedChanged(bool value)
-        {
-            if (value && !ReferenceEquals(CurrentView, BrowserViewModel))
-            {
-                SelectBrowserTab();
-            }
-        }
+        partial void OnIsBrowserTabSelectedChanged(bool value) => ShowIfSelected(value, BrowserViewModel);
 
-        partial void OnIsBatchRenameTabSelectedChanged(bool value)
-        {
-            if (value && !ReferenceEquals(CurrentView, BatchRenameViewModel))
-            {
-                SelectBatchRenameTab();
-            }
-        }
+        partial void OnIsBatchRenameTabSelectedChanged(bool value) => ShowIfSelected(value, BatchRenameViewModel);
 
-        partial void OnIsOrganizerTabSelectedChanged(bool value)
-        {
-            if (value && !ReferenceEquals(CurrentView, OrganizerViewModel))
-            {
-                SelectOrganizerTab();
-            }
-        }
+        partial void OnIsOrganizerTabSelectedChanged(bool value) => ShowIfSelected(value, OrganizerViewModel);
 
-        partial void OnIsSpaceRecoveryTabSelectedChanged(bool value)
+        partial void OnIsSpaceRecoveryTabSelectedChanged(bool value) => ShowIfSelected(value, SpaceRecoveryViewModel);
+
+        partial void OnIsEnvironmentTabSelectedChanged(bool value) => ShowIfSelected(value, EnvironmentDoctorViewModel);
+
+        partial void OnIsDuplicatesTabSelectedChanged(bool value) => ShowIfSelected(value, DuplicateFinderViewModel);
+
+        partial void OnIsForensicsTabSelectedChanged(bool value) => ShowIfSelected(value, ForensicsViewModel);
+
+        private void ShowIfSelected(bool selected, object? view)
         {
-            if (value && !ReferenceEquals(CurrentView, SpaceRecoveryViewModel))
+            if (selected && view != null && !ReferenceEquals(CurrentView, view))
             {
-                SelectSpaceRecoveryTab();
+                ShowTab(view);
             }
         }
 
@@ -246,6 +219,14 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 else if (IsEnvironmentTabSelected && EnvironmentDoctorViewModel != null)
                 {
                     await EnvironmentDoctorViewModel.ScanCommand.ExecuteAsync(null);
+                }
+                else if (IsDuplicatesTabSelected && DuplicateFinderViewModel?.Folders.Count > 0)
+                {
+                    await DuplicateFinderViewModel.ScanCommand.ExecuteAsync(null);
+                }
+                else if (IsForensicsTabSelected && ForensicsViewModel?.IsRecycleSection == true)
+                {
+                    await ForensicsViewModel.LoadRecycleBinCommand.ExecuteAsync(null);
                 }
 
                 StatusMessage = "Ready";
