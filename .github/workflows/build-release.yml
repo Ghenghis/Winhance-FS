@@ -23,7 +23,7 @@ env:
 jobs:
   # Build Rust library first (optional - only if Rust components exist)
   rust-build:
-    name: Build Rust Library
+    name: Build Rust Search Engine
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -33,6 +33,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc,i686-pc-windows-msvc,aarch64-pc-windows-msvc
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -50,6 +51,23 @@ jobs:
 
       - name: Run Rust tests
         run: cargo test --manifest-path src/Cargo.toml --release
+
+      # nexus_core.dll for every app architecture; each publishing job downloads these into src/target.
+      - name: Build search engine for x64, x86 and ARM64
+        shell: pwsh
+        run: |
+          foreach ($t in 'x86_64-pc-windows-msvc', 'i686-pc-windows-msvc', 'aarch64-pc-windows-msvc') {
+            cargo build --manifest-path src/Cargo.toml --release --lib --target $t
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Upload search engine
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-core
+          path: src/target/*-pc-windows-msvc/release/nexus_core.dll
+          if-no-files-found: error
+          retention-days: 7
 
   build:
     name: Build ${{ matrix.config.name }}
@@ -129,6 +147,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download search engine (nexus_core.dll)
+        uses: actions/download-artifact@v4
+        with:
+          name: nexus-core
+          path: src/target
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -164,7 +188,7 @@ jobs:
 
       - name: Build application
         run: |
-          dotnet publish ${{ env.PROJECT_PATH }} `
+          dotnet publish ${{ env.PROJECT_PATH }} -p:RequireNexusCore=true `
             --configuration Release `
             --runtime ${{ matrix.config.runtime }} `
             --self-contained ${{ matrix.config.self_contained }} `
@@ -203,6 +227,88 @@ jobs:
             ./publish/${{ matrix.config.artifact_name }}-${{ steps.version.outputs.version }}.zip.sha256
           retention-days: 30
 
+  # Standalone MCP server for AI assistants (single self-contained exe with the search engine inside)
+  mcp-build:
+    name: Build MCP Server ${{ matrix.arch }}
+    runs-on: windows-latest
+    needs: rust-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runtime: win-x64
+          - arch: ARM64
+            runtime: win-arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download search engine (nexus_core.dll)
+        uses: actions/download-artifact@v4
+        with:
+          name: nexus-core
+          path: src/target
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          VERSION_NUM=${VERSION#v}
+          ASSEMBLY_VERSION=$(echo "$VERSION_NUM" | sed 's/-.*$//' | sed 's/^\([0-9]*\.[0-9]*\.[0-9]*\)$/\1.0/' | sed 's/^\([0-9]*\.[0-9]*\)$/\1.0.0/' | sed 's/^\([0-9]*\)$/\1.0.0.0/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_num=$VERSION_NUM" >> $GITHUB_OUTPUT
+          echo "assembly_version=$ASSEMBLY_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish MCP server
+        run: |
+          dotnet publish src/Winhance.Mcp/Winhance.Mcp.csproj `
+            --configuration Release `
+            --runtime ${{ matrix.runtime }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:RequireNexusCore=true `
+            -p:DebugType=none `
+            -p:Version=${{ steps.version.outputs.version_num }} `
+            -p:AssemblyVersion=${{ steps.version.outputs.assembly_version }} `
+            -p:FileVersion=${{ steps.version.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ steps.version.outputs.version_num }} `
+            --output ./publish/mcp
+
+      - name: Protocol smoke test (x64)
+        if: matrix.arch == 'x64'
+        run: python tests/e2e/mcp_smoke.py "${{ github.workspace }}\publish\mcp\Winhance-FS-MCP.exe"
+
+      - name: Package MCP server
+        shell: pwsh
+        run: |
+          $zipName = "Winhance-FS-MCP-${{ matrix.arch }}-${{ steps.version.outputs.version }}.zip"
+          Copy-Item docs/MCP.md ./publish/mcp/README.md
+          Compress-Archive -Path ./publish/mcp/* -DestinationPath "./publish/$zipName" -Force
+          $hash = Get-FileHash "./publish/$zipName" -Algorithm SHA256
+          Set-Content -Path "./publish/$zipName.sha256" -Value "$($hash.Hash)  $zipName"
+
+      - name: Upload MCP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Winhance-FS-MCP-${{ matrix.arch }}
+          path: |
+            ./publish/Winhance-FS-MCP-${{ matrix.arch }}-${{ steps.version.outputs.version }}.zip
+            ./publish/Winhance-FS-MCP-${{ matrix.arch }}-${{ steps.version.outputs.version }}.zip.sha256
+          retention-days: 30
+
   # MSIX Installer Builds for Microsoft Store
   msix-build:
     name: Build MSIX ${{ matrix.arch }}
@@ -225,6 +331,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Download search engine (nexus_core.dll)
+        uses: actions/download-artifact@v4
+        with:
+          name: nexus-core
+          path: src/target
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -253,7 +365,7 @@ jobs:
         shell: pwsh
         run: |
           # Build the application
-          dotnet publish ${{ env.PROJECT_PATH }} `
+          dotnet publish ${{ env.PROJECT_PATH }} -p:RequireNexusCore=true `
             --configuration Release `
             --runtime ${{ matrix.runtime }} `
             --self-contained true `
@@ -474,6 +586,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download search engine (nexus_core.dll)
+        uses: actions/download-artifact@v4
+        with:
+          name: nexus-core
+          path: src/target
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -501,7 +619,7 @@ jobs:
         shell: pwsh
         run: |
           # Build the application
-          dotnet publish ${{ env.PROJECT_PATH }} `
+          dotnet publish ${{ env.PROJECT_PATH }} -p:RequireNexusCore=true `
             --configuration Release `
             --runtime ${{ matrix.runtime }} `
             --self-contained true `
@@ -1120,6 +1238,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download search engine (nexus_core.dll)
+        uses: actions/download-artifact@v4
+        with:
+          name: nexus-core
+          path: src/target
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -1147,7 +1271,7 @@ jobs:
         shell: pwsh
         run: |
           # Build with ClickOnce manifest generation
-          dotnet publish ${{ env.PROJECT_PATH }} `
+          dotnet publish ${{ env.PROJECT_PATH }} -p:RequireNexusCore=true `
             --configuration Release `
             --runtime win-x64 `
             --self-contained true `
@@ -1180,13 +1304,14 @@ jobs:
     # Waits for every packaging job, but only the core assets (portable/standard zips, verified x64 build and
     # the Setup installer) are required. Store, MSI, Chocolatey, WinGet, Squirrel and ClickOnce packages are
     # attached when they succeed and skipped when they fail, so they can never block a release again.
-    needs: [rust-build, build, verify, msix-build, msix-bundle, appx-build, appx-bundle, installer-build, msi-build, chocolatey-build, winget-build, squirrel-build, clickonce-build]
+    needs: [rust-build, build, verify, mcp-build, msix-build, msix-bundle, appx-build, appx-bundle, installer-build, msi-build, chocolatey-build, winget-build, squirrel-build, clickonce-build]
     runs-on: ubuntu-latest
     if: >-
       always() &&
       (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') &&
       needs.build.result != 'cancelled' &&
       needs.verify.result == 'success' &&
+      needs.mcp-build.result == 'success' &&
       needs.installer-build.result == 'success'
 
     steps:
@@ -1226,6 +1351,7 @@ jobs:
             echo "- **No install:** \`Winhance-x64-Portable-$V.zip\` (self-contained, unzip and run \`Winhance.exe\`)"
             echo "- **Already have the .NET 9 Desktop Runtime:** a \`FrameworkDependent\` zip (smaller)"
             echo "- **32-bit / ARM devices:** the \`x86\` / \`ARM64\` zips"
+            echo "- **AI assistants (Claude, VS Code, Windsurf, Cursor):** \`Winhance-FS-MCP-x64-$V.zip\`, a read-only MCP server (one exe, see its README)"
             echo ""
             echo "Windows 10 or 11. Winhance-FS asks for administrator rights when it starts."
             echo ""

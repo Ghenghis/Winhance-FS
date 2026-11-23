@@ -54,7 +54,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                 AddToRecentSearches(query);
 
                 // Try indexed search first if available
-                if (_nexusIndexer.IsAvailable)
+                if (_nexusIndexer.HasIndex)
                 {
                     var indexedResults = await SearchIndexedAsync(query, options, ct);
                     results.AddRange(indexedResults);
@@ -125,7 +125,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
                 if (_nexusIndexer.IsAvailable)
                 {
-                    // Use native MFT-based indexing
+                    // Use native MFT-based indexing; keep the drives and folders indexed before.
                     progress?.Report(new IndexProgress
                     {
                         CurrentPath = drivePath,
@@ -133,7 +133,22 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                         PercentComplete = 10,
                     });
 
-                    var count = await _nexusIndexer.IndexDirectoryAsync(drivePath, _indexingCts.Token);
+                    var roots = (_nexusIndexer.Current?.Roots.Select(r => r.Path) ?? Enumerable.Empty<string>())
+                        .Append(drivePath)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    long count;
+                    string? error = null;
+                    try
+                    {
+                        var info = await _nexusIndexer.BuildIndexAsync(roots, null, _indexingCts.Token);
+                        count = info.Roots.FirstOrDefault(r => drivePath.StartsWith(r.Path, StringComparison.OrdinalIgnoreCase))?.Entries ?? info.Entries;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        count = -1;
+                        error = ex.Message;
+                    }
 
                     _driveStatuses[driveLetter] = new DriveIndexStatus
                     {
@@ -141,7 +156,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                         IsIndexed = count >= 0,
                         LastIndexed = DateTime.UtcNow,
                         FilesIndexed = count >= 0 ? count : 0,
-                        ErrorMessage = count < 0 ? _nexusIndexer.GetLastError() : null,
+                        ErrorMessage = error,
                     };
 
                     progress?.Report(new IndexProgress
@@ -244,13 +259,13 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
         /// <inheritdoc/>
         public Task<IndexStatus> GetIndexStatusAsync(CancellationToken ct = default)
         {
-            var stats = _nexusIndexer.Stats;
+            var stats = _nexusIndexer.Current;
 
             var status = new IndexStatus
             {
-                IsIndexing = _isIndexing,
-                LastIndexed = stats.LastIndexTime != default ? stats.LastIndexTime : null,
-                TotalFilesIndexed = stats.TotalFiles,
+                IsIndexing = _isIndexing || _nexusIndexer.IsBuilding,
+                LastIndexed = stats?.BuiltUtc,
+                TotalFilesIndexed = stats?.Files ?? 0,
                 DriveStatuses = _driveStatuses.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             };
 
@@ -282,10 +297,10 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             {
                 AddToRecentSearches(query);
 
-                if (_nexusIndexer.IsAvailable)
+                if (_nexusIndexer.HasIndex)
                 {
                     var results = await _nexusIndexer.SearchAsync(query, options.MaxResults, ct);
-                    foreach (var entry in results)
+                    foreach (var entry in results.Results)
                     {
                         if (ct.IsCancellationRequested)
                         {
@@ -380,10 +395,10 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
                 suggestions.AddRange(recentMatches);
 
                 // Then, do a quick indexed search for filename suggestions
-                if (_nexusIndexer.IsAvailable && suggestions.Count < maxSuggestions)
+                if (_nexusIndexer.HasIndex && suggestions.Count < maxSuggestions)
                 {
                     var searchResults = await _nexusIndexer.SearchAsync(partialQuery, maxSuggestions - suggestions.Count, ct);
-                    suggestions.AddRange(searchResults.Select(r => r.Name).Distinct());
+                    suggestions.AddRange(searchResults.Results.Select(r => r.Name).Distinct());
                 }
 
                 return suggestions.Distinct().Take(maxSuggestions);
@@ -418,7 +433,7 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
 
             var nexusResults = await _nexusIndexer.SearchAsync(query, options.MaxResults, ct);
 
-            foreach (var entry in nexusResults)
+            foreach (var entry in nexusResults.Results)
             {
                 var result = ConvertNexusEntry(entry);
                 result.Score = CalculateRelevanceScore(result.Name, query);
@@ -521,10 +536,10 @@ namespace Winhance.Infrastructure.Features.FileManager.Services
             {
                 FullPath = entry.Path,
                 Name = entry.Name,
-                Directory = Path.GetDirectoryName(entry.Path) ?? string.Empty,
+                Directory = entry.Folder,
                 Size = entry.Size,
                 DateModified = entry.Modified ?? DateTime.MinValue,
-                DateCreated = entry.Created ?? DateTime.MinValue,
+                DateCreated = DateTime.MinValue,
                 IsDirectory = entry.IsDirectory,
                 Extension = entry.Extension ?? string.Empty,
             };

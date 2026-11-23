@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-11-23
+
+### Added
+- **Search tab** (File Manager → Search): instant file and folder name search over whole drives, powered by the
+  Rust engine (`nexus_core.dll`), now shipped with every build (x64, x86, ARM64).
+  - NTFS drives are indexed by reading the Master File Table directly: about 6 s for a 6-million-file drive on a
+    fast SSD, with sizes, dates and every name of hard-linked files. Falls back to the Windows enumeration API,
+    then to a parallel folder walk (no junctions or links followed) for other drives and added folders.
+  - Results while you type (tens of milliseconds over millions of files), ranked exact → prefix → word start.
+    Query syntax: words, `"phrases"`, `*`/`?` wildcards, path terms with `\`, `!exclude`, `ext:`, `file:`,
+    `folder:`. Sort by best match, largest or newest.
+  - The index is saved (`%LOCALAPPDATA%\Winhance-FS\search-index.bin`) and loaded when the tab opens; files
+    deleted since indexing are marked.
+- **MCP server for AI assistants**: `Winhance-FS-MCP.exe`, a single self-contained, read-only stdio server
+  (release zips for x64 and ARM64) with `search_files`, `largest_files`, `search_index_status`,
+  `build_search_index`, `find_duplicates`, `hidden_streams`, `check_file_contents`, `previous_versions` and
+  `recycle_bin`. `--help` prints a ready-to-paste client configuration. Setup: [docs/MCP.md](docs/MCP.md).
+
+### Changed
+- The app's search service talks to the Rust engine through a small JSON API (`ffi/search_api.rs`). The old
+  P/Invoke layer called `Nexus_init` while the DLL exported `nexus_init`, so the engine was never used.
+- Tantivy full-text search is now an optional Cargo feature (`fulltext`); the default build has no C
+  dependencies, which makes the ARM64 build possible.
+
+---
+
 ## [1.4.0] - 2026-11-22
 
 ### Added

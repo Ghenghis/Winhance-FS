@@ -12,10 +12,10 @@
     <!-- Force icon refresh -->
     <Win32Resource></Win32Resource>
     <!-- Version information -->
-    <Version>1.4.0</Version>
-    <FileVersion>1.4.0.0</FileVersion>
-    <AssemblyVersion>1.4.0.0</AssemblyVersion>
-    <InformationalVersion>1.4.0</InformationalVersion>
+    <Version>1.5.0</Version>
+    <FileVersion>1.5.0.0</FileVersion>
+    <AssemblyVersion>1.5.0.0</AssemblyVersion>
+    <InformationalVersion>1.5.0</InformationalVersion>
     <!-- Publisher metadata shown in the exe's Properties > Details and by Windows -->
     <Product>Winhance-FS</Product>
     <Company>Ghenghis</Company>
@@ -42,6 +42,7 @@
     <EmbeddedResource Include="Resources\Configs\Winhance_Recommended_Config.winhance" />
     <EmbeddedResource Include="Resources\AdvancedTools\autounattend-template.xml" />
   </ItemGroup>
+  <Import Project="..\NexusCore.targets" />
   <ItemGroup>
     <None Update="Localization\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

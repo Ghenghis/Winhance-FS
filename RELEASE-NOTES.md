@@ -1,5 +1,22 @@
 # Winhance-FS Release Notes
 
+## Version 1.5.0 - November 23, 2026
+
+- **Search**: a new File Manager tab that finds any file or folder by name on whole drives while you type.
+  NTFS drives are read straight from the drive's file table, so indexing millions of files takes seconds.
+  Wildcards, phrases, path terms, exclusions, type filters, and sorting by size or date.
+- **MCP server**: `Winhance-FS-MCP.exe` lets AI assistants (Claude Desktop, Claude Code, VS Code, Windsurf,
+  Cursor) search your drives and run the Duplicates and Forensics checks. It is read-only and needs no install.
+  See [docs/MCP.md](docs/MCP.md).
+
+Full list: [CHANGELOG.md](CHANGELOG.md#150---2026-11-23).
+
+**Downloads** (GitHub Releases): `Winhance-FS-Setup-v1.5.0.exe` (installer), `Winhance-x64-Portable-v1.5.0.zip`
+(self-contained portable), `Winhance-FS-MCP-x64-v1.5.0.zip` (MCP server), plus framework-dependent and x86/ARM64
+variants, each with a `.sha256`.
+
+---
+
 ## Version 1.4.0 - November 22, 2026
 
 Two new File Manager tabs:

@@ -1,5 +1,21 @@
 # Claude Code - Completed Tasks
 
+## 2026-11-23 — v1.5.0: Rust search engine in the app, MCP server exe
+
+| Task | Result |
+|------|--------|
+| Rust name index (`nexus_core/src/search/name_index.rs`) | Packed in-memory name table, parallel query engine (words, phrases, wildcards, path terms, `!`, `ext:`, `file:`/`folder:`), ranking, sort by size/date, binary save/load |
+| Raw MFT reader (`search/mft_raw.rs`) | Boot sector → $MFT extents → parallel record parsing with fixups; hard links, sizes, dates. C: (6.1M entries) in ~5.5 s; falls back to FSCTL_ENUM_USN_DATA, then folder walk |
+| JSON FFI (`ffi/search_api.rs`) | `nexus_index_build/load/search/info/cancel/progress`, panic-safe |
+| `INexusIndexerService` rewritten | Old P/Invoke called `Nexus_init` (DLL exports `nexus_init`), so the engine never loaded. New service in Infrastructure; `Core/.../Interop/NexusInterop.cs` removed |
+| Search tab (WPF) | `FastSearchViewModel` + `FastSearchView`, second File Manager tab |
+| `src/Winhance.Mcp` | `Winhance-FS-MCP.exe`, read-only MCP server (ModelContextProtocol 2.4.0), 9 tools; links only the services it needs |
+| Packaging | `src/NexusCore.targets` ships `nexus_core.dll`; release workflow builds it for x64/x86/ARM64 and publishes MCP zips |
+| Tantivy | Optional `fulltext` Cargo feature (removes the zstd C dependency from the default build) |
+| Tests | Rust 19, C# 207 (5 new), MCP protocol smoke 30/30, E2E Search 22/22 |
+
+---
+
 ## 2026-11-14 — WPF build fixed, solution green
 
 | Task | Result |

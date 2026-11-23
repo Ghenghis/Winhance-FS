@@ -1,489 +1,100 @@
-# Rust Backend (nexus-native)
+# Rust Backend (`nexus_core`)
 
-## Overview
+`src/nexus_core` builds `nexus_core.dll`, the search engine behind the File Manager **Search** tab and the
+`Winhance-FS-MCP.exe` server. It is a plain `cdylib` with a small JSON-over-FFI API; there is no code
+generation or Python binding.
 
-The `nexus-native` crate provides high-performance file system operations for Winhance-FS, implemented in Rust for maximum speed and safety.
-
-## Why Rust?
-
-- **Performance**: Direct NTFS/MFT access, SIMD operations
-- **Safety**: Memory-safe without garbage collection
-- **Interop**: UniFFI generates C# bindings automatically
-- **Ecosystem**: Excellent crates for Windows APIs
-
-## Architecture
+## Layout
 
 ```
-nexus-native/
-+-- Cargo.toml           # Dependencies and build config
-+-- build.rs             # UniFFI build script
-+-- src/
-    +-- lib.rs           # Library entry point
-    +-- nexus.udl        # UniFFI interface definition
-    +-- mft/             # MFT parsing
-    |   +-- mod.rs
-    |   +-- parser.rs
-    |   +-- iterator.rs
-    +-- search/          # SIMD search engine
-    |   +-- mod.rs
-    |   +-- simd.rs
-    |   +-- bloom.rs
-    |   +-- tantivy.rs
-    +-- vss/             # Shadow copies
-    |   +-- mod.rs
-    |   +-- shadow.rs
-    +-- memory/          # Memory recovery
-    |   +-- mod.rs
-    |   +-- standby.rs
-    |   +-- pool_tags.rs
-    +-- classification/  # File classification
-        +-- mod.rs
-        +-- entropy.rs
-        +-- magic.rs
+src/
+├── Cargo.toml                 # workspace (version, shared dependency versions)
+├── NexusCore.targets          # MSBuild: copies nexus_core.dll into the app / MCP output
+└── nexus_core/
+    ├── Cargo.toml             # feature "fulltext" = optional Tantivy engine
+    ├── examples/index_drive.rs  # benchmark: cargo run --release --example index_drive -- C:\ readme
+    └── src/
+        ├── lib.rs             # FileEntry, IndexStats, error type
+        ├── search/
+        │   ├── name_index.rs  # the name index: build, query, rank, sort, save/load (+ folder walker, USN enumeration fallback)
+        │   ├── mft_raw.rs     # raw NTFS Master File Table reader
+        │   └── tantivy_engine.rs  # only with --features fulltext
+        ├── ffi/
+        │   ├── search_api.rs  # JSON API used by C# (NexusIndexerService)
+        │   └── mod.rs         # older C ABI (hashing helpers), nexus_free_string
+        ├── indexer/           # metadata, hashing, USN journal monitor, older MFT enumeration
+        └── watcher/           # notify-based folder watcher
 ```
 
-## Key Dependencies
+## How indexing works
 
-```toml
-[dependencies]
-# NTFS Access
-ntfs = "0.4"                    # MFT parsing
+1. **Roots** are normalized (`C:` → `C:\`, trailing slashes removed). Nested roots are merged into the outer one.
+2. **NTFS drive roots** (`C:\`) are read with `mft_raw::read_volume`:
+   - The boot sector gives the cluster size, record size and the MFT's first cluster.
+   - Record 0 (`$MFT` itself) gives the MFT's extents (data runs).
+   - The MFT is read in 16 MB sequential chunks; each 1 KB record gets its update-sequence fixups checked and
+     applied, then is parsed in parallel (rayon): `$STANDARD_INFORMATION` (attributes, modified time),
+     every `$FILE_NAME` except DOS 8.3 names (so hard links appear under each name), and the unnamed `$DATA`
+     size. Extension records are merged into their base record.
+   - Needs Administrator rights (the app always runs elevated). On C: with 6.1 million entries this takes about
+     5.5 s on an NVMe SSD.
+   - If that fails, `FSCTL_ENUM_USN_DATA` (names only, sizes filled in when results are shown) is tried, then a
+     folder walk.
+3. **Folders and other drives** are walked in parallel. Junctions and symbolic links are listed but never
+   followed. Sizes and dates come from the directory listing (no extra system calls).
+4. Records are linked into a tree (parents first). Records whose parent chain doesn't reach the root (NTFS
+   metadata, orphans) are dropped, and cycles are guarded against.
 
-# SIMD Search
-memchr = "2.7"                  # 10.99 GB/s string matching
-aho-corasick = "1.1"            # Multi-pattern matching
-regex = "1.10"                  # SIMD regex
+## The index in memory
 
-# Bloom Filters
-fastbloom = "0.7"               # Fast negative lookups
+One entry per name: a packed UTF-8 string buffer with `u32` offsets, plus parallel arrays for parent, flags,
+size and modified time. A 6-million-entry index uses roughly 270 MB. Matching is case-insensitive without
+storing a lower-case copy: ASCII names are compared byte by byte, other names are folded on the fly.
 
-# Full-text Search
-tantivy = "0.22"                # Rust search engine
+Saved format (`WFSIDX01`): header, roots, then per entry: parent, flags, size, mtime, name. Written to a
+temporary file and renamed. Loading validates parent indexes and string lengths.
 
-# Windows APIs
-windows = "0.58"                # Official Microsoft bindings
+## Queries
 
-# FFI
-uniffi = "0.28"                 # C# binding generation
+`Query::parse` turns text into ANDed terms: words (name contains), `"phrases"`, `*`/`?` wildcards (whole name),
+path terms (any term containing `\` or `/` matches the full path), `!negation`, `ext:a;b`, `file:`, `folder:`.
+Cheap terms are checked first; full paths are only built for path terms. Results are ranked: exact name, name
+starts with the first word, the word starts a word in the name, then anywhere; ties go to shorter names.
+`SortBy::Size` and `SortBy::Modified` order by size or date instead, and with them an empty query matches
+everything. Only the top `limit` results are fully built (paths, and a `stat` to mark items deleted since
+indexing).
+
+## FFI (`ffi/search_api.rs`)
+
+Every function takes and returns UTF-8 JSON; returned strings are freed with `nexus_free_string`. Panics are
+caught and returned as `{"ok":false,...}`.
+
+| Function | Request | Reply |
+|----------|---------|-------|
+| `nexus_engine_version()` | — | `{"ok":true,"version":"1.5.0","format":"WFSIDX01"}` |
+| `nexus_index_build(json)` | `{"roots":["C:\\"],"save_to":"...bin"}` | index info, or `{"ok":false,"cancelled":true}` |
+| `nexus_index_load(path)` | file path (plain string) | index info |
+| `nexus_index_info()` | — | index info |
+| `nexus_index_search(json)` | `{"query":"tax 2024","limit":200,"sort":"relevance"}` | `{"total","ms","results":[{path,name,folder,isDir,size,modified,missing}]}` |
+| `nexus_index_cancel()`, `nexus_index_progress()` | — | cancel a build / items found so far |
+
+The engine holds one index per process; a build replaces it only when complete, so searches keep working
+during a rebuild.
+
+## Building and testing
+
+```powershell
+cargo build --release --manifest-path src/Cargo.toml        # target\release\nexus_core.dll (used by dotnet build)
+cargo test  --release --manifest-path src/Cargo.toml
+cargo clippy --manifest-path src/Cargo.toml --all-targets -- -D warnings
+cargo build --release --manifest-path src/Cargo.toml --lib --target aarch64-pc-windows-msvc   # needs MSVC ARM64 tools
 ```
 
-## Building
+The release workflow builds `x86_64`, `i686` and `aarch64` and passes `-p:RequireNexusCore=true` so a package
+can't ship without the engine. C# tests (`tests/Winhance.Tests/FileManager/NexusSearchTests.cs`) load the DLL
+from the build output.
 
-### Prerequisites
+## Not done yet
 
-- Rust 1.75+ (install via [rustup](https://rustup.rs))
-- Windows 10/11 SDK
-- Visual Studio Build Tools
-
-### Build Commands
-
-```bash
-cd src/nexus-native
-
-# Debug build
-cargo build
-
-# Release build (optimized)
-cargo build --release
-
-# Run tests
-cargo test
-
-# Run benchmarks
-cargo bench
-
-# Generate C# bindings
-cargo run --bin uniffi-bindgen generate src/nexus.udl --language csharp --out-dir ../Winhance.Infrastructure/Native/RustInterop/
-```
-
-## UniFFI Interface
-
-The `nexus.udl` file defines the interface exposed to C#:
-
-```
-namespace nexus {
-    // Async function for drive scanning
-    [Async]
-    DrivesScanResult scan_all_drives();
-
-    // Search with options
-    [Async]
-    SearchResults search(string query, SearchOptions options);
-
-    // File move with transaction
-    [Async, Throws=NexusError]
-    MoveResult relocate_with_symlink(
-        string source,
-        string destination,
-        boolean create_symlink,
-        boolean verify
-    );
-};
-
-dictionary DrivesScanResult {
-    sequence<DriveInfo> drives;
-    sequence<SpaceRecoveryItem> recovery_items;
-    u64 total_recoverable_bytes;
-};
-
-[Error]
-enum NexusError {
-    "IoError",
-    "PermissionDenied",
-    "NotFound",
-    // ...
-};
-```
-
-### Generated C# Bindings
-
-UniFFI generates `NexusNative.cs`:
-
-```csharp
-namespace Nexus;
-
-public static class NexusMethods
-{
-    public static async Task<DrivesScanResult> ScanAllDrivesAsync()
-    {
-        // Auto-generated FFI call
-    }
-
-    public static async Task<SearchResults> SearchAsync(
-        string query,
-        SearchOptions options)
-    {
-        // Auto-generated FFI call
-    }
-}
-```
-
-## Core Modules
-
-### MFT Parser
-
-Direct NTFS Master File Table access for ultra-fast file enumeration:
-
-```rust
-// mft/parser.rs
-use ntfs::Ntfs;
-
-pub struct MftParser {
-    ntfs: Ntfs,
-}
-
-impl MftParser {
-    pub fn new(drive_letter: &str) -> Result<Self, NexusError> {
-        let path = format!("\\\\.\\{}:", drive_letter);
-        let file = std::fs::File::open(&path)?;
-        let ntfs = Ntfs::new(file)?;
-        Ok(Self { ntfs })
-    }
-
-    pub fn scan(&self) -> impl Iterator<Item = MftEntry> + '_ {
-        self.ntfs.mft_records()
-            .filter_map(|record| record.ok())
-            .map(|record| MftEntry::from(record))
-    }
-}
-```
-
-**Performance**: 1M files in <1 second (vs 10+ seconds for FindFirstFile)
-
-### SIMD Search
-
-High-performance string matching using memchr:
-
-```rust
-// search/simd.rs
-use memchr::memmem;
-
-pub fn simd_search(haystack: &[u8], needle: &[u8]) -> Vec<usize> {
-    let finder = memmem::Finder::new(needle);
-    finder.find_iter(haystack).collect()
-}
-
-// Multi-pattern matching
-use aho_corasick::AhoCorasick;
-
-pub fn multi_pattern_search(text: &str, patterns: &[&str]) -> Vec<Match> {
-    let ac = AhoCorasick::new(patterns).unwrap();
-    ac.find_iter(text)
-        .map(|m| Match {
-            pattern_index: m.pattern().as_usize(),
-            start: m.start(),
-            end: m.end(),
-        })
-        .collect()
-}
-```
-
-**Performance**: 10.99 GB/s throughput with memchr
-
-### Bloom Filter
-
-Fast pre-filtering for search:
-
-```rust
-// search/bloom.rs
-use fastbloom::BloomFilter;
-
-pub struct SearchIndex {
-    bloom: BloomFilter,
-    // ... other index data
-}
-
-impl SearchIndex {
-    pub fn might_contain(&self, term: &str) -> bool {
-        // ~23ns lookup time
-        self.bloom.contains(term)
-    }
-
-    pub fn search(&self, query: &str) -> Vec<SearchResult> {
-        // Quick negative check
-        if !self.might_contain(query) {
-            return vec![];
-        }
-
-        // Full search only if bloom filter passes
-        self.full_search(query)
-    }
-}
-```
-
-### Entropy Calculator
-
-Detect encrypted/compressed files:
-
-```rust
-// classification/entropy.rs
-
-pub fn calculate_entropy(data: &[u8]) -> f64 {
-    if data.is_empty() {
-        return 0.0;
-    }
-
-    let mut frequencies = [0u64; 256];
-    for &byte in data {
-        frequencies[byte as usize] += 1;
-    }
-
-    let len = data.len() as f64;
-    let mut entropy = 0.0;
-
-    for &count in &frequencies {
-        if count > 0 {
-            let probability = count as f64 / len;
-            entropy -= probability * probability.log2();
-        }
-    }
-
-    entropy  // 0.0-8.0, >7.5 = likely encrypted
-}
-```
-
-### Windows API Integration
-
-Using official Microsoft Rust bindings:
-
-```rust
-// memory/standby.rs
-use windows::Win32::System::SystemInformation::*;
-use windows::Win32::System::Memory::*;
-
-pub fn clear_standby_list() -> Result<u64, NexusError> {
-    unsafe {
-        // Requires SeIncreaseQuotaPrivilege
-        let command = MemoryPurgeStandbyList;
-        let status = NtSetSystemInformation(
-            SystemMemoryListInformation,
-            &command as *const _ as *mut _,
-            std::mem::size_of_val(&command) as u32,
-        );
-
-        if status.is_ok() {
-            Ok(get_freed_bytes())
-        } else {
-            Err(NexusError::MemoryRecoveryError)
-        }
-    }
-}
-```
-
-## Testing
-
-### Unit Tests
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_entropy_empty() {
-        assert_eq!(calculate_entropy(&[]), 0.0);
-    }
-
-    #[test]
-    fn test_entropy_uniform() {
-        // All same bytes = 0 entropy
-        let data = vec![0u8; 1000];
-        assert_eq!(calculate_entropy(&data), 0.0);
-    }
-
-    #[test]
-    fn test_entropy_random() {
-        // Random data = high entropy
-        let data: Vec<u8> = (0..1000).map(|_| rand::random()).collect();
-        let entropy = calculate_entropy(&data);
-        assert!(entropy > 7.0);
-    }
-
-    #[tokio::test]
-    async fn test_scan_drive() {
-        let result = scan_mft("C:").await;
-        assert!(result.is_ok());
-    }
-}
-```
-
-### Benchmarks
-
-```rust
-// benches/mft_scan.rs
-use criterion::{criterion_group, criterion_main, Criterion};
-
-fn bench_mft_scan(c: &mut Criterion) {
-    c.bench_function("mft_scan_c_drive", |b| {
-        b.iter(|| {
-            let parser = MftParser::new("C:").unwrap();
-            let count = parser.scan().count();
-            assert!(count > 0);
-        })
-    });
-}
-
-fn bench_simd_search(c: &mut Criterion) {
-    let haystack = vec![b'a'; 1_000_000];
-    let needle = b"pattern";
-
-    c.bench_function("simd_search_1mb", |b| {
-        b.iter(|| simd_search(&haystack, needle))
-    });
-}
-
-criterion_group!(benches, bench_mft_scan, bench_simd_search);
-criterion_main!(benches);
-```
-
-Run benchmarks:
-```bash
-cargo bench
-```
-
-## Error Handling
-
-```rust
-use thiserror::Error;
-
-#[derive(Error, Debug, uniffi::Error)]
-pub enum NexusError {
-    #[error("IO error: {0}")]
-    IoError(String),
-
-    #[error("Permission denied: requires elevation")]
-    PermissionDenied,
-
-    #[error("File not found: {0}")]
-    NotFound(String),
-
-    #[error("Operation failed: {0}")]
-    OperationFailed(String),
-
-    #[error("Memory recovery failed")]
-    MemoryRecoveryError,
-}
-
-impl From<std::io::Error> for NexusError {
-    fn from(err: std::io::Error) -> Self {
-        NexusError::IoError(err.to_string())
-    }
-}
-```
-
-## Performance Optimization
-
-### Release Profile
-
-```toml
-[profile.release]
-opt-level = 3        # Maximum optimization
-lto = "fat"          # Link-time optimization
-codegen-units = 1    # Single codegen unit for better optimization
-panic = "abort"      # Smaller binary
-strip = true         # Strip symbols
-```
-
-### SIMD Targeting
-
-```toml
-# .cargo/config.toml
-[build]
-rustflags = ["-C", "target-cpu=native"]
-```
-
-### Memory Efficiency
-
-- Use `memmap2` for large file access
-- Pre-allocate vectors with known sizes
-- Use `parking_lot` for faster locks
-- Avoid unnecessary allocations
-
-## Debugging
-
-### Logging
-
-```rust
-use tracing::{info, warn, error, instrument};
-
-#[instrument(skip(data))]
-pub fn process_file(path: &str, data: &[u8]) -> Result<(), NexusError> {
-    info!("Processing file: {}", path);
-
-    if data.is_empty() {
-        warn!("Empty file: {}", path);
-        return Ok(());
-    }
-
-    // Processing...
-
-    Ok(())
-}
-```
-
-Enable logging:
-```bash
-RUST_LOG=debug cargo run
-```
-
-### Windows Debugging
-
-```rust
-// Print Win32 error details
-use windows::Win32::Foundation::GetLastError;
-
-unsafe {
-    let error = GetLastError();
-    eprintln!("Win32 error: {:?}", error);
-}
-```
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for Rust-specific guidelines.
-
-Key points:
-- Run `cargo fmt` before committing
-- Run `cargo clippy -- -D warnings` for linting
-- Add tests for new functionality
-- Document public APIs with doc comments
+- Live updates from the USN journal (the index is rebuilt on demand; a drive takes seconds).
+- Listing deleted MFT records for raw-disk undelete (the reader already sees them; they are skipped today).

@@ -1,6 +1,14 @@
 # Claude Code Rules for Winhance-FS
 
-## PROJECT STATUS (2026-11-14)
+## PROJECT STATUS (2026-11-23, v1.5.0)
+
+- **Rust engine shipped:** `nexus_core.dll` (name index + raw MFT reader, `src/nexus_core/src/search/`) powers the
+  File Manager **Search** tab through `INexusIndexerService` (JSON FFI, `ffi/search_api.rs`). Build it with
+  `cargo build --release --manifest-path src/Cargo.toml` before `dotnet build`/`dotnet test` (tests load it).
+- **MCP server:** `src/Winhance.Mcp` → `Winhance-FS-MCP.exe` (read-only, 9 tools). Protocol smoke test:
+  `python tests/e2e/mcp_smoke.py`. Docs: `docs/MCP.md`.
+
+### Earlier status (2026-11-14)
 
 - **Build:** full solution 0 errors / 0 warnings (Core, Infrastructure, WPF, Tests).
 - **Tests:** `dotnet test tests/Winhance.Tests` — all passing, including DI-validation tests that build the real
@@ -115,10 +123,10 @@ NEVER edit files in:
 ## Remaining Claude Tasks
 
 ### Rust Backend (Optional Enhancements)
-1. `mft_reader.rs` - MFT reading for fast indexing
-2. `usn_journal.rs` - Real-time file change monitoring
-3. `content_hasher.rs` - xxHash and SHA-256
-4. Tantivy search engine integration
+1. ~~MFT reading for fast indexing~~ done in v1.5.0 (`search/mft_raw.rs`)
+2. `usn_journal.rs` - live index updates from the USN journal (index is rebuilt on demand today)
+3. Raw-disk undelete: list MFT records that are no longer in use (the raw reader already reads them)
+4. Tantivy full-text: optional `fulltext` Cargo feature, not used by the app
 
 ### Maintenance
 - Monitor for interface change requests from Windsurf

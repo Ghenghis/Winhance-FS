@@ -1,306 +1,262 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Winhance.Core.Features.Common.Enums;
 using Winhance.Core.Features.Common.Interfaces;
 using Winhance.Core.Features.FileManager.Interfaces;
-using Winhance.Core.Features.FileManager.Interop;
 
-namespace Winhance.Infrastructure.Features.FileManager.Services
+namespace Winhance.Infrastructure.Features.FileManager.Services;
+
+/// <summary>
+/// File-name search backed by the Rust engine in nexus_core.dll (see <c>src/nexus_core/src/ffi/search_api.rs</c>).
+/// The engine holds one index per process; this service is registered as a singleton.
+/// </summary>
+public sealed class NexusIndexerService : INexusIndexerService
 {
-    /// <summary>
-    /// High-performance file indexer using Rust nexus_core native library.
-    /// Achieves sub-second indexing of entire drives via MFT reading.
-    /// Pure performance - minimal overhead, direct native calls.
-    /// </summary>
-    public class NexusIndexerService : INexusIndexerService
+    private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
+    private readonly ILogService? _log;
+    private readonly SemaphoreSlim _buildLock = new(1, 1);
+    private NexusIndexInfo? _current;
+    private volatile bool _isBuilding;
+
+    public NexusIndexerService(ILogService? logService)
+        : this(logService, DefaultIndexPath())
     {
-        private readonly ILogService _logService;
-        private bool _initialized;
-        private bool _isAvailable;
-        private NexusInterop.ProgressCallback? _progressCallback;
+    }
 
-        public bool IsAvailable => _isAvailable;
-
-        public NexusIndexStats Stats { get; } = new();
-
-        public event Action<ulong, ulong, string>? ProgressChanged;
-
-        public NexusIndexerService(ILogService logService)
+    public NexusIndexerService(ILogService? logService, string indexFilePath)
+    {
+        _log = logService;
+        IndexFilePath = indexFilePath;
+        try
         {
-            _logService = logService;
-            _isAvailable = CheckNativeLibrary();
+            using var doc = JsonDocument.Parse(Call(Native.nexus_engine_version()));
+            EngineVersion = doc.RootElement.GetProperty("version").GetString();
+            IsAvailable = true;
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
+        {
+            UnavailableReason = "The search engine (nexus_core.dll) is missing or does not match this version of Winhance-FS.";
+            _log?.Log(LogLevel.Warning, $"nexus_core unavailable: {ex.Message}");
+        }
+    }
+
+    public event EventHandler? IndexChanged;
+
+    public bool IsAvailable { get; }
+
+    public string? UnavailableReason { get; }
+
+    public string? EngineVersion { get; }
+
+    public bool HasIndex => _current != null;
+
+    public bool IsBuilding => _isBuilding;
+
+    public NexusIndexInfo? Current => _current;
+
+    public string IndexFilePath { get; }
+
+    /// <summary>
+    /// <c>%LOCALAPPDATA%\Winhance-FS\search-index.bin</c>, shared by the app and the MCP server. The
+    /// <c>WINHANCE_FS_INDEX</c> environment variable overrides it.
+    /// </summary>
+    public static string DefaultIndexPath() =>
+        Environment.GetEnvironmentVariable("WINHANCE_FS_INDEX") is { Length: > 0 } custom
+            ? Path.GetFullPath(Environment.ExpandEnvironmentVariables(custom))
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Winhance-FS", "search-index.bin");
+
+    public async Task<NexusIndexInfo?> LoadSavedIndexAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsAvailable || !File.Exists(IndexFilePath))
+        {
+            return null;
         }
 
-        private bool CheckNativeLibrary()
+        var reply = await Task.Run(() => Call(Native.nexus_index_load(IndexFilePath)), cancellationToken).ConfigureAwait(false);
+        using var doc = JsonDocument.Parse(reply);
+        if (!Ok(doc, out var error))
         {
-            try
-            {
-                // Try to load the native library
-                return NexusInterop.Nexus_init();
-            }
-            catch (DllNotFoundException)
-            {
-                _logService.Log(LogLevel.Warning, "nexus_core native library not found - using fallback indexer");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logService.Log(LogLevel.Warning, $"Failed to initialize nexus_core: {ex.Message}");
-                return false;
-            }
+            _log?.Log(LogLevel.Warning, $"Saved search index not loaded: {error}");
+            return null;
         }
 
-        public bool Initialize()
+        SetCurrent(ParseInfo(doc.RootElement));
+        return _current;
+    }
+
+    public async Task<NexusIndexInfo> BuildIndexAsync(IReadOnlyList<string> roots, IProgress<long>? progress = null, CancellationToken cancellationToken = default)
+    {
+        EnsureAvailable();
+        if (roots == null || roots.Count == 0)
         {
-            if (_initialized)
-            {
-                return true;
-            }
+            throw new ArgumentException("Choose at least one drive or folder to index.", nameof(roots));
+        }
 
-            if (!_isAvailable)
+        await _buildLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        _isBuilding = true;
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var request = JsonSerializer.Serialize(new { roots, save_to = IndexFilePath });
+            var build = Task.Run(() => Call(Native.nexus_index_build(request)), CancellationToken.None);
+            using (cancellationToken.Register(Native.nexus_index_cancel))
             {
-                return false;
-            }
-
-            try
-            {
-                _initialized = NexusInterop.Nexus_init();
-                if (_initialized)
+                while (!build.IsCompleted)
                 {
-                    _logService.Log(LogLevel.Info, "Nexus indexer initialized successfully");
+                    await Task.WhenAny(build, Task.Delay(200, CancellationToken.None)).ConfigureAwait(false);
+                    progress?.Report((long)Native.nexus_index_progress());
                 }
-
-                return _initialized;
             }
-            catch (Exception ex)
+
+            using var doc = JsonDocument.Parse(await build.ConfigureAwait(false));
+            var root = doc.RootElement;
+            if (root.TryGetProperty("cancelled", out var c) && c.ValueKind == JsonValueKind.True)
             {
-                _logService.Log(LogLevel.Error, $"Failed to initialize Nexus indexer: {ex.Message}");
-                return false;
+                throw new OperationCanceledException(cancellationToken);
             }
-        }
 
-        public async Task<long> IndexAllDrivesAsync(CancellationToken cancellationToken = default)
+            if (!Ok(doc, out var error))
+            {
+                throw new InvalidOperationException(error);
+            }
+
+            if (root.TryGetProperty("saveError", out var saveError))
+            {
+                _log?.Log(LogLevel.Warning, $"Search index built but not saved: {saveError.GetString()}");
+            }
+
+            var info = ParseInfo(root);
+            SetCurrent(info);
+            _log?.Log(LogLevel.Info, $"Search index: {info.Entries:N0} items in {info.BuildMilliseconds} ms ({string.Join(", ", info.Roots.Select(r => $"{r.Path} {r.Method}"))})");
+            return info;
+        }
+        finally
         {
-            if (!_isAvailable)
-            {
-                _logService.Log(LogLevel.Warning, "Nexus native library not available");
-                return -1;
-            }
-
-            return await Task.Run(
-                () =>
-            {
-                var sw = Stopwatch.StartNew();
-
-                try
-                {
-                    _logService.Log(LogLevel.Info, "Starting MFT-based full drive indexing...");
-
-                    long count = NexusInterop.Nexus_index_all();
-
-                    sw.Stop();
-                    Stats.IndexTimeMs = sw.ElapsedMilliseconds;
-                    Stats.TotalFiles = count > 0 ? count : 0;
-                    Stats.LastIndexTime = DateTime.UtcNow;
-
-                    if (count >= 0)
-                    {
-                        _logService.Log(
-                            LogLevel.Info,
-                            $"Indexed {count:N0} files in {sw.ElapsedMilliseconds}ms ({count / Math.Max(1, sw.ElapsedMilliseconds / 1000.0):N0} files/sec)");
-                    }
-                    else
-                    {
-                        _logService.Log(LogLevel.Error, $"Indexing failed: {GetLastError()}");
-                    }
-
-                    return count;
-                }
-                catch (Exception ex)
-                {
-                    _logService.Log(LogLevel.Error, $"Indexing error: {ex.Message}");
-                    return -1;
-                }
-            }, cancellationToken);
+            _isBuilding = false;
+            _buildLock.Release();
         }
+    }
 
-        public async Task<long> IndexDirectoryAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<NexusSearchResult> SearchAsync(string query, int limit = 200, CancellationToken cancellationToken = default, NexusSort sort = NexusSort.Relevance)
+    {
+        query ??= string.Empty;
+        if (!IsAvailable || _current == null || (string.IsNullOrWhiteSpace(query) && sort == NexusSort.Relevance))
         {
-            if (!_isAvailable)
-            {
-                return -1;
-            }
-
-            return await Task.Run(
-                () =>
-            {
-                var sw = Stopwatch.StartNew();
-
-                try
-                {
-                    long count = NexusInterop.Nexus_index_directory(path);
-
-                    sw.Stop();
-
-                    if (count >= 0)
-                    {
-                        _logService.Log(
-                            LogLevel.Info,
-                            $"Indexed {count:N0} files in '{path}' ({sw.ElapsedMilliseconds}ms)");
-                    }
-
-                    return count;
-                }
-                catch (Exception ex)
-                {
-                    _logService.Log(LogLevel.Error, $"Directory indexing error: {ex.Message}");
-                    return -1;
-                }
-            }, cancellationToken);
+            return new NexusSearchResult(0, 0, Array.Empty<NexusFileEntry>());
         }
 
-        public async Task<IEnumerable<NexusFileEntry>> SearchAsync(string query, int maxResults = 100, CancellationToken cancellationToken = default)
+        var request = JsonSerializer.Serialize(new { query, limit, sort = sort.ToString().ToLowerInvariant() });
+        var reply = await Task.Run(() => Call(Native.nexus_index_search(request)), cancellationToken).ConfigureAwait(false);
+        using var doc = JsonDocument.Parse(reply);
+        if (!Ok(doc, out var error))
         {
-            if (!_isAvailable || string.IsNullOrWhiteSpace(query))
-            {
-                return Array.Empty<NexusFileEntry>();
-            }
-
-            return await Task.Run(
-                () =>
-            {
-                var results = new List<NexusFileEntry>();
-
-                try
-                {
-                    long count = NexusInterop.Nexus_search(query, (uint)maxResults);
-
-                    if (count > 0)
-                    {
-                        for (uint i = 0; i < (uint)count; i++)
-                        {
-                            IntPtr resultPtr = NexusInterop.Nexus_get_search_result(i);
-                            if (resultPtr != IntPtr.Zero)
-                            {
-                                var ffiResult = Marshal.PtrToStructure<FfiSearchResult>(resultPtr);
-
-                                results.Add(new NexusFileEntry
-                                {
-                                    Path = ffiResult.GetPath(),
-                                    Name = ffiResult.GetName(),
-                                    Size = (long)ffiResult.Size,
-                                    IsDirectory = ffiResult.IsDir,
-                                });
-
-                                NexusInterop.Nexus_free_result(resultPtr);
-                            }
-                        }
-
-                        _logService.Log(LogLevel.Debug, $"Search '{query}' returned {count} results");
-                    }
-
-                    NexusInterop.Nexus_clear_search_results();
-                }
-                catch (Exception ex)
-                {
-                    _logService.Log(LogLevel.Error, $"Search error: {ex.Message}");
-                }
-
-                return results;
-            }, cancellationToken);
+            throw new InvalidOperationException(error);
         }
 
-        /// <summary>
-        /// Compute quick hash for duplicate detection (xxHash3 - very fast).
-        /// </summary>
-        /// <returns></returns>
-        public ulong GetQuickHash(string path)
+        var root = doc.RootElement;
+        var results = root.GetProperty("results").EnumerateArray().Select(r => new NexusFileEntry
         {
-            if (!_isAvailable)
-            {
-                return 0;
-            }
+            Path = r.GetProperty("path").GetString() ?? string.Empty,
+            Name = r.GetProperty("name").GetString() ?? string.Empty,
+            Folder = r.GetProperty("folder").GetString() ?? string.Empty,
+            IsDirectory = r.GetProperty("isDir").GetBoolean(),
+            Size = r.GetProperty("size").GetInt64(),
+            Modified = r.TryGetProperty("modified", out var m) ? DateTimeOffset.FromUnixTimeSeconds(m.GetInt64()).LocalDateTime : null,
+            Missing = r.GetProperty("missing").GetBoolean(),
+        }).ToList();
+        return new NexusSearchResult(root.GetProperty("total").GetInt64(), root.GetProperty("ms").GetInt64(), results);
+    }
 
-            return NexusInterop.Nexus_hash_file_quick(path);
-        }
-
-        /// <summary>
-        /// Compute full SHA-256 hash for verification.
-        /// </summary>
-        /// <returns></returns>
-        public string? GetFullHash(string path)
+    private void EnsureAvailable()
+    {
+        if (!IsAvailable)
         {
-            if (!_isAvailable)
-            {
-                return null;
-            }
-
-            IntPtr hashPtr = NexusInterop.Nexus_hash_file_full(path);
-            if (hashPtr == IntPtr.Zero)
-            {
-                return null;
-            }
-
-            string hash = Marshal.PtrToStringAnsi(hashPtr) ?? string.Empty;
-            NexusInterop.Nexus_free_string(hashPtr);
-            return hash;
+            throw new InvalidOperationException(UnavailableReason);
         }
+    }
 
-        /// <summary>
-        /// Find potential duplicate file groups by size.
-        /// </summary>
-        /// <returns></returns>
-        public long FindDuplicates(ulong minSize = 1024)
+    private void SetCurrent(NexusIndexInfo info)
+    {
+        _current = info;
+        IndexChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static bool Ok(JsonDocument doc, out string error)
+    {
+        var root = doc.RootElement;
+        if (root.TryGetProperty("ok", out var ok) && ok.ValueKind == JsonValueKind.True)
         {
-            if (!_isAvailable)
-            {
-                return -1;
-            }
-
-            return NexusInterop.Nexus_find_duplicates(minSize);
+            error = string.Empty;
+            return true;
         }
 
-        /// <summary>
-        /// Get current index statistics from native library.
-        /// </summary>
-        /// <returns></returns>
-        public FfiIndexStats GetNativeStats()
+        error = root.TryGetProperty("error", out var e) ? e.GetString() ?? "Unknown error" : "Unknown error";
+        return false;
+    }
+
+    private static NexusIndexInfo ParseInfo(JsonElement root)
+    {
+        var roots = root.GetProperty("roots").EnumerateArray().Select(r => new NexusRootInfo(
+            r.GetProperty("path").GetString() ?? string.Empty,
+            r.GetProperty("method").GetString() ?? "scan",
+            r.GetProperty("entries").GetInt64(),
+            r.TryGetProperty("error", out var e) ? e.GetString() : null)).ToList();
+        return new NexusIndexInfo(
+            root.GetProperty("entries").GetInt64(),
+            root.GetProperty("files").GetInt64(),
+            root.GetProperty("folders").GetInt64(),
+            DateTimeOffset.FromUnixTimeSeconds(root.GetProperty("built").GetInt64()).UtcDateTime,
+            root.GetProperty("ms").GetInt64(),
+            roots);
+    }
+
+    /// <summary>Copies a string returned by the engine and releases it.</summary>
+    private static string Call(IntPtr reply)
+    {
+        if (reply == IntPtr.Zero)
         {
-            if (!_isAvailable)
-            {
-                return default;
-            }
-
-            return NexusInterop.Nexus_get_stats();
+            return "{\"ok\":false,\"error\":\"No reply from the search engine\"}";
         }
 
-        public string? GetLastError()
+        try
         {
-            if (!_isAvailable)
-            {
-                return "Native library not available";
-            }
-
-            try
-            {
-                IntPtr errorPtr = NexusInterop.Nexus_get_last_error();
-                if (errorPtr == IntPtr.Zero)
-                {
-                    return null;
-                }
-
-                string error = Marshal.PtrToStringAnsi(errorPtr) ?? string.Empty;
-                NexusInterop.Nexus_free_string(errorPtr);
-                return error;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return Marshal.PtrToStringUTF8(reply) ?? string.Empty;
         }
+        finally
+        {
+            Native.nexus_free_string(reply);
+        }
+    }
+
+    private static class Native
+    {
+        private const string Dll = "nexus_core";
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr nexus_engine_version();
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr nexus_index_build([MarshalAs(UnmanagedType.LPUTF8Str)] string request);
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void nexus_index_cancel();
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern ulong nexus_index_progress();
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr nexus_index_load([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr nexus_index_search([MarshalAs(UnmanagedType.LPUTF8Str)] string request);
+
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void nexus_free_string(IntPtr text);
     }
 }

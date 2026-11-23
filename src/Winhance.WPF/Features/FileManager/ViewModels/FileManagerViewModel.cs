@@ -45,6 +45,9 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         private bool _isForensicsTabSelected;
 
         [ObservableProperty]
+        private bool _isSearchTabSelected;
+
+        [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
@@ -55,15 +58,6 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
         [ObservableProperty]
         private object? _currentView;
-
-        [ObservableProperty]
-        private bool _isIndexing;
-
-        [ObservableProperty]
-        private long _indexedFileCount;
-
-        [ObservableProperty]
-        private ObservableCollection<NexusFileEntry> _searchResults = new();
 
         public DualPaneBrowserViewModel? BrowserViewModel { get; private set; }
 
@@ -79,11 +73,11 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
 
         public ForensicsViewModel? ForensicsViewModel { get; private set; }
 
+        public FastSearchViewModel? FastSearchViewModel { get; private set; }
+
         public TabContainerViewModel? TabContainerViewModel { get; private set; }
 
         public SearchResultsViewModel? SearchResultsViewModel { get; private set; }
-
-        public bool IsNexusAvailable => _nexusIndexer?.IsAvailable ?? false;
 
         public FileManagerViewModel()
         {
@@ -116,6 +110,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             EnvironmentDoctorViewModel = new EnvironmentDoctorViewModel(_serviceProvider?.GetService<IEnvironmentDoctorService>());
             DuplicateFinderViewModel = new DuplicateFinderViewModel(_serviceProvider?.GetService<IDuplicateFinderService>());
             ForensicsViewModel = new ForensicsViewModel(_serviceProvider?.GetService<IForensicsService>());
+            FastSearchViewModel = new FastSearchViewModel(_nexusIndexer);
             TabContainerViewModel = _serviceProvider?.GetRequiredService<TabContainerViewModel>() ?? new TabContainerViewModel();
             SearchResultsViewModel = _serviceProvider?.GetRequiredService<SearchResultsViewModel>() ?? new SearchResultsViewModel();
 
@@ -145,6 +140,7 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
             IsEnvironmentTabSelected = ReferenceEquals(view, EnvironmentDoctorViewModel);
             IsDuplicatesTabSelected = ReferenceEquals(view, DuplicateFinderViewModel);
             IsForensicsTabSelected = ReferenceEquals(view, ForensicsViewModel);
+            IsSearchTabSelected = ReferenceEquals(view, FastSearchViewModel);
         }
 
         [RelayCommand]
@@ -168,6 +164,9 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         [RelayCommand]
         private void SelectForensicsTab() => ShowTab(ForensicsViewModel);
 
+        [RelayCommand]
+        private void SelectSearchTab() => ShowTab(FastSearchViewModel);
+
         // The tab headers are RadioButtons bound TwoWay to these flags, so selecting a tab by keyboard,
         // screen reader or UI Automation (which sets IsChecked without a click) also switches the view.
         partial void OnIsBrowserTabSelectedChanged(bool value) => ShowIfSelected(value, BrowserViewModel);
@@ -183,6 +182,8 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
         partial void OnIsDuplicatesTabSelectedChanged(bool value) => ShowIfSelected(value, DuplicateFinderViewModel);
 
         partial void OnIsForensicsTabSelectedChanged(bool value) => ShowIfSelected(value, ForensicsViewModel);
+
+        partial void OnIsSearchTabSelectedChanged(bool value) => ShowIfSelected(value, FastSearchViewModel);
 
         private void ShowIfSelected(bool selected, object? view)
         {
@@ -228,6 +229,10 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 {
                     await ForensicsViewModel.LoadRecycleBinCommand.ExecuteAsync(null);
                 }
+                else if (IsSearchTabSelected && FastSearchViewModel != null)
+                {
+                    await FastSearchViewModel.SearchNowCommand.ExecuteAsync(null);
+                }
 
                 StatusMessage = "Ready";
             }
@@ -266,86 +271,12 @@ namespace Winhance.WPF.Features.FileManager.ViewModels
                 System.Windows.MessageBoxImage.Information);
         }
 
-        /// <summary>
-        /// Index all drives using Rust MFT reader (ultra-fast).
-        /// </summary>
-        [RelayCommand]
-        private async Task IndexAllDrivesAsync()
-        {
-            if (_nexusIndexer == null || !_nexusIndexer.IsAvailable)
-            {
-                StatusMessage = "Nexus indexer not available";
-                return;
-            }
-
-            IsIndexing = true;
-            StatusMessage = "Indexing drives (MFT scan)...";
-
-            try
-            {
-                var count = await _nexusIndexer.IndexAllDrivesAsync();
-                IndexedFileCount = count;
-                StatusMessage = count >= 0
-                    ? $"Indexed {count:N0} files"
-                    : $"Indexing failed: {_nexusIndexer.GetLastError()}";
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Index error: {ex.Message}";
-            }
-            finally
-            {
-                IsIndexing = false;
-            }
-        }
-
-        /// <summary>
-        /// Search indexed files using Rust backend.
-        /// </summary>
-        [RelayCommand]
-        private async Task SearchNexusAsync()
-        {
-            if (_nexusIndexer == null || !_nexusIndexer.IsAvailable || string.IsNullOrWhiteSpace(SearchText))
-            {
-                return;
-            }
-
-            IsLoading = true;
-            StatusMessage = $"Searching '{SearchText}'...";
-
-            try
-            {
-                var results = await _nexusIndexer.SearchAsync(SearchText, 500);
-                SearchResults.Clear();
-                foreach (var result in results)
-                {
-                    SearchResults.Add(result);
-                }
-
-                StatusMessage = $"Found {SearchResults.Count} results";
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Search error: {ex.Message}";
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
         partial void OnSearchTextChanged(string value)
         {
             // Filter current view based on search text
             if (IsBrowserTabSelected && BrowserViewModel != null)
             {
                 BrowserViewModel.FilterText = value;
-            }
-
-            // Trigger Nexus search if available and text is substantial
-            if (_nexusIndexer?.IsAvailable == true && value.Length >= 2)
-            {
-                _ = SearchNexusAsync();
             }
         }
     }

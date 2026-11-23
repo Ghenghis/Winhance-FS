@@ -74,7 +74,7 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
             services.TryAddSingleton<IOperationQueueService, OperationQueueService>();
             
             // Nexus Integration Services
-            services.TryAddSingleton<INexusIndexerService, NexusIndexerService>();
+            services.TryAddSingleton<INexusIndexerService>(sp => new NexusIndexerService(sp.GetService<ILogService>()));
             
             // Favorites Service
             services.TryAddSingleton<IFavoritesService, FavoritesService>();

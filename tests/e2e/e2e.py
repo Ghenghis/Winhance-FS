@@ -316,9 +316,12 @@ if __name__ == '__main__':
         sections += e2e_env.install(sys.modules[__name__])
         import e2e_v14
         sections += e2e_v14.install(sys.modules[__name__])
-    if SWEEP == 'v14':  # only the Duplicates and Forensics tabs
+        import e2e_v15
+        sections += e2e_v15.install(sys.modules[__name__])
+    only = {'v14': ('duplicates', 'forensics'), 'v15': ('search_tab',)}.get(SWEEP)
+    if only:  # just the sections new in that release
         ps('uia.ps1', '-Action', 'click', '-Name', 'File Manager'); time.sleep(2.5)
-        sections = [s for s in sections if s.__name__ in ('duplicates', 'forensics')]
+        sections = [s for s in sections if s.__name__ in only]
     for section in sections:
         try:
             section()

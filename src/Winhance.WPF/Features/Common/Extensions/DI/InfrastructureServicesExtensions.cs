@@ -167,8 +167,8 @@ namespace Winhance.WPF.Features.Common.Extensions.DI
                 Winhance.Infrastructure.Features.FileManager.Services.BatchRenameService>();
             services.AddSingleton<Winhance.Core.Features.FileManager.Interfaces.IOrganizerService,
                 Winhance.Infrastructure.Features.FileManager.Services.OrganizerService>();
-            services.AddSingleton<Winhance.Core.Features.FileManager.Interfaces.INexusIndexerService,
-                Winhance.Infrastructure.Features.FileManager.Services.NexusIndexerService>();
+            services.AddSingleton<Winhance.Core.Features.FileManager.Interfaces.INexusIndexerService>(sp =>
+                new Winhance.Infrastructure.Features.FileManager.Services.NexusIndexerService(sp.GetService<ILogService>()));
             services.AddSingleton<Winhance.Core.Features.FileManager.Interfaces.IAdvancedFileOperations,
                 Winhance.Infrastructure.Features.FileManager.Services.AdvancedFileOperationsService>();
             services.AddSingleton<Winhance.Core.Features.FileManager.Interfaces.IDuplicateFinderService,

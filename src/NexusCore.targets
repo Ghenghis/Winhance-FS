@@ -1,0 +1,21 @@
+<Project>
+  <!-- Ships the Rust search engine (nexus_core.dll from src/nexus_core) next to the app.
+       Dev builds use src/target/release (cargo build, release profile). The release workflow builds each
+       architecture into src/target/<triple>/release and publishes with RequireNexusCore=true, so a missing
+       engine fails the build instead of shipping without search. -->
+  <PropertyGroup>
+    <NexusRustTarget Condition="'$(RuntimeIdentifier)' == 'win-x64'">x86_64-pc-windows-msvc</NexusRustTarget>
+    <NexusRustTarget Condition="'$(RuntimeIdentifier)' == 'win-x86'">i686-pc-windows-msvc</NexusRustTarget>
+    <NexusRustTarget Condition="'$(RuntimeIdentifier)' == 'win-arm64'">aarch64-pc-windows-msvc</NexusRustTarget>
+    <NexusTargetDir>$(MSBuildThisFileDirectory)target\</NexusTargetDir>
+    <NexusCoreDll Condition="'$(NexusRustTarget)' != '' and Exists('$(NexusTargetDir)$(NexusRustTarget)\release\nexus_core.dll')">$(NexusTargetDir)$(NexusRustTarget)\release\nexus_core.dll</NexusCoreDll>
+    <NexusCoreDll Condition="'$(NexusCoreDll)' == '' and ('$(NexusRustTarget)' == '' or '$(NexusRustTarget)' == 'x86_64-pc-windows-msvc')">$(NexusTargetDir)release\nexus_core.dll</NexusCoreDll>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(NexusCoreDll)' != '' and Exists('$(NexusCoreDll)')">
+    <None Include="$(NexusCoreDll)" Link="nexus_core.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+  <Target Name="CheckNexusCore" BeforeTargets="Build">
+    <Error Condition="'$(RequireNexusCore)' == 'true' and ('$(NexusCoreDll)' == '' or !Exists('$(NexusCoreDll)'))" Text="nexus_core.dll for $(RuntimeIdentifier) not found under $(NexusTargetDir). Build it with cargo first." />
+    <Message Importance="high" Condition="'$(NexusCoreDll)' == '' or !Exists('$(NexusCoreDll)')" Text="Note: nexus_core.dll not found; search will report the engine as missing. Run: cargo build --release --manifest-path src/Cargo.toml" />
+  </Target>
+</Project>

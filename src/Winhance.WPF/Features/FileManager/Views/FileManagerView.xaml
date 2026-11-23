@@ -121,6 +121,8 @@
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- Tabs are RadioButtons so they are reachable with Tab/arrow keys and announced by screen readers. -->
@@ -134,7 +136,17 @@
             <!-- Separator -->
             <Border Grid.Column="1" Width="1" Height="30" Background="#404040" />
 
-            <RadioButton Grid.Column="2" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectBatchRenameTabCommand}" IsChecked="{Binding IsBatchRenameTabSelected, Mode=TwoWay}" AutomationProperties.Name="Batch Rename" ToolTip="Rename many files with a live preview">
+            <RadioButton Grid.Column="2" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectSearchTabCommand}" IsChecked="{Binding IsSearchTabSelected, Mode=TwoWay}" AutomationProperties.Name="Search" ToolTip="Find any file or folder by name on whole drives, instantly">
+              <StackPanel Orientation="Horizontal">
+                <iconPacks:PackIconMaterial Kind="Magnify" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+                <TextBlock Text="Search" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
+              </StackPanel>
+            </RadioButton>
+
+            <!-- Separator -->
+            <Border Grid.Column="3" Width="1" Height="30" Background="#404040" />
+
+            <RadioButton Grid.Column="4" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectBatchRenameTabCommand}" IsChecked="{Binding IsBatchRenameTabSelected, Mode=TwoWay}" AutomationProperties.Name="Batch Rename" ToolTip="Rename many files with a live preview">
               <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="RenameBox" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
                 <TextBlock Text="Batch Rename" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
@@ -142,9 +154,9 @@
             </RadioButton>
 
             <!-- Separator -->
-            <Border Grid.Column="3" Width="1" Height="30" Background="#404040" />
+            <Border Grid.Column="5" Width="1" Height="30" Background="#404040" />
 
-            <RadioButton Grid.Column="4" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectOrganizerTabCommand}" IsChecked="{Binding IsOrganizerTabSelected, Mode=TwoWay}" AutomationProperties.Name="Smart Organizer" ToolTip="Sort a folder's files into category subfolders">
+            <RadioButton Grid.Column="6" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectOrganizerTabCommand}" IsChecked="{Binding IsOrganizerTabSelected, Mode=TwoWay}" AutomationProperties.Name="Smart Organizer" ToolTip="Sort a folder's files into category subfolders">
               <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="FolderStar" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
                 <TextBlock Text="Smart Organizer" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
@@ -152,9 +164,9 @@
             </RadioButton>
 
             <!-- Separator -->
-            <Border Grid.Column="5" Width="1" Height="30" Background="#404040" />
+            <Border Grid.Column="7" Width="1" Height="30" Background="#404040" />
 
-            <RadioButton Grid.Column="6" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectSpaceRecoveryTabCommand}" IsChecked="{Binding IsSpaceRecoveryTabSelected, Mode=TwoWay}" AutomationProperties.Name="Space Recovery" ToolTip="Find temp files, model folders and caches using space">
+            <RadioButton Grid.Column="8" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectSpaceRecoveryTabCommand}" IsChecked="{Binding IsSpaceRecoveryTabSelected, Mode=TwoWay}" AutomationProperties.Name="Space Recovery" ToolTip="Find temp files, model folders and caches using space">
               <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="HarddiskPlus" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
                 <TextBlock Text="Space Recovery" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
@@ -162,9 +174,9 @@
             </RadioButton>
 
             <!-- Separator -->
-            <Border Grid.Column="7" Width="1" Height="30" Background="#404040" />
+            <Border Grid.Column="9" Width="1" Height="30" Background="#404040" />
 
-            <RadioButton Grid.Column="8" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectEnvironmentTabCommand}" IsChecked="{Binding IsEnvironmentTabSelected, Mode=TwoWay}" AutomationProperties.Name="Environment" ToolTip="Diagnose and repair environment variables and PATH">
+            <RadioButton Grid.Column="10" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectEnvironmentTabCommand}" IsChecked="{Binding IsEnvironmentTabSelected, Mode=TwoWay}" AutomationProperties.Name="Environment" ToolTip="Diagnose and repair environment variables and PATH">
               <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="Stethoscope" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
                 <TextBlock Text="Environment" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
@@ -172,9 +184,9 @@
             </RadioButton>
 
             <!-- Separator -->
-            <Border Grid.Column="9" Width="1" Height="30" Background="#404040" />
+            <Border Grid.Column="11" Width="1" Height="30" Background="#404040" />
 
-            <RadioButton Grid.Column="10" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectDuplicatesTabCommand}" IsChecked="{Binding IsDuplicatesTabSelected, Mode=TwoWay}" AutomationProperties.Name="Duplicates" ToolTip="Find files with identical content and reclaim the space">
+            <RadioButton Grid.Column="12" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectDuplicatesTabCommand}" IsChecked="{Binding IsDuplicatesTabSelected, Mode=TwoWay}" AutomationProperties.Name="Duplicates" ToolTip="Find files with identical content and reclaim the space">
               <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="ContentDuplicate" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
                 <TextBlock Text="Duplicates" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
@@ -182,9 +194,9 @@
             </RadioButton>
 
             <!-- Separator -->
-            <Border Grid.Column="11" Width="1" Height="30" Background="#404040" />
+            <Border Grid.Column="13" Width="1" Height="30" Background="#404040" />
 
-            <RadioButton Grid.Column="12" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectForensicsTabCommand}" IsChecked="{Binding IsForensicsTabSelected, Mode=TwoWay}" AutomationProperties.Name="Forensics" ToolTip="Hidden streams, encrypted or disguised files, previous versions and Recycle Bin recovery">
+            <RadioButton Grid.Column="14" Style="{StaticResource FileManagerTabStyle}" Command="{Binding SelectForensicsTabCommand}" IsChecked="{Binding IsForensicsTabSelected, Mode=TwoWay}" AutomationProperties.Name="Forensics" ToolTip="Hidden streams, encrypted or disguised files, previous versions and Recycle Bin recovery">
               <StackPanel Orientation="Horizontal">
                 <iconPacks:PackIconMaterial Kind="ShieldSearch" Width="20" Height="20" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
                 <TextBlock Text="Forensics" FontSize="14" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextColor}" />
@@ -217,6 +229,9 @@
               </DataTemplate>
               <DataTemplate DataType="{x:Type viewModels:ForensicsViewModel}">
                 <views:ForensicsView />
+              </DataTemplate>
+              <DataTemplate DataType="{x:Type viewModels:FastSearchViewModel}">
+                <views:FastSearchView />
               </DataTemplate>
             </ContentControl.Resources>
           </ContentControl>

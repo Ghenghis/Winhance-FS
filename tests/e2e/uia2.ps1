@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory)][string]$Action,
   [int]$Index = 0,
   [string]$Value = '',
@@ -134,6 +134,16 @@ public static class M {
     "combo #$Index = $Value"
   }
   'combos' { $i = 0; foreach ($c in (All $root $CT::ComboBox)) { $v = Pat $c ([System.Windows.Automation.ValuePattern]::Pattern); "[$i] $($c.Current.Name) = $(if($v){$v.Current.Value})"; $i++ } }
+  'check' {
+    # Set the checkbox whose accessible name is $Name to $Value ('on' or 'off')
+    $c = All $root $CT::CheckBox | Where-Object { $_.Current.Name -eq $Name } | Select-Object -First 1
+    if (-not $c) { "NOT FOUND checkbox '$Name'"; exit 1 }
+    $tp = Pat $c ([System.Windows.Automation.TogglePattern]::Pattern)
+    $want = if ($Value -eq 'on') { 'On' } else { 'Off' }
+    $n = 0; while ($tp.Current.ToggleState.ToString() -ne $want -and $n -lt 3) { $tp.Toggle(); $n++ }
+    "checkbox '$Name' = $($tp.Current.ToggleState)"
+  }
+  'checks' { foreach ($c in (All $root $CT::CheckBox)) { $tp = Pat $c ([System.Windows.Automation.TogglePattern]::Pattern); "$($c.Current.Name) = $(if($tp){$tp.Current.ToggleState})" } }
   'texts' { foreach ($t in (All $root $CT::Text)) { $n = $t.Current.Name; if ($n -match $Value) { $n } } }
   default { "unknown action $Action"; exit 9 }
 }

@@ -97,5 +97,6 @@ pub struct IndexStats {
 
 /// Re-export commonly used types
 pub use indexer::{FastIndexer, IndexConfig};
+#[cfg(feature = "fulltext")]
 pub use search::{SearchEngine, SearchQuery, SearchResult};
 pub use watcher::{FileWatcher, WatchEvent};

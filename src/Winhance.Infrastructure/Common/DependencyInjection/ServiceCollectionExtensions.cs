@@ -56,7 +56,7 @@ namespace Winhance.Infrastructure.Common.DependencyInjection
             services.TryAddScoped<ISearchService, SearchService>();
             services.TryAddScoped<IFileOperationsService, FileOperationsService>();
             services.TryAddScoped<IMetadataService, MetadataService>();
-            services.TryAddScoped<INexusIndexerService, NexusIndexerService>();
+            services.TryAddSingleton<INexusIndexerService>(sp => new NexusIndexerService(sp.GetService<ILogService>()));
 
             // UI support services
             services.TryAddScoped<ITabService, TabService>();

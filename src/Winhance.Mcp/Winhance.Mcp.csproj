@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Winhance-FS MCP server: a standalone, read-only stdio server for AI assistants (Claude Desktop,
+       Claude Code, VS Code, Windsurf...). It compiles only the File Manager services it exposes, so it does not
+       pull in the WPF app or PowerShell. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Winhance-FS-MCP</AssemblyName>
+    <RootNamespace>Winhance.Mcp</RootNamespace>
+    <Version>1.5.0</Version>
+    <FileVersion>1.5.0.0</FileVersion>
+    <AssemblyVersion>1.5.0.0</AssemblyVersion>
+    <Company>Ghenghis</Company>
+    <Product>Winhance-FS MCP Server</Product>
+    <Copyright>Copyright © 2026 Ghenghis</Copyright>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Winhance.Core\Features\Common\Enums\LogLevel.cs" Link="Linked\LogLevel.cs" />
+    <Compile Include="..\Winhance.Core\Features\FileManager\Interfaces\INexusIndexerService.cs" Link="Linked\INexusIndexerService.cs" />
+    <Compile Include="..\Winhance.Core\Features\FileManager\Interfaces\IForensicsService.cs" Link="Linked\IForensicsService.cs" />
+    <Compile Include="..\Winhance.Core\Features\FileManager\Interfaces\IDuplicateFinderService.cs" Link="Linked\IDuplicateFinderService.cs" />
+    <Compile Include="..\Winhance.Infrastructure\Features\FileManager\Services\NexusIndexerService.cs" Link="Linked\NexusIndexerService.cs" />
+    <Compile Include="..\Winhance.Infrastructure\Features\FileManager\Services\ForensicsService*.cs" Link="Linked\%(Filename)%(Extension)" />
+    <Compile Include="..\Winhance.Infrastructure\Features\FileManager\Services\DuplicateFinderService.cs" Link="Linked\DuplicateFinderService.cs" />
+    <Compile Include="..\Winhance.Infrastructure\Features\FileManager\Services\FileIdentity.cs" Link="Linked\FileIdentity.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="System.Management" />
+  </ItemGroup>
+
+  <Import Project="..\NexusCore.targets" />
+</Project>

@@ -1,5 +1,16 @@
 # Notifications for Windsurf Team
 
+## 2026-11-23 — v1.5.0: Search tab added, INexusIndexerService changed
+
+- New tab **Search** (`FastSearchViewModel`, `FastSearchView`), inserted second in `FileManagerView.xaml`; later
+  tab `Grid.Column` indices shifted by 2.
+- `INexusIndexerService` was replaced (the old one never worked: entry-point name mismatch). New members:
+  `IsAvailable`, `HasIndex`, `Current`, `LoadSavedIndexAsync`, `BuildIndexAsync`, `SearchAsync(query, limit, ct, sort)`.
+  `NexusFileEntry` now has `Folder` and `Missing`; `Created`, `ContentHash`, `Drive` were removed.
+- `FileManagerViewModel` lost the unused `IndexAllDrives`/`SearchNexus` commands and `SearchResults`.
+
+---
+
 ## 2026-11-14 — Claude Code edited WPF FileManager files (user-authorized)
 
 The user asked for a finished, working product and explicitly authorized Claude Code to fix the WPF build.

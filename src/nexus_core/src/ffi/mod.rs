@@ -6,6 +6,8 @@
 // FFI functions intentionally take raw pointers and handle safety internally
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
+pub mod search_api;
+
 use crate::indexer::ContentHasher;
 use crate::{FileEntry, IndexConfig};
 use once_cell::sync::Lazy;

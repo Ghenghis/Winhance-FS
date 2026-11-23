@@ -23,9 +23,11 @@
 **Winhance-FS** is a fork of [Winhance](https://github.com/memstechtips/Winhance) by memstechtips. It keeps
 everything stock Winhance does (software install/removal, Optimize, Customize, Advanced Tools) and adds a
 **File Manager** section for answering *"Where did my disk space go?"* and getting it back: a dual-pane browser,
-batch rename, a folder organizer, space recovery and a duplicate finder, plus an **Environment Doctor** for PATH
-and environment variables and **Forensics** tools (hidden streams, encrypted or disguised files, previous versions,
-Recycle Bin recovery), all with previews, confirmations and undo.
+**instant search across whole drives** (a Rust engine that reads the NTFS file table directly), batch rename, a
+folder organizer, space recovery and a duplicate finder, plus an **Environment Doctor** for PATH and environment
+variables and **Forensics** tools (hidden streams, encrypted or disguised files, previous versions, Recycle Bin
+recovery), all with previews, confirmations and undo. A standalone, read-only **MCP server** brings the search
+and inspection tools to AI assistants such as Claude.
 
 ---
 
@@ -48,6 +50,8 @@ operations use a throwaway sandbox folder; the Environment Doctor runs on a **de
 | File Browser — dual pane, copy/move between panes | Right-click menu |
 |:---:|:---:|
 | ![File Browser](docs/images/file-browser.png) | ![Context menu](docs/images/file-browser-context-menu.png) |
+| **Search — instant results while you type** | **Search — query syntax, deleted files marked** |
+| ![Search](docs/images/search.png) | ![Search syntax](docs/images/search-syntax.png) |
 | **Rename validation (invalid names rejected)** | **Delete asks first and uses the Recycle Bin** |
 | ![Rename validation](docs/images/file-browser-rename-validation.png) | ![Delete confirmation](docs/images/file-browser-delete-confirm.png) |
 | **Batch Rename — live preview** | **Batch Rename — regex rule** |
@@ -83,7 +87,9 @@ operations use a throwaway sandbox folder; the Environment Doctor runs on a **de
 
 | Area | Stock Winhance | Winhance-FS |
 |------|----------------|-------------|
-| **File Manager section** | — | New: File Browser, Batch Rename, Smart Organizer, Space Recovery, Environment Doctor, Duplicates, Forensics |
+| **File Manager section** | — | New: File Browser, Search, Batch Rename, Smart Organizer, Space Recovery, Environment Doctor, Duplicates, Forensics |
+| File search | — | Rust engine: whole NTFS drives read from the Master File Table (6 million files in about 6 s on a fast SSD), other drives and folders scanned; results while you type (tens of milliseconds); words, wildcards, path terms, exclusions, `ext:` and `file:`/`folder:` filters; sort by name match, size or date; index saved and reloaded |
+| AI assistants | — | `Winhance-FS-MCP.exe`: a read-only MCP server (search, largest files, duplicates, hidden streams, content check, previous versions, Recycle Bin) for Claude Desktop, Claude Code, VS Code, Windsurf, Cursor |
 | Dual-pane browser | — | F5/F6 copy/move between panes, Explorer-compatible cut/copy/paste, F2 rename with validation, Recycle Bin delete, right-click menu |
 | Batch rename | — | 8 rule types, live preview, conflict detection, undo of the last batch |
 | Folder organizer | — | By type / date / project / size / AI category, preview before moving, undo |
@@ -92,7 +98,7 @@ operations use a throwaway sandbox folder; the Environment Doctor runs on a **de
 | Forensics | — | Hidden NTFS streams (Mark of the Web, hidden data, programs hidden in streams) with preview and removal; content check for encrypted (ransomware) and disguised files by header and entropy; previous versions from Windows snapshots; Recycle Bin search and restore |
 | Environment variables / PATH | — | Environment Doctor: detects 45 kinds of problems, command conflicts and runtime homes; previewed repairs with backup, verification and automatic rollback |
 | Updates | Checks memstechtips/Winhance | Checks this repository's releases; version history and rollback |
-| Native and AI tooling | — | Rust `nexus_core` (MFT/USN indexing), Python MCP server, CLI and AI agents (separate components, not used by the app UI yet) |
+| Other tooling | — | Python CLI and AI agents (`src/nexus_cli`, `src/nexus_ai`) and an earlier Python MCP server (`src/nexus_mcp`): separate, experimental components |
 | Software & Apps, Optimize, Customize, Advanced Tools | ✔ | Unchanged from upstream apart from small fixes |
 
 ---
@@ -115,6 +121,7 @@ Download from [GitHub Releases](https://github.com/Ghenghis/Winhance-FS/releases
 | `Winhance-FS-Setup-vX.Y.Z.exe` | Installer with Start Menu entry and uninstaller |
 | `Winhance-x64-Portable-vX.Y.Z.zip` | Self-contained portable — unzip and run `Winhance.exe` |
 | `Winhance-x64-FrameworkDependent-Portable-vX.Y.Z.zip` | Smaller portable; needs the .NET 9 Desktop Runtime |
+| `Winhance-FS-MCP-x64-vX.Y.Z.zip` | MCP server for AI assistants, one exe ([setup](docs/MCP.md)) |
 
 Each file has a `.sha256` next to it. Check a download with:
 
@@ -151,6 +158,7 @@ Winhance is useful to you, please support its developer:
 | Area | Status |
 |------|--------|
 | [File Browser](#file-browser--available) | ✅ Available |
+| [Search](#search--available) (Rust engine, NTFS file table) | ✅ Available |
 | [Batch Rename](#batch-rename--available) | ✅ Available |
 | [Smart Organizer](#smart-organizer--available) | ✅ Available |
 | [Space Recovery](#space-recovery--available) | ✅ Available |
@@ -159,8 +167,8 @@ Winhance is useful to you, please support its developer:
 | [Duplicate Finder](#duplicate-finder--available) | ✅ Available |
 | [Forensics](#forensics--available): hidden streams, content/entropy check, previous versions, Recycle Bin restore | ✅ Available |
 | [AI model relocation](#space-recovery--available) | ✅ Available (Space Recovery → Relocate Selected) |
-| Rust deep-scan engine (MFT reader, USN journal, Tantivy search) | ⚠️ Backend only (`src/nexus_core`) |
-| MCP server for AI assistants | ⚠️ Separate Python component (`src/nexus_mcp`) |
+| [MCP server for AI assistants](#mcp-server-for-ai-assistants--available) | ✅ Available (`Winhance-FS-MCP.exe`) |
+| Live index updates (USN journal) | 🚧 Planned: rebuild the index to pick up changes (seconds per drive) |
 | Raw-disk undelete (recovering files already removed from the Recycle Bin by reading the MFT) | 🚧 Planned |
 
 ---
@@ -185,6 +193,31 @@ A dual-pane browser in the **File Manager** section of Winhance.
 Multi-select with **Ctrl**/**Shift**. Name conflicts never overwrite: a copy becomes `name (1).ext`.
 Pasting a folder into itself is refused, and moving a folder to another drive copies first and removes the
 source only after the copy completes.
+
+---
+
+## Search ✅ Available
+
+The **Search** tab finds any file or folder by name on whole drives, with results while you type.
+
+| Step | What happens |
+|------|--------------|
+| **Build Index** | Tick drives and/or add folders. NTFS drives are read straight from the drive's Master File Table, the way "Everything" does it: about 6 seconds for 6 million files on a fast SSD, with every file's size and date and every name of a hard-linked file. Other drives (FAT32, exFAT, network, cloud) and added folders are scanned folder by folder, never following junctions or links. Read-only. The index is saved to `%LOCALAPPDATA%\Winhance-FS\search-index.bin` and loaded the next time you open the tab. |
+| **Type** | Results update as you type, typically in tens of milliseconds across millions of files. The best name matches come first: exact name, then names that start with the text, then names where it starts a word. |
+| **Open** | Enter or double-click opens the item; **Open Location** shows it in Explorer; **Copy Path**. Items deleted or moved since the index was built are greyed and marked. |
+
+| Query | Finds |
+|-------|-------|
+| `tax 2024` | names containing both words (any order, any case) |
+| `"annual report"` | the exact phrase |
+| `*.iso`, `IMG_????.jpg` | wildcard match on the whole name |
+| `projects\ readme` | `readme` in any path containing `projects\` |
+| `report !draft` | excludes names containing `draft` |
+| `ext:pdf;docx` | only those types |
+| `file:` / `folder:` | only files / only folders |
+
+Sort by **Largest first** or **Newest first** with an empty box to list the biggest or latest files on every
+indexed drive. Rebuild the index to pick up changes (live updates are planned).
 
 ---
 
@@ -287,6 +320,22 @@ Not included: recovering files that were already removed from the Recycle Bin by
 
 ---
 
+## MCP server for AI assistants ✅ Available
+
+`Winhance-FS-MCP.exe` (one self-contained file from the release zip) is a read-only
+[Model Context Protocol](https://modelcontextprotocol.io) server. It gives Claude Desktop, Claude Code, VS Code,
+Windsurf, Cursor and other assistants these tools: `search_files`, `largest_files`, `search_index_status`,
+`build_search_index`, `find_duplicates`, `hidden_streams`, `check_file_contents`, `previous_versions` and
+`recycle_bin`. It shares the app's search index and never changes, moves or deletes files.
+
+```json
+{ "mcpServers": { "winhance-fs": { "command": "C:\\Tools\\Winhance-FS-MCP\\Winhance-FS-MCP.exe" } } }
+```
+
+Setup for each client, the tools and troubleshooting: [docs/MCP.md](docs/MCP.md).
+
+---
+
 ## Undo and safety
 
 - Batch rename and organize operations are recorded and can be undone from the app.
@@ -321,7 +370,7 @@ Not included: recovering files that were already removed from the Recycle Bin by
 │  │  ├── OrganizerService                                                    │    │
 │  │  ├── DuplicateFinderService, ForensicsService                            │    │
 │  │  ├── EnvironmentDoctorService (+ registry / snapshot stores)             │    │
-│  │  └── NexusIndexerService (Rust Interop)                                  │    │
+│  │  └── NexusIndexerService (Rust engine, JSON over FFI)                    │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                    │                                            │
 │                                    ▼                                            │
@@ -335,16 +384,17 @@ Not included: recovering files that were already removed from the Recycle Bin by
 │                                    ▼                                            │
 │  ┌─────────────────────────────────────────────────────────────────────────┐    │
 │  │  NATIVE LAYER (Rust nexus_core)                                          │    │
-│  │  ├── MFT Reader (mft_reader.rs)                                          │    │
-│  │  ├── USN Journal (usn_journal.rs)                                        │    │
-│  │  ├── Tantivy Search (tantivy_engine.rs)                                  │    │
-│  │  └── FFI Bindings (ffi/mod.rs)                                           │    │
+│  │  ├── Name index + query engine (search/name_index.rs)                    │    │
+│  │  ├── Raw MFT reader (search/mft_raw.rs), folder walker                   │    │
+│  │  ├── USN Journal (usn_journal.rs), Tantivy (optional "fulltext")         │    │
+│  │  └── JSON FFI for the app and MCP server (ffi/search_api.rs)             │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                    │                                            │
 │                                    ▼                                            │
 │  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │  AI TOOLS LAYER (Python)                                                 │    │
-│  │  ├── nexus_mcp (MCP Server)                                              │    │
+│  │  AI TOOLS                                                                │    │
+│  │  ├── Winhance.Mcp (MCP server exe, C#, read-only)                        │    │
+│  │  ├── nexus_mcp (earlier Python MCP server, experimental)                 │    │
 │  │  ├── nexus_ai (ML Tools)                                                 │    │
 │  │  └── nexus_cli (Command Line)                                            │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
@@ -362,13 +412,14 @@ Winhance-FS-Repo/
 │   ├── Winhance.Core/           # C# Domain layer (interfaces, models)
 │   ├── Winhance.Infrastructure/ # C# Service layer
 │   ├── Winhance.WPF/            # C# WPF Presentation layer
-│   ├── nexus_core/              # Rust performance backend
-│   │   ├── src/indexer/         # MFT, USN Journal
-│   │   ├── src/search/          # Tantivy engine
+│   ├── Winhance.Mcp/            # MCP server for AI assistants (Winhance-FS-MCP.exe)
+│   ├── nexus_core/              # Rust search engine (nexus_core.dll)
+│   │   ├── src/indexer/         # MFT enumeration, USN Journal
+│   │   ├── src/search/          # Name index, raw MFT reader, optional Tantivy
 │   │   └── src/ffi/             # C# interop
 │   ├── nexus_ai/                # Python AI tools
 │   ├── nexus_cli/               # Python CLI
-│   └── nexus_mcp/               # Python MCP server
+│   └── nexus_mcp/               # Earlier Python MCP server (experimental)
 ├── docs/                        # Documentation
 ├── scripts/                     # Utility scripts
 └── .github/workflows/           # CI/CD pipelines
@@ -383,6 +434,7 @@ Winhance-FS-Repo/
 - [File Manager Guide](docs/FILE_MANAGER.md)
 - [Batch Rename System](docs/BATCH_RENAME.md)
 - [Smart Organizer](docs/FILE_ORGANIZER.md)
+- [MCP Server for AI assistants](docs/MCP.md)
 - [Theming Guide](docs/THEMING.md)
 
 ### Developer Guides
